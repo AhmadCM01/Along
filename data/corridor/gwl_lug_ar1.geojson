@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "corridor_id": "GWL-LUG-AR1",
+        "name": "Gwagwalada - Airport Rd - Lugbe - Area 1 - Central Area",
+        "length_m": 42000,
+        "direction": "S"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [7.0825, 8.9430],
+          [7.1520, 8.9720],
+          [7.2625, 8.9945],
+          [7.3650, 8.9830],
+          [7.3790, 8.9895],
+          [7.3980, 8.9970],
+          [7.4280, 9.0120],
+          [7.4535, 9.0265],
+          [7.4680, 9.0335],
+          [7.4952, 9.0585]
+        ]
+      }
+    }
+  ]
+}

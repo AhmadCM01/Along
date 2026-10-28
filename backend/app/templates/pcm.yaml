@@ -1,0 +1,69 @@
+welcome_help: |
+  Welcome to *Along* (Abuja Shared Corridor Transit).
+  Abeg tell us where you dey and where you dey go for English, Pidgin, or Hausa (text or voice note).
+  Example: *"Abeg I dey Dutse First Gate, two seats go Berger"*
+
+ask_origin: |
+  Abeg where you dey make our Along pod pick you? (like *Dutse First Gate*, *Sokale Roundabout*, *Police Signboard Lugbe*, or *Orange Market Mararaba*)
+
+ask_destination: |
+  We don see say you dey *{origin_name}*. Abeg where you dey drop along the road? (like *Berger*, *Wuse Market*, *Area 1*, or *Federal Secretariat*)
+
+ask_both_slots: |
+  Abeg tell us where you dey stand and where you dey go along the road.
+  Example: *"I dey Sokale Roundabout, carry me reach Berger"*
+
+disambiguate_origin: |
+  Which pickup junction you mean so?
+  {options_text}
+  Reply with `1`, `2`, or `3` or type the junction name.
+
+disambiguate_destination: |
+  Which drop-off junction you mean so?
+  {options_text}
+  Reply with `1`, `2`, or `3` or type the junction name.
+
+short_trip_rejected: |
+  *{origin_name}* and *{dest_name}* too close (under 800m). Along pod na for corridor movement pass 800m. Abeg pick another drop-off down the road.
+
+quote_ready: |
+  *Along Corridor Quote ({corridor_id})*
+  Safe Pickup Anchor: *{anchor_name}* ({origin_name})
+  Drop-off: *{dest_name}*
+  Seats: *{seats}* ({unit_fare_naira}/seat, you save {savings_pct}% pass solo drop)
+  Total Money: *{total_fare_naira}* (Safe inside Escrow)
+  Reply *YES* make we lock your seat sharp-sharp, or *CANCEL* if you no go again.
+
+pooling_started: |
+  *Your Seat Don Lock Inside Pod Pool!*
+  Request Code: `{request_code}`
+  Pickup Anchor: *{anchor_name}*
+  Drop-off: *{dest_name}*
+  Escrow Hold: *{total_fare_naira}* ({seats} seat(s))
+  We dey pair you inside 4-person Along pod ({current_seats}/4 seats full).
+
+pod_matched: |
+  *Pod `{pod_code}` Don Set!*
+  Driver: *{driver_name}* ({vehicle_desc}, Plate *{plate_number}*)
+  Wait for Safe Anchor: *{anchor_name}* (Inside Filling Station, No Agbero Wahala)
+  Your Boarding Code (OTP): *{boarding_otp}*
+  Follow Live Movement: {share_url}
+
+status_update: |
+  *Along Ride Status*
+  Stage: `{stage}`
+  Route: *{origin_name}* -> *{dest_name}*
+  Anchor: *{anchor_name}*
+
+booking_cancelled: |
+  We don cancel your Along booking and return your money sharp-sharp to your wallet. Message us anytime you wan move again.
+
+sos_triggered: |
+  *SOS EMERGENCY ALERT DON FIRE*
+  Along Safety Command Center don get your live location and moto details now-now. Our safety team dey call you and security patrol immediately.
+
+rating_recorded: |
+  Twale! Thanks for giving your Along trip *{stars}/5 stars*! Safe waka around Abuja.
+
+blocked_message: |
+  We no fit process that message. Abeg send your Abuja pickup and destination junction.

@@ -1,0 +1,45 @@
+# Python
+__pycache__
+*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Node / Next.js
+node_modules
+.next
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Generated Artifacts & Local Data
+data/faiss/*.index
+data/faiss/*.json
+!data/faiss/.gitkeep
+evals/reports/*.json
+evals/reports/*.md
+!evals/reports/latest.md
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

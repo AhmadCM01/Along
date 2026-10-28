@@ -1,0 +1,10 @@
+{
+  "name": "Along Driver Companion",
+  "short_name": "Along",
+  "description": "Shared corridor transit driver companion for Abuja, FCT, Nigeria",
+  "start_url": "/driver",
+  "display": "standalone",
+  "background_color": "#F7F8F6",
+  "theme_color": "#008751",
+  "orientation": "portrait"
+}

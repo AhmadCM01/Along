@@ -1,0 +1,24 @@
+services:
+  api:
+    restart: always
+    environment:
+      ENV: production
+      ALLOW_SIMULATED_GPS: "false"
+
+  worker:
+    restart: always
+    environment:
+      ENV: production
+
+  scheduler:
+    restart: always
+    environment:
+      ENV: production
+
+  web:
+    restart: always
+    environment:
+      NODE_ENV: production
+
+  caddy:
+    restart: always

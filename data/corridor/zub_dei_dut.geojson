@@ -1,0 +1,28 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "corridor_id": "ZUB-DEI-DUT",
+        "name": "Zuba - Dei-Dei - Kubwa - Dutse - Sokale - Bwari Connector",
+        "length_m": 24000,
+        "direction": "S"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [7.1965, 9.1045],
+          [7.2580, 9.1155],
+          [7.3195, 9.1460],
+          [7.3525, 9.1635],
+          [7.3738, 9.1790],
+          [7.3765, 9.1930],
+          [7.3792, 9.2055],
+          [7.3845, 9.2280],
+          [7.3812, 9.2865]
+        ]
+      }
+    }
+  ]
+}

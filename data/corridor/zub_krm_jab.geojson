@@ -1,0 +1,28 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "corridor_id": "ZUB-KRM-JAB",
+        "name": "Zuba - Dei-Dei - Gwagwa - Karmo - Jabi - Utako - Wuse",
+        "length_m": 29500,
+        "direction": "S"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [7.1965, 9.1045],
+          [7.2580, 9.1155],
+          [7.3120, 9.0890],
+          [7.3610, 9.0695],
+          [7.3980, 9.0760],
+          [7.4245, 9.0640],
+          [7.4415, 9.0675],
+          [7.4525, 9.0765],
+          [7.4682, 9.0785]
+        ]
+      }
+    }
+  ]
+}

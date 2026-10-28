@@ -1,0 +1,7 @@
+id,name,length_m,geojson_file,service_start,service_end
+BWR-DUT-WUS,Bwari - Dutse - Oando - Berger - Wuse / Central Area,36500,bwr_dut_wus.geojson,05:30,22:00
+ZUB-KUB-WUS,Zuba - Dei-Dei - Kubwa - Gwarinpa - Oando - Berger - Wuse / Central Area,38000,zub_kub_wus.geojson,05:30,22:00
+ZUB-DEI-DUT,Zuba - Dei-Dei - Kubwa - Dutse - Sokale - Bwari Connector,24000,zub_dei_dut.geojson,05:30,22:00
+ZUB-KRM-JAB,Zuba - Dei-Dei - Gwagwa - Karmo - Jabi - Utako - Wuse,29500,zub_krm_jab.geojson,05:30,22:00
+GWL-LUG-AR1,Gwagwalada - Airport Rd - Lugbe - Area 1 - Central Area,42000,gwl_lug_ar1.geojson,05:30,22:00
+MRB-NYA-CEN,Mararaba - Nyanya - Kugbo - AYA - Central Area - Wuse,26000,mrb_nya_cen.geojson,05:30,22:00

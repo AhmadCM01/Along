@@ -1,0 +1,69 @@
+welcome_help: |
+  Barka da zuwa *Along* (Tsarin Sufurin Mota na Abuja).
+  Aiko mana da inda kake da inda za ka je da Hausa, Pidgin, ko Turanci (rubutu ko murya).
+  Misali: *"Ina Bwari zan je Kasuwar Wuse kujera biyu"*
+
+ask_origin: |
+  A wane wuri kake don motar Along ta dauke ka? (misali *Dutse First Gate*, *Zagayen Sokale*, *Police Signboard Lugbe*, ko *Orange Market Mararaba*)
+
+ask_destination: |
+  Mun gane kana *{origin_name}*. Ina za a sauke ka a kan hanya? (misali *Gadar Berger*, *Kasuwar Wuse*, *Area 1*, ko *Federal Secretariat*)
+
+ask_both_slots: |
+  Don Allah fada mana inda kake da inda za ka je a kan titin Abuja.
+  Misali: *"Daga Sokale Roundabout zuwa Gadar Berger"*
+
+disambiguate_origin: |
+  Wane wurin dauka kake nufi daga cikin wadannan?
+  {options_text}
+  Aiko da lamba (`1`, `2`, ko `3`) ko sunan wurin.
+
+disambiguate_destination: |
+  Wane wurin sauka kake nufi daga cikin wadannan?
+  {options_text}
+  Aiko da lamba (`1`, `2`, ko `3`) ko sunan wurin.
+
+short_trip_rejected: |
+  Tsakanin *{origin_name}* da *{dest_name}* bai kai mita 800 ba. Zabi wani wurin sauka na gaba a kan hanyar.
+
+quote_ready: |
+  *Farashin Tafiyar Along ({corridor_id})*
+  Tashar Dauka (Anchor): *{anchor_name}* ({origin_name})
+  Wurin Sauka: *{dest_name}*
+  Kujeru: *{seats}* ({unit_fare_naira}/kujera, ragin {savings_pct}% fiye da daukar mota kai kadai)
+  Jimillar Kudi: *{total_fare_naira}* (Tsare a Escrow)
+  Aiko da *YES* don tabbatar da kujera ko *CANCEL* don fasa.
+
+pooling_started: |
+  *An Kulle Kujerarka a Cikin Pod!*
+  Lambar Bukata: `{request_code}`
+  Tashar Dauka: *{anchor_name}*
+  Wurin Sauka: *{dest_name}*
+  Kudin Escrow: *{total_fare_naira}* (kujera {seats})
+  Ana hada ku mutum 4 a mota daya ({current_seats}/4 sun cika).
+
+pod_matched: |
+  *An Samu Motar Pod `{pod_code}`!*
+  Direba: *{driver_name}* ({vehicle_desc}, Lambar Mota *{plate_number}*)
+  Wurin Haduwa: *{anchor_name}* (Gidan Mai Mai Tsaro, Babu Matsalar Agbero)
+  Lambar Shiga Mota (OTP): *{boarding_otp}*
+  Bibiyar Tafiya Kai Tsaye: {share_url}
+
+status_update: |
+  *Matsayin Tafiyar Along*
+  Matsayi: `{stage}`
+  Hanya: *{origin_name}* -> *{dest_name}*
+  Tasha: *{anchor_name}*
+
+booking_cancelled: |
+  An soke tafiyarka ta Along kuma an mayar da kudinka cikin jakar wallet dinka nan take.
+
+sos_triggered: |
+  *SANARWAR GAGGAWA TA SOS*
+  Cibiyar Tsaro ta Along ta karbi inda kake da bayanan motar yanzu haka. Jami'an tsaro na tuntubar ka nan take.
+
+rating_recorded: |
+  Mun gode da ba wa tafiyar Along tauraro *{stars}/5*! Allah ya kiyaye hanya.
+
+blocked_message: |
+  Ba mu iya fahimtar wannan sakon ba. Aiko da sunan wurin dauka da wurin sauka a Abuja.

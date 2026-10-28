@@ -1,0 +1,16 @@
+{"id": "LMK-EVAL-01", "query": "Dutse first gate", "expected_landmark_id": "LMK-DUT-FG", "corridor_id": "BWR-DUT-WUS", "zone_id": "ZONE-DUT"}
+{"id": "LMK-EVAL-02", "query": "Sokale roundabout", "expected_landmark_id": "LMK-SOK-RBT", "corridor_id": "BWR-DUT-WUS", "zone_id": "ZONE-DUT"}
+{"id": "LMK-EVAL-03", "query": "Gadar Berger", "expected_landmark_id": "LMK-BER-RB", "corridor_id": "BWR-DUT-WUS", "zone_id": "ZONE-MAB-BER"}
+{"id": "LMK-EVAL-04", "query": "Kasuwar Wuse", "expected_landmark_id": "LMK-WUS-MKT", "corridor_id": "BWR-DUT-WUS", "zone_id": "ZONE-WUS"}
+{"id": "LMK-EVAL-05", "query": "Oando after Katampe bridge", "expected_landmark_id": "LMK-OAN-KAT", "corridor_id": "BWR-DUT-WUS", "zone_id": "ZONE-KAT-OAN"}
+{"id": "LMK-EVAL-06", "query": "Banex plaza", "expected_landmark_id": "LMK-WUS-BNX", "corridor_id": "BWR-DUT-WUS", "zone_id": "ZONE-WUS"}
+{"id": "LMK-EVAL-07", "query": "Charley boy bus stop Gwarinpa", "expected_landmark_id": "LMK-GWA-CHB", "corridor_id": "BWR-DUT-WUS", "zone_id": "ZONE-GWA"}
+{"id": "LMK-EVAL-08", "query": "Bwari law school", "expected_landmark_id": "LMK-BWR-LAW", "corridor_id": "BWR-DUT-WUS", "zone_id": "ZONE-BWR"}
+{"id": "LMK-EVAL-09", "query": "Police signboard Lugbe", "expected_landmark_id": "LMK-LUG-PSB", "corridor_id": "GWL-LUG-AR1", "zone_id": "ZONE-LUG"}
+{"id": "LMK-EVAL-10", "query": "Area 1 roundabout", "expected_landmark_id": "LMK-AR1-RBT", "corridor_id": "GWL-LUG-AR1", "zone_id": "ZONE-AR1"}
+{"id": "LMK-EVAL-11", "query": "Giri junction", "expected_landmark_id": "LMK-GWL-GIR", "corridor_id": "GWL-LUG-AR1", "zone_id": "ZONE-GWL-AIR"}
+{"id": "LMK-EVAL-12", "query": "Orange market Mararaba", "expected_landmark_id": "LMK-MRB-ORN", "corridor_id": "MRB-NYA-CEN", "zone_id": "ZONE-MRB"}
+{"id": "LMK-EVAL-13", "query": "Sharp corner Mararaba", "expected_landmark_id": "LMK-MRB-SHP", "corridor_id": "MRB-NYA-CEN", "zone_id": "ZONE-MRB"}
+{"id": "LMK-EVAL-14", "query": "Jabi motor park", "expected_landmark_id": "LMK-JBI-PRK", "corridor_id": "ZUB-KRM-JAB", "zone_id": "ZONE-JBI-UTK"}
+{"id": "LMK-EVAL-15", "query": "Karmo market", "expected_landmark_id": "LMK-KRM-MKT", "corridor_id": "ZUB-KRM-JAB", "zone_id": "ZONE-KRM-GWG"}
+{"id": "LMK-EVAL-16", "query": "Utako market", "expected_landmark_id": "LMK-UTK-MKT", "corridor_id": "ZUB-KRM-JAB", "zone_id": "ZONE-JBI-UTK"}

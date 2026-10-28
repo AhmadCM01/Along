@@ -1,0 +1,28 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "corridor_id": "MRB-NYA-CEN",
+        "name": "Mararaba - Nyanya - Kugbo - AYA - Central Area - Wuse",
+        "length_m": 26000,
+        "direction": "S"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [7.6020, 9.0245],
+          [7.5840, 9.0255],
+          [7.5685, 9.0268],
+          [7.5540, 9.0310],
+          [7.5320, 9.0405],
+          [7.5190, 9.0448],
+          [7.4952, 9.0585],
+          [7.4795, 9.0672],
+          [7.4525, 9.0765]
+        ]
+      }
+    }
+  ]
+}

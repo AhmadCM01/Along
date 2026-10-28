@@ -1,0 +1,21 @@
+id,corridor_id,name,seq_order,start_km_m,end_km_m
+ZONE-BWR,BWR-DUT-WUS,Bwari Town & Institutions,1,0,6000
+ZONE-USH,BWR-DUT-WUS,Ushafa & Lower Bwari Rd,2,6000,11000
+ZONE-DUT,BWR-DUT-WUS,Dutse Alhaji & Sokale,3,11000,16500
+ZONE-GAL-DAW,BWR-DUT-WUS,Galadimawa & Dawaki,4,16500,20500
+ZONE-GWA,BWR-DUT-WUS,Gwarinpa Estate Flank,5,20500,24500
+ZONE-KAT-OAN,BWR-DUT-WUS,Katampe Ext & Oando Bridge,6,24500,27500
+ZONE-MAB-BER,BWR-DUT-WUS,Mabushi & Berger Hub,7,27500,31000
+ZONE-WUS,BWR-DUT-WUS,Wuse (Zones 1-6 & Wuse II),8,31000,34000
+ZONE-CEN,BWR-DUT-WUS,Central Business District,9,34000,36500
+ZONE-ZUB,ZUB-KUB-WUS,Zuba & Madalla Gateway,1,0,6000
+ZONE-DEI,ZUB-KUB-WUS,Dei-Dei Dakwa & Saburi,2,6000,12000
+ZONE-KUB,ZUB-KUB-WUS,Kubwa Satellite Axis,3,12000,19000
+ZONE-KRM-GWG,ZUB-KRM-JAB,Gwagwa Jiwa & Karmo,3,12000,20000
+ZONE-JBI-UTK,ZUB-KRM-JAB,Jabi & Utako District,4,20000,26000
+ZONE-GWL-AIR,GWL-LUG-AR1,Gwagwalada Giri & Airport Jct,1,0,18000
+ZONE-LUG,GWL-LUG-AR1,Lugbe Corridor,2,18000,31000
+ZONE-AR1,GWL-LUG-AR1,Galadimawa Rbt Games Village & Area 1,3,31000,39000
+ZONE-MRB,MRB-NYA-CEN,Mararaba Masaka & Ado,1,0,9000
+ZONE-NYA-KUG,MRB-NYA-CEN,Nyanya & Kugbo,2,9000,16500
+ZONE-AYA,MRB-NYA-CEN,AYA / Asokoro,3,16500,21000

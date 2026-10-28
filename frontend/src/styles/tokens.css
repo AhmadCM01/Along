@@ -1,0 +1,50 @@
+/* Along Dual-Surface Adaptive Design Tokens (§14.1.2) */
+
+:root,
+[data-theme="dark-command"] {
+  --bg-canvas: #0A0F0D;
+  --bg-surface-1: #111916;
+  --bg-surface-2: #17221E;
+  --bg-surface-3: #1E2C27;
+  --bg-glass: rgba(17, 25, 22, 0.84);
+
+  --text-primary: #F3F6F4;
+  --text-secondary: #9FB0A7;
+  --text-muted: #687A71;
+
+  --brand-emerald: #00A86B;
+  --brand-emerald-deep: #008751;
+  --brand-emerald-subtle: rgba(0, 168, 107, 0.14);
+  --brand-amber: #F59E0B;
+  --brand-amber-subtle: rgba(245, 158, 11, 0.14);
+
+  --status-danger: #EF4444;
+  --status-danger-subtle: rgba(239, 68, 68, 0.16);
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(0, 168, 107, 0.38);
+}
+
+[data-theme="light-daylight"] {
+  --bg-canvas: #F7F8F6;
+  --bg-surface-1: #FFFFFF;
+  --bg-surface-2: #EEF2EF;
+  --bg-surface-3: #E2E9E4;
+  --bg-glass: rgba(255, 255, 255, 0.92);
+
+  --text-primary: #0A1410;
+  --text-secondary: #374740;
+  --text-muted: #64756D;
+
+  --brand-emerald: #008751;
+  --brand-emerald-deep: #006B3F;
+  --brand-emerald-subtle: rgba(0, 135, 81, 0.10);
+  --brand-amber: #D97706;
+  --brand-amber-subtle: rgba(217, 119, 6, 0.12);
+
+  --status-danger: #DC2626;
+  --status-danger-subtle: rgba(220, 38, 38, 0.12);
+
+  --border-subtle: rgba(10, 20, 16, 0.10);
+  --border-strong: rgba(0, 135, 81, 0.42);
+}

@@ -1,0 +1,21 @@
+{
+    auto_https off
+}
+
+:80 {
+    handle /api/* {
+        reverse_proxy api:8000
+    }
+    handle /webhooks/* {
+        reverse_proxy api:8000
+    }
+    handle /healthz {
+        reverse_proxy api:8000
+    }
+    handle /metrics {
+        reverse_proxy api:8000
+    }
+    handle {
+        reverse_proxy web:3000
+    }
+}

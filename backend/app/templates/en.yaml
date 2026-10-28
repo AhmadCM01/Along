@@ -1,0 +1,69 @@
+welcome_help: |
+  Welcome to *Along* (Abuja Shared Corridor Transit).
+  Send your pickup and destination in English, Pidgin, or Hausa (text or voice note).
+  Example: *"From Dutse First Gate to Wuse Market, 2 seats"*
+
+ask_origin: |
+  Where should your Along pod pick you up? (e.g., *Dutse First Gate*, *Sokale Roundabout*, *Lugbe Police Signboard*, or *Orange Market Mararaba*)
+
+ask_destination: |
+  Got your pickup at *{origin_name}*. Where are you heading along the corridor? (e.g., *Berger*, *Wuse Market*, *Area 1*, or *Federal Secretariat*)
+
+ask_both_slots: |
+  Please share your pickup landmark and destination landmark along an Abuja corridor.
+  Example: *"From Sokale Roundabout to Berger"*
+
+disambiguate_origin: |
+  Did you mean one of these pickup points?
+  {options_text}
+  Reply with the number (`1`, `2`, or `3`) or type the landmark name.
+
+disambiguate_destination: |
+  Did you mean one of these drop-off points?
+  {options_text}
+  Reply with the number (`1`, `2`, or `3`) or type the landmark name.
+
+short_trip_rejected: |
+  *{origin_name}* and *{dest_name}* are less than 800m apart. Along pods serve shared corridor trips of 800m or more. Please choose a further destination along the corridor.
+
+quote_ready: |
+  *Along Corridor Quote ({corridor_id})*
+  Pickup Anchor: *{anchor_name}* ({origin_name})
+  Drop-off: *{dest_name}*
+  Seats: *{seats}* ({unit_fare_naira}/seat, saves {savings_pct}% vs solo ride)
+  Total Fare: *{total_fare_naira}* (Escrow-Protected)
+  Reply *YES* to lock your seat(s) or *CANCEL* to stop.
+
+pooling_started: |
+  *Seat Locked in Pod Pool!*
+  Request Code: `{request_code}`
+  Pickup Anchor: *{anchor_name}*
+  Drop-off: *{dest_name}*
+  Escrow Held: *{total_fare_naira}* ({seats} seat(s))
+  We are matching you into a 4-seat pod ({current_seats}/4 seats filled).
+
+pod_matched: |
+  *Pod `{pod_code}` Matched!*
+  Driver: *{driver_name}* ({vehicle_desc}, Plate *{plate_number}*)
+  Meet at Safe Anchor: *{anchor_name}* (Private Filling Station Bay, Zero Agbero Touts)
+  Boarding Code (OTP): *{boarding_otp}*
+  Live Trip Tracker: {share_url}
+
+status_update: |
+  *Along Booking Status*
+  State: `{stage}`
+  Route: *{origin_name}* -> *{dest_name}*
+  Anchor: *{anchor_name}*
+
+booking_cancelled: |
+  Your Along booking has been cancelled and any held escrow has been refunded to your wallet. Send a new pickup and destination whenever you are ready.
+
+sos_triggered: |
+  *EMERGENCY SOS ACTIVATED*
+  Along Safety Command Center has been alerted with your live corridor telemetry and pod details. An operations dispatcher is contacting you and security responders immediately.
+
+rating_recorded: |
+  Thank you for rating your Along trip *{stars}/5 stars*! Safe travels across Abuja.
+
+blocked_message: |
+  We could not process that message. Please send a valid Abuja pickup and destination landmark.

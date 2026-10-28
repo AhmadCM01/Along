@@ -1,0 +1,6 @@
+{
+  "version": "v1_f384f6e5b560",
+  "dim": 768,
+  "n_vectors": 1208,
+  "embedding_model": "intfloat/multilingual-e5-base"
+}

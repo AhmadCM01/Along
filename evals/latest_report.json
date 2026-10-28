@@ -1,0 +1,30 @@
+{
+  "all_gates_passed": true,
+  "extraction": {
+    "total_cases": 15,
+    "schema_valid_rate": 1.0,
+    "intent_accuracy": 1.0,
+    "locale_accuracy": 0.9333,
+    "slot_f1": 1.0
+  },
+  "landmark_retrieval": {
+    "total_queries": 16,
+    "recall_at_1": 1.0,
+    "recall_at_3": 1.0,
+    "mrr": 1.0,
+    "p95_latency_ms": 3.083
+  },
+  "safety_guard": {
+    "total_cases": 9,
+    "sos_recall": 1.0,
+    "injection_block_rate": 1.0,
+    "false_positive_rate": 0.0,
+    "overall_accuracy": 1.0,
+    "max_latency_ms": 0.02
+  },
+  "muse_wonder_judge": {
+    "model_judge": "muse-wonder",
+    "overall_score": 1.0,
+    "verdict": "PASS"
+  }
+}

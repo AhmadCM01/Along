@@ -9,8 +9,11 @@ from typing import Any
 import pytest
 
 _BACKEND_ROOT = str(Path(__file__).resolve().parents[1])
+_REPO_ROOT = str(Path(__file__).resolve().parents[2])
 if _BACKEND_ROOT not in sys.path:
     sys.path.insert(0, _BACKEND_ROOT)
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
 from app.matching.corridor import haversine_distance_m
 

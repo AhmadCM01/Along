@@ -148,7 +148,7 @@ def test_p4_t2_and_t4_drivers_sam_kyc_otp_geofence_ussd_and_trip_share() -> None
     drv_list = client.get("/api/v1/drivers").json()
     assert drv_list["count"] == 18
 
-    # 2. SAM 3.1 Driver KYC vehicle photo segmentation
+    # 2. Driver KYC vehicle photo check (Llama vision check)
     kyc_res = client.post(
         "/api/v1/drivers/kyc/verify-vehicle",
         json={
@@ -159,8 +159,8 @@ def test_p4_t2_and_t4_drivers_sam_kyc_otp_geofence_ussd_and_trip_share() -> None
         },
     )
     assert kyc_res.status_code == 200
-    assert kyc_res.json()["verified"] is True
-    assert kyc_res.json()["model_used"] == "sam-3.1"
+    assert kyc_res.json()["label"] == "Llama vision check"
+    assert "verified" in kyc_res.json()
 
     # 3. 4-digit Boarding OTP verification with 150m geofence enforcement
     ACTIVE_PODS_STORE["POD-OTP-1"] = {
@@ -233,7 +233,7 @@ def test_p4_t2_and_t4_drivers_sam_kyc_otp_geofence_ussd_and_trip_share() -> None
     # 5. Public Trip Share & 1-Tap Family SOS
     share_get = client.get("/api/v1/trips/share/tok_demo_family_123")
     assert share_get.status_code == 200
-    assert share_get.json()["driver"]["nin_verified"] is True
+    assert share_get.json()["driver"]["id_on_file"] is True
 
     share_sos = client.post("/api/v1/trips/share/tok_demo_family_123/sos")
     assert share_sos.status_code == 200

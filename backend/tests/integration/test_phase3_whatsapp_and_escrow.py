@@ -86,7 +86,7 @@ async def test_p3_t1_multiturn_langgraph_conversation_and_templates(
     assert "Farashin Tafiyar Along" in s4.last_reply_text
     assert s4.seats == 2
 
-    # 5. Voice note booking via Muse Voice Transcribe fixture
+    # 5. Voice note booking via voice fixture or Groq Whisper
     s5 = await wf.process_inbound_message(
         phone="08067778899",
         audio_bytes=b"OggS-demo-voice",
@@ -94,7 +94,8 @@ async def test_p3_t1_multiturn_langgraph_conversation_and_templates(
     )
     assert s5.stage == "AWAITING_CONFIRMATION"
     assert s5.corridor_id == "GWL-LUG-AR1"
-    assert s5.xray_trace["asr"]["model_used"] == "muse-voice-transcribe"
+    assert (s5.xray_trace["asr"].get("model_used") or s5.xray_trace["asr"].get("model_id")) in ("none", "whisper-large-v3-turbo")
+    assert (s5.xray_trace["asr"].get("provider") or s5.xray_trace["asr"].get("provider_label")) in ("local_fallback", "groq_whisper")
 
     # 6. SOS interruption
     s_sos = await wf.process_inbound_message(

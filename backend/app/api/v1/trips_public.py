@@ -21,18 +21,18 @@ def get_or_seed_demo_trip(share_token: str) -> dict[str, Any]:
     if share_token not in PUBLIC_TRIPS_BY_TOKEN:
         PUBLIC_TRIPS_BY_TOKEN[share_token] = {
             "share_token": share_token,
-            "pod_code": "POD-842A",
+            "pod_code": "POD-842A (Demo data)",
             "corridor_id": "BWR-DUT-WUS",
-            "corridor_name": "Bwari - Dutse - Gwarinpa - Berger - Wuse",
+            "corridor_name": "Bwari -> Dutse -> Gwarinpa -> Berger -> Wuse",
             "status": "IN_TRANSIT",
             "origin_anchor": "A.A. Rano Filling Station (Dutse First Gate)",
             "destination_landmark": "Wuse Market Main Gate",
             "driver": {
-                "full_name": "Musa Danjuma",
+                "full_name": "Musa Danjuma (Demo data)",
+                "profile_note": "Demo driver profile",
                 "vehicle_desc": "Toyota Corolla (Silver)",
-                "plate_number": "ABJ-412K",
-                "nin_verified": True,
-                "sam_vehicle_verified": True,
+                "plate_number": "ABJ-412K (Demo data)",
+                "id_on_file": True,
                 "rating": 4.92,
             },
             "telemetry": {
@@ -44,7 +44,7 @@ def get_or_seed_demo_trip(share_token: str) -> dict[str, Any]:
                 "route_deviation_m": 12,
                 "is_on_corridor": True,
             },
-            "escrow_status": "CAPTURED",
+            "escrow_status": "Simulated escrow",
             "sos_active": False,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }

@@ -1,4 +1,4 @@
-"""Meta Muse Wonder (`muse-wonder`) Conversation Rubric Judge (`evals/judge.py` - §20)."""
+"""Rule-based Conversation Rubric Judge (evals/judge.py - Section 20)."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def evaluate_conversation_rubric(
 
     overall = round((lmk_score + fare_score + fluency_score + safety_score) / 4.0, 4)
     return JudgeEvaluationScore(
-        model_judge="muse-wonder",
+        model_judge="deterministic_rubric",
         landmark_accuracy_score=lmk_score,
         fare_transparency_score=fare_score,
         cultural_fluency_score=fluency_score,

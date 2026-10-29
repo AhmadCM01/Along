@@ -34,18 +34,16 @@ Your task is to analyze a commuter's WhatsApp text or transcribed voice message 
 
 ## 3. Output Rules
 1. Always return valid JSON matching `ExtractionOutput`:
-   - `intent`: One of `BOOK_RIDE`, `PROVIDE_ORIGIN`, `PROVIDE_DESTINATION`, `PROVIDE_SEATS`, `CONFIRM_BOOKING`, `CANCEL_BOOKING`, `CHECK_STATUS`, `SOS_EMERGENCY`, `RATE_TRIP`, `GENERAL_HELP`, `CHITCHAT`.
-   - `language`: `en` (English), `pcm` (Nigerian Pidgin), or `ha` (Hausa).
-   - `origin_raw`: Verbatim origin phrase if mentioned, else `null`.
-   - `destination_raw`: Verbatim destination phrase if mentioned, else `null`.
-   - `relational_ref`: Populated if the user describes a location relative to an anchor (e.g. `{"relation": "after", "ordinal": 2, "object_type": "transformer", "anchor_raw": "Dutse first gate", "target_slot": "origin"}`).
-   - `seats`: Integer `1` to `4` (default `1`).
-   - `luggage`: Boolean (`true` if load/bags/box/kaya mentioned).
-   - `women_only_preference`: Boolean (`true` if women-only pod requested).
-   - `rating`: Integer `1` to `5` if `intent == "RATE_TRIP"`.
+   - `intent`: One of `BOOK_RIDE`, `PROVIDE_SLOT`, `CONFIRM_YES`, `CONFIRM_NO`, `CHANGE_ORIGIN`, `CHANGE_DESTINATION`, `CHECK_STATUS`, `CANCEL_RIDE`, `CHECK_WALLET`, `TOPUP_WALLET`, `REPORT_SOS`, `RATE_RIDE`, `SWITCH_LOCALE`, `FAQ_OR_HELP`, `HUMAN_HANDOFF`, `UNKNOWN`.
+   - `detected_locale`: `en` (English), `pcm` (Nigerian Pidgin), or `ha` (Hausa).
+   - `origin_mention`: Verbatim origin phrase if mentioned, else `null`.
+   - `destination_mention`: Verbatim destination phrase if mentioned, else `null`.
+   - `seat_count_requested`: Integer `1` to `4` (default `1`).
+   - `safety_passed`: Boolean (`false` only if dangerous/adversarial/violent intent, else `true`).
+   - `safety_reason`: Short string explanation of safety status.
+   - `clarifying_question`: A friendly 1-sentence question in the detected locale if origin or destination is ambiguous, else `null`.
    - `confidence`: Float `0.0` to `1.0`.
-   - `needs_clarification`: Boolean.
-   - `clarification_slot`: `"origin"`, `"destination"`, `"both"`, or `null`.
+   - `has_relational_modifier`: Boolean (`true` if relative landmark like after/before/opposite used).
 
 ## 4. Few-Shot Examples
 
@@ -55,17 +53,15 @@ Output:
 ```json
 {
   "intent": "BOOK_RIDE",
-  "language": "pcm",
-  "origin_raw": "Dutse first gate",
-  "destination_raw": "Berger",
-  "relational_ref": null,
-  "seats": 2,
-  "luggage": false,
-  "women_only_preference": false,
-  "rating": null,
-  "confidence": 0.97,
-  "needs_clarification": false,
-  "clarification_slot": null
+  "detected_locale": "pcm",
+  "origin_mention": "Dutse first gate",
+  "destination_mention": "Berger",
+  "seat_count_requested": 2,
+  "safety_passed": true,
+  "safety_reason": "benign ride booking request",
+  "clarifying_question": null,
+  "has_relational_modifier": false,
+  "confidence": 0.97
 }
 ```
 
@@ -75,23 +71,15 @@ Output:
 ```json
 {
   "intent": "BOOK_RIDE",
-  "language": "en",
-  "origin_raw": "Sokale roundabout",
-  "destination_raw": "that Oando after Katampe bridge",
-  "relational_ref": {
-    "relation": "after",
-    "ordinal": 1,
-    "object_type": "Oando filling station",
-    "anchor_raw": "Katampe bridge",
-    "target_slot": "destination"
-  },
-  "seats": 1,
-  "luggage": false,
-  "women_only_preference": false,
-  "rating": null,
-  "confidence": 0.96,
-  "needs_clarification": false,
-  "clarification_slot": null
+  "detected_locale": "en",
+  "origin_mention": "Sokale roundabout",
+  "destination_mention": "that Oando after Katampe bridge",
+  "seat_count_requested": 1,
+  "safety_passed": true,
+  "safety_reason": "benign mid-corridor drop-off",
+  "clarifying_question": null,
+  "has_relational_modifier": true,
+  "confidence": 0.96
 }
 ```
 

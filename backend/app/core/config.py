@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_PRIMARY_ENV_FILE = _REPO_ROOT / ".env"
 
 
 def is_valid_secret(val: str | None) -> bool:
@@ -54,25 +58,32 @@ class Settings(BaseSettings):
     """Environment-backed runtime settings."""
 
     model_config = SettingsConfigDict(
-        env_file=(".env", "../.env", ".env.example", "../.env.example"),
+        env_file=str(_PRIMARY_ENV_FILE) if _PRIMARY_ENV_FILE.exists() else (".env", "../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
     ENV: Literal["development", "test", "production"] = "development"
-    PUBLIC_BASE_URL: str = "http://localhost:3000"
+    PUBLIC_BASE_URL: str = "http://localhost:3001"
     API_BASE_URL: str = "http://localhost:8000"
     ALLOW_SIMULATED_GPS: bool = True
 
-    DATABASE_URL: str = "postgresql://along:along_dev_password@localhost:5432/along"
-    DIRECT_DATABASE_URL: str = "postgresql://along:along_dev_password@localhost:5432/along"
-    REDIS_URL: str = "redis://localhost:6379/0"
+    DATABASE_URL: str = "postgresql://along:along_dev_password@localhost:5433/along"
+    DIRECT_DATABASE_URL: str = "postgresql://along:along_dev_password@localhost:5433/along"
+    REDIS_URL: str = "redis://localhost:6381/0"
 
-    # Primary OpenAI-Compatible LLM Endpoint (default: NVIDIA free tier)
+    # Level 1: Primary OpenAI-Compatible LLM Endpoint
     LLM_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
     LLM_API_KEY: str = ""
-    LLM_MODEL: str = "meta/muse-glimmer-30b"
+    LLM_MODEL: str = "meta/llama-3.2-11b-vision-instruct"
     LLM_PROVIDER_LABEL: str = "nvidia_free_endpoint"
+    LLM_TIMEOUT_SECONDS: int = 25
+
+    # Level 2: Fallback OpenAI-Compatible LLM Endpoint (disabled when key is empty)
+    LLM_FALLBACK_BASE_URL: str = ""
+    LLM_FALLBACK_API_KEY: str = ""
+    LLM_FALLBACK_MODEL: str = ""
+    LLM_FALLBACK_PROVIDER_LABEL: str = ""
 
     # Speech-to-Text Fallback Endpoint (Groq Whisper)
     GROQ_API_KEY: str = ""
@@ -123,6 +134,12 @@ class Settings(BaseSettings):
     def get_effective_llm_key(self) -> str | None:
         """Return LLM_API_KEY if valid, else None."""
         return self.LLM_API_KEY.strip() if is_valid_secret(self.LLM_API_KEY) else None
+
+    def get_effective_llm_fallback_key(self) -> str | None:
+        """Return LLM_FALLBACK_API_KEY if valid, else None."""
+        if is_valid_secret(self.LLM_FALLBACK_API_KEY):
+            return self.LLM_FALLBACK_API_KEY.strip()
+        return None
 
     def get_effective_groq_key(self) -> str | None:
         """Return GROQ_API_KEY if valid, else None."""

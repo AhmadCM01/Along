@@ -19,23 +19,23 @@
 
 ---
 
-## Slide 2: Why Now? (The September 2, 2026 Inflection Point)
+## Slide 2: Why Now? (The Urban Transit Inflection Point)
 
-### **Silicon Valley Ride-Hailing Failed in Nigeria. The Commuter Crisis Is Now.**
+### **Solo Ride-Hailing Is Broken for Mass Commuters. The Crisis Is Now.**
 
-1. **Uber Officially Exited Nigeria on September 2, 2026:**
-   - After 12 years, Uber shut down across Nigeria because Western solo point-to-point ride-hailing (**₦4,000 to ₦8,500 per trip**) broke under post-subsidy fuel prices (**>₦1,000/litre**) and inflation.
-2. **What Uber's Exit Left Behind in Abuja:**
-   - **Millions of daily commuters** who can no longer afford solo rides on remaining apps, forced back onto the roadside.
-   - **Thousands of vetted ex-Uber drivers** with clean vehicles who lost their dispatch platform overnight.
-3. **Why Copy-Paste Apps Fail Here:**
-   - Nigerian daily commuters do not travel point-to-point in solo cars. **85% of Abuja's daily traffic flows along 6 fixed highway corridors** (Dutse, Kubwa, Zuba, Bwari, Lugbe, and Mararaba into Wuse, Berger, and Central Area).
+1. **Solo Ride-Hailing Is Economically Unaffordable for Daily Commuters:**
+   - Western solo point-to-point ride-hailing (**₦4,000 to ₦8,500 per trip**) collapsed under post-subsidy fuel prices (**>₦1,000/litre**) and currency inflation.
+2. **The Reality for Abuja Commuters and Drivers:**
+   - **Millions of daily commuters (illustrative estimate)** can no longer afford solo rides, forced back onto chaotic roadside "Along" taxis.
+   - **Thousands of vetted commercial drivers (illustrative estimate)** with clean vehicles need sustainable daily corridor earnings without paying tout extortion.
+3. **Why Point-to-Point Apps Fail Here:**
+   - Nigerian daily commuters do not travel point-to-point in solo cars. An estimated **85% of Abuja daily traffic flows along 6 fixed highway corridors (illustrative estimate)** (Dutse, Kubwa, Zuba, Bwari, Lugbe, and Mararaba into Wuse, Berger, and Central Area).
 
 ---
 
 ## Slide 3: The 3 Broken Realities of "Along" Today
 
-### **Every Morning in Abuja, 2.5 Million Commuters Face Three Threats:**
+### **Every Morning in Abuja, an Estimated 2.5 Million Commuters (Illustrative Estimate) Face Three Threats:**
 
 1. **The Economic Squeeze (6 People in a 4-Seat Car):**
    - To cover fuel costs, informal "Along" drivers (typically Volkswagen Golfs and Corollas) force **6 passengers into a 4-seat car** (2 squeezed in the front passenger seat, 4 crushed in the back).
@@ -54,12 +54,12 @@
    - A commuter sends a text or voice note on WhatsApp:
      *"Abeg I dey second transformer after Dutse first gate, I wan drop for that Oando after Katampe bridge."*
 2. **Step 2: Hyper-Local AI & Private Forecourt Routing:**
-   - Along's **Meta `muse-spark-1.3` + FAISS Vector Engine** resolves colloquial street landmarks and directs the rider **100 meters away from the chaotic public junction** onto a safe **Virtual Anchor Point** on private commercial property (such as an *A.A. Rano*, *Oando*, or *TotalEnergies* Filling Station forecourt), where Agberos have **zero legal jurisdiction**.
+   - Along's **multilingual reasoning + FAISS Vector Engine** resolves colloquial street landmarks and directs the rider **100 meters away from the chaotic public junction** onto a safe **Virtual Anchor Point** on private commercial property (such as an *A.A. Rano*, *Oando*, or *TotalEnergies* Filling Station forecourt), where Agberos have **zero legal jurisdiction**.
 3. **Step 3: Dynamic Zone Fare & Digital Escrow:**
-   - The rider pays the exact street-competitive segment fare (**₦700** for Dutse to Oando, **₦1,000 to ₦1,200** for Dutse to Wuse) into **Along Escrow**.
+   - The rider pays the exact street-competitive segment fare (**₦700** for Dutse to Oando, **₦1,000 to ₦1,200** for Dutse to Wuse) into **Along Escrow** (Simulated escrow in demonstration mode).
 4. **Step 4: Look, Sit, 1-Tap Boarding (Zero Codes, Zero Friction):**
    - Once 4 riders heading down the corridor are matched, a verified driver arrives at the filling station forecourt.
-   - All 4 riders see the **Driver's Photo, Car Color, Plate Number (`ABJ-402-AL`), and Live 4-Seat Co-Rider Manifest** on WhatsApp.
+   - All 4 riders see the **Driver's Photo, Car Color, Plate Number (`ABJ-402-AL` [Demo data]), and Live 4-Seat Co-Rider Manifest** on WhatsApp.
    - They sit in their 4 comfortable seats (**1 Front, 3 Back**) and tap one button on WhatsApp: **`[ I Have Entered ]`**. The driver gets an instant green go-signal and departs in 10 seconds.
 
 ---
@@ -72,7 +72,7 @@ Most transit startups fail in Africa because they assume every commercial driver
 
 | Driver Segment | Device Used | How They Operate on Along |
 |---|---|---|
-| **Tier 1: Ex-Uber & Fleet Drivers** | Android / iOS Smartphone | **Dual-Theme Driver PWA (`/driver`) + WhatsApp Bot:** Live corridor map, FIFO anchor queue check-in, 30-second pod offers, live 4-seat boarding grid, and instant bank withdrawals. |
+| **Tier 1: Smartphone & Fleet Drivers** | Android / iOS Smartphone | **Dual-Theme Driver PWA (`/driver`) + WhatsApp Bot:** Live corridor map, FIFO anchor queue check-in, 30-second pod offers, live 4-seat boarding grid, and instant bank withdrawals. |
 | **Tier 2: Traditional "Along" Drivers** | Basic 2G Feature Phone (Nokia / Itel "Torchlight" Phone, Zero Internet) | **1-Key "Flash-to-Queue" + Spoken Hausa/Pidgin Voice Call:**<br>1. Driver holds **Key `1`** to "flash" (missed-call) Along at ₦0 airtime cost to join the filling station queue.<br>2. Along places an **automated spoken voice call** in Hausa/Pidgin (*"4 passengers ready at A.A. Rano Dutse, net pay ₦3,690. Press 1 to accept"*).<br>3. Riders tap **`[ I Have Entered ]`** on their own WhatsApp, and the driver's Nokia phone beeps: `ALL 4 PAID & INSIDE - OYA MOVE!` |
 
 ---
@@ -103,20 +103,20 @@ Unlike flat-rate apps, Along uses a **Dynamic Origin-to-Destination Zone Matrix*
 
 ---
 
-## Slide 7: Proprietary AI & Spatial Dispatch Engine
+## Slide 7: AI & Spatial Dispatch Engine
 
 ### **Solving Unstructured African Urban Mobility With Multimodal AI**
 
 In Abuja, commuters do not use street addresses or zip codes. They navigate by spoken, multilingual, relational landmarks (*"second transformer after Dutse first gate"*, *"Ina Dei-Dei zan tafi gadar Berger"*).
 
 1. **Multilingual Reasoning & Slot Extraction:**
-   - Powers sub-second intent and route extraction across **English, Nigerian Pidgin, and Hausa**, resolving complex relational landmarks and forecasting corridor demand in real time.
-2. **Hyper-Local Vector Search (FAISS + Quantized Embeddings):**
-   - Indexes **500+ hyper-local Abuja landmark aliases** across 6 corridors, snapping informal spoken descriptions to exact **Virtual Anchor Point** coordinates in **< 4 milliseconds**.
-3. **Computer Vision Fleet Verification:**
-   - Automatically verifies vehicle body color, license plate, and 4-seat cabin layout during Driver KYC onboarding so unverified cars never enter the network.
-4. **Two-Way Multilingual Voice Engine:**
-   - Enables two-way voice notes in Hausa, Pidgin, and English on WhatsApp and automated voice calls on 2G feature phones so every commuter and driver can use Along effortlessly.
+   - Powered by Meta open-weight models (Muse Glimmer / Llama) for intent and route extraction across **English, Nigerian Pidgin, and Hausa**, resolving complex relational landmarks.
+2. **Hyper-Local Spatial Search (Character N-Gram Hashing + FAISS):**
+   - Indexes **500+ hyper-local Abuja landmark aliases** across 6 corridors, snapping informal spoken descriptions to exact **Virtual Anchor Point** coordinates in **< 15 milliseconds**.
+3. **Computer Vision Vehicle Inspection:**
+   - Glimmer vision check inspects vehicle registration photo and plate text during onboarding to verify identity against fleet records.
+4. **Speech Recognition:**
+   - Non-Meta ASR via Groq Whisper (`whisper-large-v3-turbo`) and Meta Model API when enabled, providing spoken voice transcription on WhatsApp.
 
 ---
 
@@ -125,27 +125,27 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
 ### **Four Compounding Moats**
 
 1. **Hyper-Local Abuja Landmark & Alias Graph (Data Moat):**
-   - Google Maps and Uber do not know what *"second transformer after first gate"* or *"charley boy bus stop"* means in Pidgin or Hausa. Every ride on Along enriches our proprietary FAISS landmark index.
+   - Google Maps does not know what *"second transformer after first gate"* or *"charley boy bus stop"* means in Pidgin or Hausa. Every ride on Along enriches our landmark alias index.
 2. **Private Filling Station Forecourt Network (Physical Moat):**
    - By anchoring pickups inside private filling station forecourts (*A.A. Rano*, *Oando*, *TotalEnergies*, *NNPC*, *Conoil*), we legally bypass roadside Agbero jurisdiction while driving high-margin foot traffic to station convenience stores and fuel pumps.
 3. **Atomic Double-Entry Kobo Escrow & Mid-Corridor Reloading (Technical Moat):**
    - Our Redis Lua spatial pod matcher (`form_pod.lua`) guarantees zero overbooking under high concurrency and dynamically reloads vacated seats mid-corridor.
 4. **Zero-App-Download Distribution (Channel Moat):**
-   - Riders use WhatsApp (already on 95%+ of Nigerian smartphones). Drivers use WhatsApp, our lightweight PWA, or a 2G Nokia phone. Customer acquisition cost (CAC) is near zero.
+   - Riders use WhatsApp (already on an estimated 95%+ of Nigerian smartphones (illustrative estimate)). Drivers use WhatsApp, our lightweight PWA, or a 2G Nokia phone. Customer acquisition cost (CAC) is near zero.
 
 ---
 
-## Slide 9: Market Opportunity (TAM / SAM / SOM)
+## Slide 9: Market Opportunity (TAM / SAM / SOM) (Illustrative Estimates)
 
-### **A Multi-Billion-Dollar Daily Habit Across Emerging Markets**
+### **A Multi-Billion-Dollar Daily Habit Across Emerging Markets (Illustrative Market Estimates)**
 
-- **Abuja Initial Beachhead (SOM):**
+- **Abuja Initial Beachhead (SOM) (illustrative estimate):**
   - **6 Major Corridors** (`Bwari-Dutse-Wuse`, `Zuba-Kubwa-Wuse`, `Zuba-Dei-Dei-Dutse`, `Zuba-Karmo-Jabi`, `Gwagwalada-Lugbe-Area 1`, `Mararaba-Nyanya-Central Area`).
-  - Capturing just **25,000 daily pods** (100,000 daily passenger trips at an average pod gross of ₦4,800 and 10% take rate) = **₦12,000,000/day** (**~₦4.38 Billion / $2.7M USD annual net platform revenue** in Abuja alone).
-- **Nigeria Major Corridor Cities (SAM):**
-  - Lagos (*Berger-VI, Ikorodu-Yaba, Lekki-Ajah*), Port Harcourt, Kano, Kaduna, Ibadan = **15M+ daily corridor trips** (**$180M+ annual net fee opportunity**).
-- **Pan-African Informal Corridor Transit (TAM):**
-  - Nairobi (*Matatu stages*), Accra (*Tro-Tro corridors*), Johannesburg (*Taxi ranks*), Cairo (*Microbus routes*) = **$4.5B+ annual addressable market**.
+  - Capturing just **25,000 daily pods** (100,000 daily passenger trips at an average pod gross of ₦4,800 and 10% take rate) = **₦12,000,000/day** (**~₦4.38 Billion / $2.7M USD annual net platform revenue (illustrative estimate)** in Abuja alone).
+- **Nigeria Major Corridor Cities (SAM) (illustrative estimate):**
+  - Lagos (*Berger-VI, Ikorodu-Yaba, Lekki-Ajah*), Port Harcourt, Kano, Kaduna, Ibadan = **15M+ daily corridor trips (illustrative estimate)** (**$180M+ annual net fee opportunity (illustrative estimate)**).
+- **Pan-African Informal Corridor Transit (TAM) (illustrative estimate):**
+  - Nairobi (*Matatu stages*), Accra (*Tro-Tro corridors*), Johannesburg (*Taxi ranks*), Cairo (*Microbus routes*) = **$4.5B+ annual addressable market (illustrative estimate)**.
 
 ---
 
@@ -154,11 +154,11 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
 ### **Profitable From Day 1 With Built-In Viral Loops**
 
 1. **Revenue Streams:**
-   - **10% Corridor Dispatch Commission:** Deducted automatically upon escrow settlement.
+   - **10% Corridor Dispatch Commission:** Deducted automatically upon escrow settlement (Simulated escrow in mock mode).
    - **Weekday Morning Commuter Pass (Subscription):** Commuters lock in their daily `7:15 AM` seat Monday to Friday at a guaranteed standard-band fare.
-   - **Forecourt Partner Rebates:** Filling stations gain 500+ verified daily vehicles and 2,000+ commuters passing through their forecourts every morning.
+   - **Forecourt Partner Rebates:** Filling stations gain verified vehicles and commuters passing through their forecourts every morning.
 2. **Go-To-Market (Starting With Dutse -> Oando -> Berger -> Wuse):**
-   - **Supply First (Ex-Uber & Union-Free Drivers):** Fast-track onboarding of displaced Abuja Uber drivers and independent Golf/Corolla owners tired of paying ₦1,500/trip to Agberos.
+   - **Supply First (Commercial & Fleet Drivers):** Fast-track onboarding of vetted Abuja commercial drivers and independent Golf/Corolla owners tired of paying ₦1,500/trip to Agberos.
    - **Demand Loop (WhatsApp Co-Rider Viral Invite):** When 2 or 3 riders are waiting at *A.A. Rano Dutse*, WhatsApp gives them a 1-tap **"Invite Commuter Standing Next to You"** link to fill the 4th seat immediately.
 
 ---
@@ -167,7 +167,7 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
 
 ### **Five Reasons Along Is a Category Winner**
 
-1. **Post-Uber Market Vacuum:** Uber's September 2, 2026 exit proved that solo ride-hailing unit economics do not work for the Nigerian mass market. **4-seat corridor pooling is the only model where driver earnings and rider affordability both work.**
+1. **Mass Market Corridor Economics:** Solo ride-hailing unit economics do not work for the Nigerian mass market. **4-seat corridor pooling is the only model where driver earnings and rider affordability both work.**
 2. **Zero Subsidy Burn:** Unlike first-generation mobility startups that burned millions subsidizing rides, Along matches existing street prices (`₦600 - ₦2,000`) while saving drivers `₦1,000 - ₦1,500` in Agbero extortion per trip.
 3. **Capital-Light Infrastructure:** No consumer app store friction, no custom hardware required, and full support for existing 2G feature phones and WhatsApp.
 4. **High Daily Retention:** Commuting to work from Dutse, Kubwa, Lugbe, or Mararaba is a **10x-per-week habit**, not an occasional airport trip.
@@ -183,8 +183,8 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
   - Full-stack production platform supporting **6 Abuja corridors, 20 fare zones, 24 private filling station Virtual Anchor Points, and 500+ multilingual landmark aliases**.
   - End-to-end **WhatsApp Commuter Bot** (Text + Voice Notes in English, Pidgin, and Hausa), **Dual-Theme Driver PWA**, **2G Feature-Phone Voice/USSD channel**, **Double-Entry Kobo Escrow Ledger**, and **Operations Command Center**.
 - **12-Month Rollout Roadmap:**
-  - **Quarter 1 (Abuja Flagship Launch):** Live commercial operations on the **Bwari - Dutse First Gate - Oando - Berger - Wuse** corridor with 100 vetted drivers and 6 partner filling station forecourts (*A.A. Rano, Oando, TotalEnergies*).
-  - **Quarter 2 (FCT Corridor Expansion):** Activate the **Zuba - Dei-Dei - Kubwa** and **Mararaba - Nyanya - Central Area** corridors (500 active drivers, 10,000+ daily passenger trips).
+  - **Quarter 1 (Abuja Flagship Launch):** Commercial operations on the **Bwari - Dutse First Gate - Oando - Berger - Wuse** corridor with 100 vetted drivers and 6 partner filling station forecourts (*A.A. Rano, Oando, TotalEnergies*).
+  - **Quarter 2 (FCT Corridor Expansion):** Activate the **Zuba - Dei-Dei - Kubwa** and **Mararaba - Nyanya - Central Area** corridors.
   - **Quarter 3 (Recurring Commuter Subscriptions):** Launch **Weekday Morning Commuter Pass** subscriptions and Dedicated Virtual Account (NUBAN) instant top-ups.
   - **Quarter 4 (Multi-City Scale):** Expand blueprint to **Lagos** (*Ikorodu-Yaba, Berger-VI, Lekki-Ajah*) and **Kano / Port Harcourt**.
 - **The Opportunity for Investors & Forecourt Partners:**

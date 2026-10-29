@@ -1,19 +1,23 @@
-"""WhatsApp Voice Note Speech-to-Text (`app/ai/asr.py`).
+"""WhatsApp Voice Note Speech-to-Text (app/ai/asr.py).
 
-Primary Engine:
-- Muse Voice Transcribe (`muse-voice-transcribe`) on the Official Meta Model API (`https://api.meta.ai/v1/audio/transcriptions`),
-  conditioned with the Abuja 6-Corridor Gazetteer Vocabulary Prompt so local proper nouns
-  (`Dutse Alhaji`, `Sokale`, `Kubwa`, `Gwarinpa`, `Mabushi`, `Katampe`, `Kasuwar Wuse`, `Mararaba`)
-  are transcribed accurately without phonetic mangling.
-Secondary Fallback:
-- Groq `whisper-large-v3-turbo` with the identical Abuja Vocabulary Conditioning Prompt.
-Offline / Demo Voice Fixtures:
-- Pre-verified transcripts for the built-in Abuja Pidgin, Hausa, and English demo voice notes.
+Providers:
+1. Direct Meta Model API (when enabled):
+   - Speech model: muse-voice-transcribe-1.0
+   - Endpoint: POST /v1/asr/transcribe (multipart: 'request' JSON and 'audio' PCM WAV)
+2. Groq Whisper (when GROQ_API_KEY is configured):
+   - Model: whisper-large-v3-turbo
+   - Labeled: "Non-Meta ASR"
+3. Offline / Demo Voice Fixtures (when no keys are configured):
+   - Pre-verified sample transcripts
+   - Labeled: "Sample transcript (no ASR run)"
+   - Returns provider="local_fallback", model_used="none", fallback=True
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
+import subprocess
 import time
 from dataclasses import dataclass
 
@@ -66,7 +70,38 @@ class ASRResult:
     model_used: str
     provider: str
     latency_ms: float
+    fallback: bool = False
+    label: str = "none"
     vocabulary_prompt_applied: bool = True
+
+
+def _convert_to_pcm16_wav(raw_audio: bytes) -> bytes:
+    """Convert audio payload to 16kHz mono 16-bit PCM WAV using ffmpeg if available."""
+    try:
+        proc = subprocess.run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                "pipe:0",
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                "-f",
+                "wav",
+                "pipe:1",
+            ],
+            input=raw_audio,
+            capture_output=True,
+            check=True,
+        )
+        return proc.stdout
+    except Exception:
+        # Fallback to returning raw bytes if ffmpeg is not available on path
+        return raw_audio
 
 
 async def transcribe_voice_note(
@@ -75,70 +110,53 @@ async def transcribe_voice_note(
     filename: str = "voice_note.ogg",
     fixture_id: str | None = None,
 ) -> ASRResult:
-    """Transcribe a WhatsApp `.ogg` / `.opus` voice note using Meta Muse Voice Transcribe."""
+    """Transcribe a WhatsApp voice note with API-first routing and honest fallback."""
     start = time.perf_counter()
     settings = get_settings()
-    voice_model = settings.MUSE_VOICE_TRANSCRIBE_MODEL
 
-    stem = filename.rsplit(".", 1)[0].lower()
-    lookup_key = (fixture_id or stem).strip()
-    if lookup_key in DEMO_VOICE_FIXTURES:
-        text, lang = DEMO_VOICE_FIXTURES[lookup_key]
-        return ASRResult(
-            transcript=text,
-            detected_language=lang,
-            model_used=voice_model,
-            provider="meta_model_api_cached_fixture",
-            latency_ms=round((time.perf_counter() - start) * 1000.0, 2),
-        )
+    meta_key = settings.get_effective_meta_key()
+    groq_key = settings.get_effective_groq_key()
 
-    try:
-        decoded_stub = audio_bytes.decode("utf-8").strip()
-        if decoded_stub.startswith("TRANSCRIPT:"):
-            raw_text = decoded_stub.split("TRANSCRIPT:", 1)[1].strip()
-            return ASRResult(
-                transcript=raw_text,
-                detected_language="pcm",
-                model_used=voice_model,
-                provider="meta_voice_transcribe_stub",
-                latency_ms=round((time.perf_counter() - start) * 1000.0, 2),
-            )
-    except UnicodeDecodeError:
-        pass
-
-    meta_key = (settings.META_API_KEY or "").strip()
-    groq_key = (settings.GROQ_API_KEY or "").strip()
-
-    if meta_key and "replace_me" not in meta_key and meta_key != "test":
+    # 1. Direct Meta Model API (when enabled)
+    if meta_key:
         try:
-            url = f"{settings.META_MODEL_API_BASE_URL.rstrip('/')}/audio/transcriptions"
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            wav_bytes = _convert_to_pcm16_wav(audio_bytes)
+            url = f"{settings.META_MODEL_API_BASE_URL.rstrip('/')}/asr/transcribe"
+            req_json = {
+                "model": "muse-voice-transcribe-1.0",
+                "prompt": ABUJA_ASR_VOCABULARY_PROMPT,
+            }
+            files = {
+                "request": (None, json.dumps(req_json), "application/json"),
+                "audio": (filename.rsplit(".", 1)[0] + ".wav", wav_bytes, "audio/wav"),
+            }
+            async with httpx.AsyncClient(timeout=12.0) as client:
                 resp = await client.post(
                     url,
                     headers={"Authorization": f"Bearer {meta_key}"},
-                    data={
-                        "model": voice_model,
-                        "prompt": ABUJA_ASR_VOCABULARY_PROMPT,
-                        "response_format": "json",
-                    },
-                    files={"file": (filename, audio_bytes, "audio/ogg")},
+                    files=files,
                 )
                 resp.raise_for_status()
                 payload = resp.json()
+                returned_model = str(payload.get("model") or "muse-voice-transcribe-1.0")
+                latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
                 return ASRResult(
                     transcript=payload.get("text", "").strip(),
                     detected_language=payload.get("language", "pcm"),
-                    model_used=voice_model,
+                    model_used=returned_model,
                     provider="meta_model_api",
-                    latency_ms=round((time.perf_counter() - start) * 1000.0, 2),
+                    label="Meta Model API (Muse Voice)",
+                    latency_ms=latency_ms,
+                    fallback=False,
                 )
         except Exception as exc:
-            logger.warning("muse_voice_transcribe_fallback", error=str(exc))
+            logger.warning("meta_asr_transcribe_fallback", error=str(exc))
 
-    if groq_key and "replace_me" not in groq_key and groq_key != "test":
+    # 2. Groq Whisper (labeled Non-Meta ASR)
+    if groq_key:
         try:
             url = "https://api.groq.com/openai/v1/audio/transcriptions"
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=12.0) as client:
                 resp = await client.post(
                     url,
                     headers={"Authorization": f"Bearer {groq_key}"},
@@ -151,23 +169,47 @@ async def transcribe_voice_note(
                 )
                 resp.raise_for_status()
                 payload = resp.json()
+                returned_model = str(payload.get("model") or settings.WHISPER_MODEL)
+                latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
                 return ASRResult(
                     transcript=payload.get("text", "").strip(),
                     detected_language=payload.get("language", "pcm"),
-                    model_used=settings.WHISPER_MODEL,
-                    provider="groq_whisper_fallback",
-                    latency_ms=round((time.perf_counter() - start) * 1000.0, 2),
+                    model_used=returned_model,
+                    provider="groq_whisper",
+                    label="Non-Meta ASR",
+                    latency_ms=latency_ms,
+                    fallback=False,
                 )
         except Exception as exc:
-            logger.warning("groq_whisper_fallback_error", error=str(exc))
+            logger.warning("groq_whisper_error", error=str(exc))
 
-    digest_idx = int(hashlib.sha256(audio_bytes or b"default").hexdigest(), 16) % len(DEMO_VOICE_FIXTURES)
-    default_key = list(DEMO_VOICE_FIXTURES.keys())[digest_idx]
-    text, lang = DEMO_VOICE_FIXTURES[default_key]
+    # 3. Offline / Demo Voice Fixtures (Honest Fallback)
+    stem = filename.rsplit(".", 1)[0].lower()
+    lookup_key = (fixture_id or stem).strip()
+    if lookup_key in DEMO_VOICE_FIXTURES:
+        text, lang = DEMO_VOICE_FIXTURES[lookup_key]
+    else:
+        try:
+            decoded_stub = audio_bytes.decode("utf-8").strip()
+            if decoded_stub.startswith("TRANSCRIPT:"):
+                text = decoded_stub.split("TRANSCRIPT:", 1)[1].strip()
+                lang = "pcm"
+            else:
+                digest_idx = int(hashlib.sha256(audio_bytes or b"default").hexdigest(), 16) % len(DEMO_VOICE_FIXTURES)
+                default_key = list(DEMO_VOICE_FIXTURES.keys())[digest_idx]
+                text, lang = DEMO_VOICE_FIXTURES[default_key]
+        except Exception:
+            digest_idx = int(hashlib.sha256(audio_bytes or b"default").hexdigest(), 16) % len(DEMO_VOICE_FIXTURES)
+            default_key = list(DEMO_VOICE_FIXTURES.keys())[digest_idx]
+            text, lang = DEMO_VOICE_FIXTURES[default_key]
+
+    latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
     return ASRResult(
         transcript=text,
         detected_language=lang,
-        model_used=voice_model,
-        provider="offline_demo_fallback",
-        latency_ms=round((time.perf_counter() - start) * 1000.0, 2),
+        model_used="none",
+        provider="local_fallback",
+        label="Sample transcript (no ASR run)",
+        latency_ms=latency_ms,
+        fallback=True,
     )

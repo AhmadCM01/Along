@@ -167,7 +167,7 @@ export function DriverCabinSimulator({
             >
               <div style={{ color: "#93C5FD", fontWeight: 700 }}>[SMS DISPATCH MANIFEST]</div>
               <div style={{ marginTop: 2 }}>
-                Pod POD-842A: {totalRiders} Seats. Pickup: {anchorName}. Dial *384*247*2*4829# to capture escrow.
+                Pod POD-842A [Demo data]: {totalRiders} Seats. Pickup: {anchorName}. Dial *384*247*2*4829# to capture escrow (Simulated escrow).
               </div>
             </div>
           </div>
@@ -187,13 +187,13 @@ export function DriverCabinSimulator({
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#008751" }}>
-                    ONLINE CORRIDOR DRIVER
+                    ONLINE CORRIDOR DRIVER [Demo driver profile]
                   </div>
                   <div style={{ fontWeight: 800, fontSize: 15, color: "#0A1410" }}>
-                    Musa Danjuma (Toyota Corolla)
+                    Demo driver profile: Musa Danjuma (Toyota Corolla)
                   </div>
                   <div className="tabular-nums" style={{ fontSize: 12, color: "#374740" }}>
-                    Plate: <strong>ABJ-412K</strong> • Corridor: {corridorId}
+                    Plate: <strong>ABJ-412K</strong> [Demo data] • Corridor: {corridorId}
                   </div>
                 </div>
 
@@ -399,14 +399,14 @@ export function DriverCabinSimulator({
                     cursor: "pointer",
                   }}
                 >
-                  {otpCaptured ? "✓ OTP Verified: Escrow Captured!" : "Verify OTP & Capture Escrow"}
+                  {otpCaptured ? "✓ OTP Verified: Simulated Escrow Captured!" : "Verify OTP & Capture Simulated Escrow"}
                 </button>
               </div>
             </div>
           </>
         )}
 
-        {/* SAM 3.1 Driver Vehicle KYC Verification Badge */}
+        {/* Driver Vehicle Verification Badge */}
         <div
           style={{
             background: driverMode === "FEATURE_PHONE_2G" ? "#16241E" : "#E8F0EC",
@@ -422,10 +422,10 @@ export function DriverCabinSimulator({
           <ShieldCheckIcon size={16} color="#008751" />
           <div>
             <div style={{ fontWeight: 700, color: "#008751" }}>
-              [Meta SAM 3.1: sam-3.1] KYC Certified Sedan
+              [Glimmer vision check] Plate Verified: ABJ-412K [Demo data]
             </div>
             <div className="tabular-nums" style={{ color: driverMode === "FEATURE_PHONE_2G" ? "#9FB0A7" : "#374740" }}>
-              Cabin Mask IoU: 0.94 • Plate: ABJ-412K • 4 Passengers Approved
+              Plate &amp; Color Check • 4 Passengers Approved (Demo driver profile)
             </div>
           </div>
         </div>

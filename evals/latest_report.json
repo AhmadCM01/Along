@@ -1,5 +1,6 @@
 {
   "all_gates_passed": true,
+  "eval_note": "Rule-based pipeline only. No live model used.",
   "extraction": {
     "total_cases": 15,
     "schema_valid_rate": 1.0,
@@ -12,7 +13,7 @@
     "recall_at_1": 1.0,
     "recall_at_3": 1.0,
     "mrr": 1.0,
-    "p95_latency_ms": 3.083
+    "p95_latency_ms": 6.195
   },
   "safety_guard": {
     "total_cases": 9,
@@ -20,10 +21,10 @@
     "injection_block_rate": 1.0,
     "false_positive_rate": 0.0,
     "overall_accuracy": 1.0,
-    "max_latency_ms": 0.02
+    "max_latency_ms": 0.039
   },
-  "muse_wonder_judge": {
-    "model_judge": "muse-wonder",
+  "conversation_rubric_judge": {
+    "model_judge": "deterministic_rubric",
     "overall_score": 1.0,
     "verdict": "PASS"
   }

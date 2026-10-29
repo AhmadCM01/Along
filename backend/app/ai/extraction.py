@@ -1,11 +1,12 @@
-"""3-Tier Multilingual Intent & Slot Extraction Engine (`app/ai/extraction.py`).
+"""Multilingual Intent & Slot Extraction Engine (`app/ai/extraction.py`).
 
-Tier 1: Meta Model API `Muse Spark` (`muse-spark-1.3`) / `Llama 3.1 8B` fast extraction.
-Tier 2: Escalation to `Muse Wonder` (`muse-wonder`) / `Llama 3.3 70B` when confidence < 0.78
-        or relational landmarks (`has_relational_modifier`) are detected.
-Tier 3: High-precision deterministic Abuja Multilingual Grammar & Gazetteer Extractor
-        (guarantees 100% schema validity and F1 >= 0.92 across English, Nigerian Pidgin,
-        and Hausa even in offline/CI test environments).
+Model chain (see app/ai/llm.py), one merged extraction + safety + clarification prompt:
+Level 1: primary model (LLM_* env vars), configured timeout and one retry.
+Level 2: fallback model (LLM_FALLBACK_* env vars), configured timeout and one retry.
+Level 3: High-precision deterministic Abuja Multilingual Grammar & Gazetteer Extractor
+        (rule-based, fallback=True; guarantees schema validity across English,
+        Nigerian Pidgin, and Hausa even in offline/CI test environments).
+The level that answered is recorded as `llm_level` in the returned trace metadata.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from pathlib import Path
 from typing import Literal
 
 from app.ai.landmarks.builder import get_active_landmark_index
-from app.ai.llm import MetaLLMClient
+from app.ai.llm import MetaLLMClient, label_model
 from app.ai.schemas import ExtractionOutput, LandmarkKindLiteral, RelationalRef
 from app.core.logging import get_logger
 
@@ -223,7 +224,7 @@ def extract_deterministic(
             seat_count_requested=seats,
             confidence=0.99,
             reasoning_brief="SOS / distress keyword detected.",
-            model_used="muse-spark-1.3",
+            model_used="none",
         )
 
     # 2. Check Cancel intent
@@ -237,7 +238,7 @@ def extract_deterministic(
             seat_count_requested=seats,
             confidence=0.96,
             reasoning_brief="Cancel booking intent detected.",
-            model_used="muse-spark-1.3",
+            model_used="none",
         )
 
     # 3. Check Confirm intent
@@ -251,7 +252,7 @@ def extract_deterministic(
             seat_count_requested=seats,
             confidence=0.97,
             reasoning_brief="Explicit confirmation detected.",
-            model_used="muse-spark-1.3",
+            model_used="none",
         )
 
     # 4. Check Status intent
@@ -266,7 +267,7 @@ def extract_deterministic(
             seat_count_requested=seats,
             confidence=0.95,
             reasoning_brief="Status check intent detected.",
-            model_used="muse-spark-1.3",
+            model_used="none",
         )
 
     # 5. Check Rating intent
@@ -280,7 +281,7 @@ def extract_deterministic(
             seat_count_requested=1,
             confidence=0.98,
             reasoning_brief=f"Extracted {stars}-star trip rating.",
-            model_used="muse-spark-1.3",
+            model_used="none",
         )
 
     # 6. Extract Origin & Destination via bilingual/trilingual transit grammar patterns
@@ -347,7 +348,6 @@ def extract_deterministic(
 
     if origin_raw or destination_raw or rel_ref is not None:
         intent_val = "PROVIDE_SLOT" if missing_slot_context else "BOOK_RIDE"
-        model_val = "muse-wonder" if rel_ref is not None else "muse-spark-1.3"
         return ExtractionOutput(
             detected_locale=lang,
             intent=intent_val,
@@ -358,8 +358,8 @@ def extract_deterministic(
             seat_count_requested=seats,
             has_relational_modifier=rel_ref is not None,
             confidence=0.95,
-            reasoning_brief="Extracted Abuja corridor route slots.",
-            model_used=model_val,
+            reasoning_brief="Extracted Abuja corridor route slots via rule-based patterns.",
+            model_used="none",
         )
 
     if re.search(r"\b(?:hello|hi|hey|good\s+morning|how\s+far|sannu|ina\s+kwana|help|how\s+it\s+works)\b", lower):
@@ -369,7 +369,7 @@ def extract_deterministic(
             seat_count_requested=1,
             confidence=0.90,
             reasoning_brief="Greeting or general help inquiry.",
-            model_used="muse-spark-1.3",
+            model_used="none",
         )
 
     return ExtractionOutput(
@@ -378,7 +378,7 @@ def extract_deterministic(
         seat_count_requested=1,
         confidence=0.55,
         reasoning_brief="No recognizable transit intent or landmark found.",
-        model_used="muse-spark-1.3",
+        model_used="none",
     )
 
 
@@ -388,50 +388,86 @@ async def extract_intent_and_slots(
     missing_slot_context: Literal["origin", "destination"] | None = None,
     llm_client: MetaLLMClient | None = None,
 ) -> tuple[ExtractionOutput, dict[str, object]]:
-    """Run the 3-tier Meta Muse Spark -> Muse Wonder -> Deterministic Abuja NLU pipeline."""
+    """Run entity extraction through primary -> fallback -> rule-based, recording the level."""
     start = time.perf_counter()
     client = llm_client or MetaLLMClient()
     system_prompt = _load_system_prompt()
+    chain_error: str | None = None
+    attempts: list[dict[str, object]] = []
 
     if client.is_live_api_configured():
         try:
-            fast_res = await client.complete_json(
+            res = await client.complete_json(
                 system_prompt=system_prompt,
                 user_message=utterance,
-                tier="fast",
                 temperature=0.0,
+                max_tokens=1024,
+                validate=ExtractionOutput.model_validate,
             )
-            if fast_res.parsed_json:
-                parsed = ExtractionOutput.model_validate(fast_res.parsed_json)
-                if parsed.confidence < 0.78 or parsed.has_relational_modifier:
-                    reason_res = await client.complete_json(
-                        system_prompt=system_prompt,
-                        user_message=utterance,
-                        tier="reasoning",
-                        temperature=0.0,
-                    )
-                    if reason_res.parsed_json:
-                        parsed_reason = ExtractionOutput.model_validate(reason_res.parsed_json)
-                        return parsed_reason, {
-                            "tier": "tier2_muse_wonder",
-                            "model": reason_res.model_used,
-                            "provider": reason_res.provider,
-                            "latency_ms": reason_res.latency_ms,
-                        }
+            attempts = list(res.attempts)
+            if res.parsed_json is not None and res.level != "rule_based":
+                parsed = ExtractionOutput.model_validate({**res.parsed_json, "model_used": res.model_used})
                 return parsed, {
-                    "tier": "tier1_muse_spark",
-                    "model": fast_res.model_used,
-                    "provider": fast_res.provider,
-                    "latency_ms": fast_res.latency_ms,
+                    "tier": "live_llm",
+                    "llm_level": res.level,
+                    "model": res.model_used,
+                    "label": label_model(res.model_used),
+                    "provider": res.provider,
+                    "latency_ms": res.latency_ms,
+                    "fallback": False,
+                    "attempts": attempts,
                 }
+            chain_error = res.error
         except Exception as exc:
-            logger.warning("llm_extraction_fallback_to_deterministic", error=str(exc))
+            chain_error = f"{type(exc).__name__}: {str(exc)[:200]}"
+            logger.warning("llm_extraction_fallback_to_deterministic", error=chain_error)
 
     output = extract_deterministic(utterance, missing_slot_context=missing_slot_context)
     latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
     return output, {
-        "tier": "tier3_deterministic_abuja_nlu",
-        "model": output.model_used,
-        "provider": "local_deterministic",
+        "tier": "rule_based_fallback",
+        "llm_level": "rule_based",
+        "model": "none",
+        "label": "none",
+        "provider": "local_fallback",
         "latency_ms": latency_ms,
+        "fallback": True,
+        "chain_error": chain_error,
+        "attempts": attempts,
     }
+
+
+async def generate_disambiguation_clarification(
+    landmark_query: str,
+    candidates: list[str],
+    locale: str,
+    llm_client: MetaLLMClient | None = None,
+) -> tuple[str, bool]:
+    """Generate a natural clarifying question using Glimmer or honest rule fallback."""
+    client = llm_client or MetaLLMClient()
+    if client.is_live_api_configured():
+        sys_prompt = (
+            f"You are Along AI, an Abuja corridor transit bot. The user said '{landmark_query}', "
+            f"which matches multiple locations: {candidates}. "
+            f"Ask a friendly, 1-sentence clarifying question in {locale} (English, Nigerian Pidgin, or Hausa). "
+            "Return JSON: {\"clarification\": \"<question>\"}"
+        )
+        try:
+            res = await client.complete_json(
+                system_prompt=sys_prompt,
+                user_message=landmark_query,
+                max_tokens=128,
+                validate=lambda d: d["clarification"],
+            )
+            if res.parsed_json and "clarification" in res.parsed_json:
+                return str(res.parsed_json["clarification"]), False
+        except Exception as exc:
+            logger.warning("clarification_generation_fallback", error=str(exc))
+
+    opts_str = " or ".join(candidates[:3])
+    if locale == "ha":
+        return f"Wane wurin kake nufi: {opts_str}?", True
+    if locale == "pcm":
+        return f"Which one you mean: {opts_str}?", True
+    return f"Which location did you mean: {opts_str}?", True
+

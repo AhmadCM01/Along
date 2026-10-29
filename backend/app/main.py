@@ -13,6 +13,7 @@ from app.api.v1.demo_emulator import router as demo_emulator_router
 from app.api.v1.driver_ussd import router as driver_ussd_router
 from app.api.v1.drivers import router as drivers_router
 from app.api.v1.ops import router as ops_router
+from app.api.v1.status import router as status_router
 from app.api.v1.trips_public import router as trips_public_router
 from app.api.v1.webhooks_payments import router as payments_webhook_router
 from app.api.v1.webhooks_whatsapp import router as whatsapp_webhook_router
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(driver_ussd_router)
     app.include_router(trips_public_router)
     app.include_router(ops_router)
+    app.include_router(status_router)
     app.include_router(demo_emulator_router)
 
     return app

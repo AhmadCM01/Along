@@ -64,6 +64,9 @@ class ExtractionOutput(BaseModel):
     seat_count_requested: int = Field(default=1, ge=1, le=4)
     rating_stars: int | None = Field(default=None, ge=1, le=5)
     has_relational_modifier: bool = False
+    safety_passed: bool = True
+    safety_reason: str = Field(default="Safe transit message", max_length=200)
+    clarifying_question: str | None = None
     confidence: float = Field(default=0.9, ge=0.0, le=1.0)
     reasoning_brief: str = Field(default="Extracted route slots.", max_length=160)
-    model_used: str = Field(default="muse-spark-1.3")
+    model_used: str = Field(default="none")

@@ -89,25 +89,16 @@ async def list_corridor_drivers() -> dict[str, Any]:
 
 @router.post("/kyc/verify-vehicle")
 async def verify_driver_vehicle_sam(payload: VehicleKYCInput) -> dict[str, Any]:
-    """Segment and verify a driver's vehicle photo during KYC using Meta SAM 3.1 (`sam-3.1`)."""
+    """Verify a driver's vehicle photo during KYC using Llama vision check."""
     raw_bytes = payload.image_base64.encode("utf-8")
     res = await verify_vehicle_photo_sam(
         raw_bytes,
         expected_plate=payload.plate_number,
         declared_seats=payload.declared_seats,
     )
-    return {
-        "driver_id": payload.driver_id,
-        "verified": res.verified,
-        "model_used": res.model_used,
-        "vehicle_mask_iou": res.vehicle_mask_iou,
-        "plate_detected": res.plate_detected,
-        "plate_bbox": list(res.plate_bbox),
-        "verified_seat_capacity": res.verified_seat_capacity,
-        "dominant_vehicle_type": res.dominant_vehicle_type,
-        "latency_ms": res.latency_ms,
-        "verification_note": res.verification_note,
-    }
+    result = res.to_dict()
+    result["driver_id"] = payload.driver_id
+    return result
 
 
 @router.post("/{driver_id}/status")

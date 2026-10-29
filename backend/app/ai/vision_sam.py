@@ -1,20 +1,19 @@
-"""Meta SAM 3.1 (`sam-3.1`) Driver KYC Vehicle & Cabin Verification (`app/ai/vision_sam.py`).
+"""Vehicle Check via Vision Model (app/ai/vision_sam.py).
 
-Uses Meta's Segment Anything Model (`SAM 3.1`) via the Official Meta Model API
-to segment and verify:
-1. Vehicle exterior body (sedan / hatchback / space wagon) and dominant color.
-2. Nigerian FCT/state license plate bounding region (`plate_bbox`).
-3. Interior 4-seat passenger cabin (`verified_seat_capacity == 4`).
-
-Executed strictly once during Driver KYC Onboarding (`POST /api/v1/drivers/kyc/verify-vehicle`),
-keeping the real-time ride-matching path 100% zero-vision-latency.
+Vehicle check sends driver car photo to configured vision model (e.g. Llama Vision)
+to extract visible plate text and car colour as JSON, comparing against the registered plate.
+Labeled: "Llama vision check".
+If the confidence is low or the plate is not legible, it reports that instead of passing.
+Fallback paths return provider="local_fallback", model_used="none", fallback=True.
 """
 
 from __future__ import annotations
 
 import base64
+import json
 import time
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 
@@ -25,88 +24,182 @@ logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
-class SAMVehicleVerificationResult:
-    """Structured output of SAM 3.1 Driver KYC vehicle photo segmentation."""
+class VehicleCheckResult:
+    """Structured output of the driver vehicle photo check."""
 
     verified: bool
     model_used: str
-    vehicle_mask_iou: float
-    plate_detected: bool
-    plate_bbox: tuple[float, float, float, float]
-    verified_seat_capacity: int
-    dominant_vehicle_type: str
+    provider: str
+    label: str
+    fallback: bool
+    plate_extracted: str
+    color_extracted: str
+    plate_matched: bool
     latency_ms: float
     verification_note: str
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "verified": self.verified,
+            "model_used": self.model_used,
+            "provider": self.provider,
+            "label": self.label,
+            "fallback": self.fallback,
+            "plate_extracted": self.plate_extracted,
+            "color_extracted": self.color_extracted,
+            "plate_matched": self.plate_matched,
+            "latency_ms": self.latency_ms,
+            "verification_note": self.verification_note,
+        }
 
+
+# Type alias for backward compatibility with existing tests
+SAMVehicleVerificationResult = VehicleCheckResult
+
+
+async def check_vehicle_photo_vision(
+    image_bytes: bytes,
+    *,
+    expected_plate: str = "ABJ-412K",
+    declared_seats: int = 4,
+) -> VehicleCheckResult:
+    """Extract plate text and vehicle color via configured vision model with honest fallback."""
+    start = time.perf_counter()
+    settings = get_settings()
+    llm_key = settings.get_effective_llm_key()
+
+    if not image_bytes or len(image_bytes) < 16:
+        return VehicleCheckResult(
+            verified=False,
+            model_used="none",
+            provider="local_fallback",
+            label="Llama vision check",
+            fallback=True,
+            plate_extracted="",
+            color_extracted="",
+            plate_matched=False,
+            latency_ms=round((time.perf_counter() - start) * 1000.0, 2),
+            verification_note="Invalid or empty vehicle image payload.",
+        )
+
+    if llm_key:
+        try:
+            b64_img = base64.b64encode(image_bytes).decode("ascii")
+            url = f"{settings.LLM_BASE_URL.rstrip('/')}/chat/completions"
+            prompt = (
+                "Look at this vehicle photo. Extract the license plate number, vehicle colour, "
+                "confidence (HIGH, MEDIUM, LOW), and whether the plate is legible (true or false). "
+                "Respond in JSON format only: {\"plate\": \"<plate_text>\", \"color\": \"<car_color>\", "
+                "\"legible\": true, \"confidence\": \"HIGH\"}."
+            )
+            payload = {
+                "model": settings.LLM_MODEL,
+                "temperature": 0.0,
+                "max_tokens": 128,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"},
+                            },
+                        ],
+                    }
+                ],
+            }
+            timeout_val = float(settings.LLM_TIMEOUT_SECONDS)
+            async with httpx.AsyncClient(timeout=timeout_val) as client:
+                resp = await client.post(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {llm_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+
+            raw_txt = data["choices"][0]["message"]["content"]
+            model_id = str(data.get("model") or settings.LLM_MODEL)
+            # Parse JSON from content
+            clean = raw_txt.strip()
+            if "```json" in clean:
+                clean = clean.split("```json", 1)[1].split("```", 1)[0].strip()
+            elif "```" in clean:
+                clean = clean.split("```", 1)[1].split("```", 1)[0].strip()
+            parsed = json.loads(clean)
+
+            is_legible = bool(parsed.get("legible", True))
+            confidence = str(parsed.get("confidence", "HIGH")).upper()
+            extracted_plate = str(parsed.get("plate", "")).upper().replace(" ", "").replace("-", "")
+            expected_clean = expected_plate.upper().replace(" ", "").replace("-", "")
+            color = str(parsed.get("color", "unknown"))
+            latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
+
+            if not is_legible or confidence == "LOW" or not extracted_plate:
+                return VehicleCheckResult(
+                    verified=False,
+                    model_used=model_id,
+                    provider=settings.LLM_PROVIDER_LABEL,
+                    label="Llama vision check",
+                    fallback=False,
+                    plate_extracted=extracted_plate,
+                    color_extracted=color,
+                    plate_matched=False,
+                    latency_ms=latency_ms,
+                    verification_note="Plate is not legible or confidence is low in vehicle photo.",
+                )
+
+            matched = bool(extracted_plate and (extracted_plate in expected_clean or expected_clean in extracted_plate))
+            note = (
+                f"Llama vision check: verified plate {extracted_plate} ({color}), matched {expected_plate}"
+                if matched
+                else f"Llama vision check: extracted plate {extracted_plate} ({color}) does not match {expected_plate}"
+            )
+
+            return VehicleCheckResult(
+                verified=matched,
+                model_used=model_id,
+                provider=settings.LLM_PROVIDER_LABEL,
+                label="Llama vision check",
+                fallback=False,
+                plate_extracted=extracted_plate,
+                color_extracted=color,
+                plate_matched=matched,
+                latency_ms=latency_ms,
+                verification_note=note,
+            )
+        except Exception as exc:
+            logger.warning("llama_vision_check_failed_fallback", error=str(exc))
+
+    latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
+    return VehicleCheckResult(
+        verified=False,
+        model_used="none",
+        provider="local_fallback",
+        label="Llama vision check",
+        fallback=True,
+        plate_extracted="",
+        color_extracted="",
+        plate_matched=False,
+        latency_ms=latency_ms,
+        verification_note="Vision model not configured or call failed; fallback used.",
+    )
+
+
+# Backward-compatible wrapper
 async def verify_vehicle_photo_sam(
     image_bytes: bytes,
     *,
     expected_plate: str = "ABJ-412K",
     declared_seats: int = 4,
-) -> SAMVehicleVerificationResult:
-    """Segment and verify a driver's vehicle photo using Meta SAM 3.1 (`sam-3.1`)."""
-    start = time.perf_counter()
-    settings = get_settings()
-    sam_model = settings.SAM_MODEL
-    meta_key = (settings.META_API_KEY or "").strip()
-
-    if not image_bytes or len(image_bytes) < 16:
-        return SAMVehicleVerificationResult(
-            verified=False,
-            model_used=sam_model,
-            vehicle_mask_iou=0.0,
-            plate_detected=False,
-            plate_bbox=(0.0, 0.0, 0.0, 0.0),
-            verified_seat_capacity=0,
-            dominant_vehicle_type="unknown",
-            latency_ms=round((time.perf_counter() - start) * 1000.0, 2),
-            verification_note="Invalid or empty vehicle image payload.",
-        )
-
-    if meta_key and "replace_me" not in meta_key and meta_key != "test":
-        try:
-            b64_img = base64.b64encode(image_bytes).decode("ascii")
-            url = f"{settings.META_MODEL_API_BASE_URL.rstrip('/')}/vision/segment"
-            async with httpx.AsyncClient(timeout=8.0) as client:
-                resp = await client.post(
-                    url,
-                    headers={
-                        "Authorization": f"Bearer {meta_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": sam_model,
-                        "image_base64": b64_img,
-                        "text_prompts": ["car body", "license plate", "passenger seats"],
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                iou = float(data.get("vehicle_mask_iou", 0.94))
-                return SAMVehicleVerificationResult(
-                    verified=iou >= 0.75,
-                    model_used=sam_model,
-                    vehicle_mask_iou=iou,
-                    plate_detected=True,
-                    plate_bbox=tuple(data.get("plate_bbox", [0.34, 0.68, 0.66, 0.79])),  # type: ignore[arg-type]
-                    verified_seat_capacity=int(data.get("verified_seat_capacity", declared_seats)),
-                    dominant_vehicle_type=str(data.get("dominant_vehicle_type", "Sedan (4-Passenger Corridor Car)")),
-                    latency_ms=round((time.perf_counter() - start) * 1000.0, 2),
-                    verification_note=f"SAM 3.1 verified vehicle body and plate region ({expected_plate}).",
-                )
-        except Exception as exc:
-            logger.warning("sam_3_1_api_fallback", error=str(exc))
-
-    seat_cap = max(1, min(declared_seats, 4))
-    return SAMVehicleVerificationResult(
-        verified=True,
-        model_used=sam_model,
-        vehicle_mask_iou=0.94,
-        plate_detected=True,
-        plate_bbox=(0.34, 0.68, 0.66, 0.79),
-        verified_seat_capacity=seat_cap,
-        dominant_vehicle_type="Sedan (4-Passenger Corridor Car)",
-        latency_ms=round((time.perf_counter() - start) * 1000.0, 2),
-        verification_note=f"SAM 3.1 segmented vehicle body (IoU 0.94), license plate ({expected_plate}), and {seat_cap}-seat cabin.",
+) -> VehicleCheckResult:
+    """Backward-compatible entry point delegating to check_vehicle_photo_vision."""
+    return await check_vehicle_photo_vision(
+        image_bytes,
+        expected_plate=expected_plate,
+        declared_seats=declared_seats,
     )

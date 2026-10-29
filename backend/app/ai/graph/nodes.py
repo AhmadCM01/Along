@@ -8,8 +8,9 @@ from typing import Any
 from app.ai.asr import transcribe_voice_note
 from app.ai.extraction import extract_intent_and_slots
 from app.ai.graph.state import ConversationSessionState, DisambiguationOption
-from app.ai.guard import check_input_safety
+from app.ai.guard import check_input_safety, check_safety_with_glimmer
 from app.ai.landmarks.resolver import resolve_landmark_mention, resolve_route_and_quote
+from app.ai.llm import label_model
 from app.ai.templates import render_template
 from app.core.ids import generate_boarding_otp, generate_short_code, generate_share_token, new_uuid7_str
 from app.core.money import format_naira
@@ -36,6 +37,9 @@ async def execute_conversation_turn(
     state.turn_count += 1
     state.last_buttons = []
 
+    traces: list[dict[str, Any]] = []
+    any_fallback = False
+
     xray: dict[str, Any] = {
         "turn": state.turn_count,
         "prev_stage": state.stage,
@@ -43,6 +47,9 @@ async def execute_conversation_turn(
         "guard": None,
         "extraction": None,
         "resolution": None,
+        "traces": traces,
+        "fallback": False,
+        "fallback_banner": None,
     }
 
     # 1. ASR Node (if voice note payload provided)
@@ -55,33 +62,68 @@ async def execute_conversation_turn(
         )
         effective_text = asr_res.transcript
         state.locale = asr_res.detected_language if asr_res.detected_language in ("en", "pcm", "ha") else state.locale  # type: ignore[assignment]
-        xray["asr"] = {
-            "transcript": asr_res.transcript,
-            "detected_language": asr_res.detected_language,
+        asr_trace = {
+            "stage": "asr",
+            "provider_label": asr_res.provider,
+            "model_id": asr_res.model_used,
             "model_used": asr_res.model_used,
-            "provider": asr_res.provider,
+            "label": asr_res.label if asr_res.label != "none" else label_model(asr_res.model_used),
             "latency_ms": asr_res.latency_ms,
+            "input_truncated": audio_filename[:60],
+            "output_truncated": asr_res.transcript[:100],
+            "status": "fallback" if asr_res.fallback else "ok",
+            "fallback": asr_res.fallback,
         }
+        traces.append(asr_trace)
+        if asr_res.fallback:
+            any_fallback = True
+        xray["asr"] = asr_trace
 
-    # 2. Safety Guard Node (< 2ms SOS & prompt-injection check)
-    guard_res = check_input_safety(effective_text)
-    xray["guard"] = {
-        "verdict": guard_res.verdict,
-        "reason": guard_res.reason,
-        "latency_ms": guard_res.latency_ms,
-    }
-
-    if guard_res.verdict == "SOS_TRIGGER":
+    # 2. Fast Rule-Based Safety Gate (< 2ms deterministic regex)
+    rule_guard = check_input_safety(effective_text)
+    if rule_guard.verdict == "SOS_TRIGGER":
+        guard_trace = {
+            "stage": "safety_guard",
+            "provider_label": rule_guard.provider,
+            "model_id": rule_guard.model_used,
+            "label": "Deterministic safety gate",
+            "llm_level": rule_guard.llm_level,
+            "latency_ms": rule_guard.latency_ms,
+            "input_truncated": effective_text[:100],
+            "output_truncated": f"verdict={rule_guard.verdict}, reason={rule_guard.reason}",
+            "status": "fallback" if rule_guard.fallback else "ok",
+            "fallback": rule_guard.fallback,
+        }
+        traces.append(guard_trace)
+        xray["guard"] = guard_trace
         state.stage = "SOS_ACTIVE"
         state.last_reply_text = render_template("sos_triggered", state.locale)
         xray["next_stage"] = state.stage
+        xray["fallback"] = any_fallback or rule_guard.fallback
+        xray["fallback_banner"] = "Fallback mode: no Meta model used for part of this request" if (any_fallback or rule_guard.fallback) else None
         xray["total_turn_ms"] = round((time.perf_counter() - turn_start) * 1000.0, 2)
         state.xray_trace = xray
         return state
 
-    if guard_res.verdict == "BLOCKED":
+    if rule_guard.verdict == "BLOCKED":
+        guard_trace = {
+            "stage": "safety_guard",
+            "provider_label": rule_guard.provider,
+            "model_id": rule_guard.model_used,
+            "label": "Deterministic safety gate",
+            "llm_level": rule_guard.llm_level,
+            "latency_ms": rule_guard.latency_ms,
+            "input_truncated": effective_text[:100],
+            "output_truncated": f"verdict={rule_guard.verdict}, reason={rule_guard.reason}",
+            "status": "fallback" if rule_guard.fallback else "ok",
+            "fallback": rule_guard.fallback,
+        }
+        traces.append(guard_trace)
+        xray["guard"] = guard_trace
         state.last_reply_text = render_template("blocked_message", state.locale)
         xray["next_stage"] = state.stage
+        xray["fallback"] = any_fallback or rule_guard.fallback
+        xray["fallback_banner"] = "Fallback mode: no Meta model used for part of this request" if (any_fallback or rule_guard.fallback) else None
         xray["total_turn_ms"] = round((time.perf_counter() - turn_start) * 1000.0, 2)
         state.xray_trace = xray
         return state
@@ -127,13 +169,59 @@ async def execute_conversation_turn(
     elif state.stage in ("AWAITING_DESTINATION", "DISAMBIGUATING_DEST"):
         missing_context = "destination"
 
-    # 5. Multilingual Slot Extraction Node (Muse Spark -> Muse Wonder -> Deterministic Abuja NLU)
+    # 5. Multilingual Slot Extraction Node (Unified extraction, safety and clarification)
     extracted, ext_meta = await extract_intent_and_slots(
         effective_text,
         missing_slot_context=missing_context,  # type: ignore[arg-type]
     )
     if state.turn_count == 1 or extracted.detected_locale != "en":
         state.locale = extracted.detected_locale
+
+    ext_fallback = bool(ext_meta.get("fallback", True))
+    ext_model = str(ext_meta.get("model", "none"))
+    ext_provider = str(ext_meta.get("provider", "local_fallback"))
+    ext_latency = float(ext_meta.get("latency_ms", 0.0))
+    ext_level = str(ext_meta.get("llm_level", "rule_based"))
+    extraction_trace = {
+        "stage": "extraction",
+        "provider_label": ext_provider,
+        "model_id": ext_model,
+        "label": label_model(ext_model),
+        "llm_level": ext_level,
+        "latency_ms": ext_latency,
+        "input_truncated": effective_text[:100],
+        "output_truncated": f"intent={extracted.intent}, orig={extracted.origin_mention}, dest={extracted.destination_mention}, seats={extracted.seat_count_requested}",
+        "status": "fallback" if ext_fallback else "ok",
+        "fallback": ext_fallback,
+    }
+    traces.append(extraction_trace)
+    if ext_fallback:
+        any_fallback = True
+
+    # Record safety classification from the unified single-call LLM response
+    guard_trace = {
+        "stage": "safety_guard",
+        "provider_label": ext_provider,
+        "model_id": ext_model,
+        "label": label_model(ext_model),
+        "llm_level": ext_level,
+        "latency_ms": ext_latency,
+        "input_truncated": effective_text[:100],
+        "output_truncated": f"passed={extracted.safety_passed}, reason={extracted.safety_reason}",
+        "status": "fallback" if ext_fallback else "ok",
+        "fallback": ext_fallback,
+    }
+    traces.append(guard_trace)
+    xray["guard"] = guard_trace
+
+    if not extracted.safety_passed:
+        state.last_reply_text = render_template("blocked_message", state.locale)
+        xray["next_stage"] = state.stage
+        xray["fallback"] = any_fallback or ext_fallback
+        xray["fallback_banner"] = "Fallback mode: no Meta model used for part of this request" if (any_fallback or ext_fallback) else None
+        xray["total_turn_ms"] = round((time.perf_counter() - turn_start) * 1000.0, 2)
+        state.xray_trace = xray
+        return state
 
     xray["extraction"] = {
         "intent": extracted.intent,
@@ -447,6 +535,9 @@ async def execute_conversation_turn(
     ]
 
     xray["next_stage"] = state.stage
+    xray["fallback"] = any_fallback
+    xray["fallback_banner"] = "Fallback mode: no Meta model used for part of this request" if any_fallback else None
     xray["total_turn_ms"] = round((time.perf_counter() - turn_start) * 1000.0, 2)
     state.xray_trace = xray
+
     return state

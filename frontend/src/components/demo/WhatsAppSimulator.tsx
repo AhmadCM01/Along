@@ -42,6 +42,7 @@ interface WhatsAppSimulatorProps {
   onTriggerSos: () => void;
   activeLocale: "en" | "pcm" | "ha";
   onChangeLocale: (loc: "en" | "pcm" | "ha") => void;
+  isProcessing?: boolean;
 }
 
 const QUICK_SAMPLES = [
@@ -72,16 +73,33 @@ export function WhatsAppSimulator({
   onTriggerSos,
   activeLocale,
   onChangeLocale,
+  isProcessing = false,
 }: WhatsAppSimulatorProps) {
   const [inputText, setInputText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [elapsedSec, setElapsedSec] = useState(0);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isProcessing) {
+      setElapsedSec(1);
+      interval = setInterval(() => {
+        setElapsedSec((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setElapsedSec(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isProcessing]);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -548,6 +566,43 @@ export function WhatsAppSimulator({
             </div>
           );
         })}
+
+        {/* Active LLM Elapsed Timer Indicator */}
+        {isProcessing && (
+          <div
+            style={{
+              alignSelf: "flex-start",
+              maxWidth: "85%",
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                background: "#202C33",
+                color: "#E9EDEF",
+                padding: "8px 14px",
+                borderRadius: "2px 10px 10px 10px",
+                fontSize: 13,
+                lineHeight: 1.4,
+                boxShadow: "0 1px 2px rgba(0,0,0,0.35)",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#25D366",
+                  animation: "along-skeleton-pulse 1s infinite",
+                }}
+              />
+              <span className="tabular-nums">Finding ride options... ({elapsedSec}s)</span>
+            </div>
+          </div>
+        )}
 
         {/* Live Audio Recording Visualizer Bar */}
         {isRecording && (

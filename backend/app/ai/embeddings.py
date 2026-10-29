@@ -1,8 +1,7 @@
-"""Low-memory 768-D embedding engine (`app/ai/embeddings.py` - §8.5.1).
+"""Low-memory 768-D vector encoding engine (app/ai/embeddings.py - Section 8.5.1).
 
-Supports INT8 ONNX Runtime (`fastembed`) when installed and includes a deterministic,
-zero-network 768-dimensional character n-gram + token stem L2-normalized vector encoder
-so FAISS index building and query resolution execute in < 2 ms with 0 external dependencies.
+Deterministic, zero-network 768-dimensional character n-gram hashing and token stem
+L2-normalized vector encoder so FAISS index building and query resolution execute in < 2 ms.
 """
 
 from __future__ import annotations
@@ -103,9 +102,9 @@ def _deterministic_embed_single(text: str, dim: int = EMBEDDING_DIM) -> np.ndarr
 
 
 class EmbeddingEngine:
-    """768-dimensional E5-compatible embedding engine with unit-norm output."""
+    """768-dimensional character n-gram hashing engine with unit-norm output."""
 
-    def __init__(self, model_name: str = "intfloat/multilingual-e5-base") -> None:
+    def __init__(self, model_name: str = "character_ngram_hash_768d") -> None:
         self.model_name = model_name
         self.dim = EMBEDDING_DIM
 

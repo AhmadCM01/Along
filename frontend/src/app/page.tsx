@@ -246,7 +246,7 @@ export default function LandingPage() {
               marginBottom: 14,
             }}
           >
-            Powered by Official Meta AI Stack
+            Meta AI Tooling Integration
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div
@@ -258,11 +258,11 @@ export default function LandingPage() {
               }}
             >
               <div style={{ fontWeight: 700, fontSize: 14, color: "#00A86B" }}>
-                1. Meta Muse Spark (muse-spark-1.3) &amp; Muse Wonder
+                1. Meta Open-Weight Model (Muse Glimmer / Llama)
               </div>
               <div style={{ fontSize: 13, color: "#9FB0A7", marginTop: 4 }}>
-                Fast multilingual slot extraction (English, Pidgin, Hausa) +
-                frontier reasoning for relational Abuja landmarks (&ldquo;that
+                Fast multilingual slot extraction (English, Pidgin, Hausa) and
+                landmark disambiguation for relational Abuja locations (&ldquo;that
                 Oando after Katampe bridge&rdquo;).
               </div>
             </div>
@@ -276,11 +276,11 @@ export default function LandingPage() {
               }}
             >
               <div style={{ fontWeight: 700, fontSize: 14, color: "#00A86B" }}>
-                2. Meta Muse Voice Transcribe (muse-voice-transcribe)
+                2. Speech Recognition (Non-Meta ASR / Meta Model API)
               </div>
               <div style={{ fontSize: 13, color: "#9FB0A7", marginTop: 4 }}>
-                Gazetteer-conditioned speech-to-text for WhatsApp voice notes
-                across 140 Abuja landmarks and 1,208 street aliases.
+                Speech-to-text for WhatsApp voice notes (Groq Whisper as Non-Meta ASR, or
+                Meta Model API when configured) across 140 Abuja landmarks and 1,208 street aliases.
               </div>
             </div>
 
@@ -293,11 +293,11 @@ export default function LandingPage() {
               }}
             >
               <div style={{ fontWeight: 700, fontSize: 14, color: "#00A86B" }}>
-                3. Meta SAM 3.1 (sam-3.1) &amp; Meta FAISS (768-D)
+                3. Character N-Gram Hashing &amp; FAISS Hybrid Index
               </div>
               <div style={{ fontSize: 13, color: "#9FB0A7", marginTop: 4 }}>
-                One-time Driver KYC vehicle/plate/4-seat cabin segmentation +
-                sub-15ms hybrid vector + Jaro-Winkler landmark resolution.
+                Sub-15ms character n-gram hashing and Jaro-Winkler landmark resolution
+                snapping informal speech to 24 virtual filling station anchors.
               </div>
             </div>
           </div>

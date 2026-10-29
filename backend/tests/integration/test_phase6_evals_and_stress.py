@@ -9,10 +9,9 @@ import pytest
 from evals.run_evals import run_all_evaluations
 
 
-@pytest.mark.asyncio
-async def test_p6_t1_offline_ai_evaluation_harness_gates() -> None:
+def test_p6_t1_offline_ai_evaluation_harness_gates() -> None:
     """Verify all extraction, landmark retrieval, safety guard, and Muse Wonder judge gates pass."""
-    report = await run_all_evaluations()
+    report = run_all_evaluations()
     assert report["all_gates_passed"] is True
     assert report["extraction"]["schema_valid_rate"] == 1.0
     assert report["extraction"]["slot_f1"] >= 0.92
@@ -22,7 +21,9 @@ async def test_p6_t1_offline_ai_evaluation_harness_gates() -> None:
     assert report["landmark_retrieval"]["p95_latency_ms"] < 15.0
     assert report["safety_guard"]["sos_recall"] == 1.0
     assert report["safety_guard"]["injection_block_rate"] == 1.0
-    assert report["muse_wonder_judge"]["overall_score"] >= 0.95
+    judge_report = report.get("conversation_rubric_judge") or report.get("muse_wonder_judge")
+    assert judge_report is not None
+    assert judge_report["overall_score"] >= 0.95
 
 
 def test_p6_t2_zero_en_dash_and_em_dash_across_entire_repository() -> None:

@@ -172,7 +172,7 @@ export default function DriverCompanionPage() {
             >
               <div style={{ color: "#93C5FD", fontWeight: 700 }}>[SMS MANIFEST RECEIVED]</div>
               <div style={{ marginTop: 2 }}>
-                Pod POD-842A: 4 Commuters inside A.A. Rano Dutse Forecourt. Dial *384*247*2*4829# to capture escrow.
+                Pod POD-842A [Demo data]: 4 Commuters inside A.A. Rano Dutse Forecourt. Dial *384*247*2*4829# to capture escrow (Simulated escrow).
               </div>
             </div>
           </div>
@@ -192,9 +192,9 @@ export default function DriverCompanionPage() {
               }}
             >
               <div>
-                <div style={{ fontWeight: 800, fontSize: 16 }}>Musa Danjuma</div>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>Musa Danjuma [Demo driver profile]</div>
                 <div className="tabular-nums" style={{ fontSize: 12, color: textSecondary }}>
-                  Plate: <strong>ABJ-412K</strong> (Toyota Corolla)
+                  Plate: <strong>ABJ-412K</strong> [Demo data] (Toyota Corolla)
                 </div>
                 <div style={{ fontSize: 11.5, color: "#008751", fontWeight: 600, marginTop: 2 }}>
                   Queue: A.A. Rano Filling Station (Dutse First Gate)
@@ -277,7 +277,7 @@ export default function DriverCompanionPage() {
                 }}
               >
                 <span style={{ fontWeight: 800, fontSize: 13.5 }}>
-                  Active Pod POD-842A ({boardedCount}/4 Boarded)
+                  Active Pod POD-842A [Demo data] ({boardedCount}/4 Boarded)
                 </span>
                 <span className="tabular-nums" style={{ fontSize: 13, fontWeight: 800, color: "#008751" }}>
                   Net Payout: ₦3,240
@@ -428,7 +428,7 @@ export default function DriverCompanionPage() {
               </div>
             </div>
 
-            {/* SAM 3.1 Driver KYC Verification Card */}
+            {/* Glimmer Vision Driver Verification Card */}
             <div
               style={{
                 background: nightMode ? "#16221D" : "#E8F0EC",
@@ -442,10 +442,10 @@ export default function DriverCompanionPage() {
             >
               <div>
                 <div style={{ fontWeight: 800, fontSize: 12.5, color: "#008751" }}>
-                  Meta SAM 3.1 (sam-3.1) Certified Vehicle
+                  Glimmer vision check [Demo data]
                 </div>
                 <div className="tabular-nums" style={{ fontSize: 11, color: textSecondary, marginTop: 2 }}>
-                  Cabin Mask IoU: 0.94 • Plate: ABJ-412K • 4 Passengers Approved
+                  Plate Check: ABJ-412K • 4 Passengers Approved (Demo driver profile)
                 </div>
               </div>
               <ShieldCheckIcon size={20} color="#008751" />

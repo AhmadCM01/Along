@@ -61,13 +61,13 @@ export default function PublicTripSharePage({
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#008751" }}>
-                POD-842A | BWR-DUT-WUS CORRIDOR
+                POD-842A [Demo data] | BWR-DUT-WUS CORRIDOR
               </div>
               <div style={{ fontSize: 20, fontWeight: 800, marginTop: 2 }}>
-                Musa Danjuma (ABJ-412K)
+                Demo driver profile: Musa Danjuma (ABJ-412K [Demo data])
               </div>
               <div style={{ fontSize: 13, color: "#374740" }}>
-                Toyota Corolla (Silver) | NIN &amp; SAM 3.1 Verified
+                Toyota Corolla (Silver) | Safe Escrow Verified [Demo data]
               </div>
             </div>
             <ShieldCheckIcon size={28} color="#008751" />

@@ -4,7 +4,7 @@ Executes:
 1. Multilingual Slot Extraction Evaluation (`extraction_gold.jsonl`) -> Gate: Slot F1 >= 0.92, Schema Validity == 1.00
 2. Abuja Landmark Hybrid Resolution Evaluation (`landmark_gold.jsonl`) -> Gate: Recall@1 >= 0.90, Recall@3 >= 0.97, MRR >= 0.93, p95 < 15ms
 3. Safety Guardrail & SOS Interception Evaluation (`safety_gold.jsonl`) -> Gate: SOS Recall == 1.00, Injection Block == 1.00
-4. Muse Wonder Conversation Rubric Judge -> Gate: Overall Rubric Score >= 0.95
+4. Rule-based Conversation Rubric Judge -> Gate: Overall Rubric Score >= 0.95
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ if str(BACKEND_DIR) not in sys.path:
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from app.ai.extraction import extract_intent_and_slots
+from app.ai.extraction import extract_deterministic
 from app.ai.guard import check_input_safety
 from app.ai.landmarks.builder import get_active_landmark_index
 from app.ai.landmarks.hybrid import hybrid_search_landmarks
@@ -38,7 +38,7 @@ from evals.metrics import (
 DATASETS_DIR = Path(__file__).resolve().parent / "datasets"
 
 
-async def evaluate_extraction_suite() -> ExtractionMetricsSummary:
+def evaluate_extraction_suite() -> ExtractionMetricsSummary:
     lines = (DATASETS_DIR / "extraction_gold.jsonl").read_text(encoding="utf-8").splitlines()
     rows = [json.loads(line) for line in lines if line.strip()]
 
@@ -48,7 +48,7 @@ async def evaluate_extraction_suite() -> ExtractionMetricsSummary:
     total_slot_checks = 0
 
     for row in rows:
-        out, _meta = await extract_intent_and_slots(row["utterance"])
+        out = extract_deterministic(row["utterance"])
         if out.intent == row["intent"]:
             intent_hits += 1
         if out.detected_locale == row["locale"]:
@@ -86,6 +86,8 @@ async def evaluate_extraction_suite() -> ExtractionMetricsSummary:
 
 def evaluate_landmark_suite() -> LandmarkRetrievalMetricsSummary:
     _ = get_active_landmark_index()
+    # Warm up search pipeline and regex compilation
+    _ = hybrid_search_landmarks("Berger", top_k=3)
     lines = (DATASETS_DIR / "landmark_gold.jsonl").read_text(encoding="utf-8").splitlines()
     rows = [json.loads(line) for line in lines if line.strip()]
 
@@ -171,9 +173,9 @@ def evaluate_safety_suite() -> SafetyMetricsSummary:
     )
 
 
-async def run_all_evaluations() -> dict[str, Any]:
+def run_all_evaluations() -> dict[str, Any]:
     """Run all offline AI evaluations and write `evals/latest_report.json`."""
-    ext = await evaluate_extraction_suite()
+    ext = evaluate_extraction_suite()
     lmk = evaluate_landmark_suite()
     saf = evaluate_safety_suite()
     judge = evaluate_conversation_rubric(
@@ -198,6 +200,7 @@ async def run_all_evaluations() -> dict[str, Any]:
 
     report = {
         "all_gates_passed": all_passed,
+        "eval_note": "Rule-based pipeline only. No live model used.",
         "extraction": {
             "total_cases": ext.total_cases,
             "schema_valid_rate": ext.schema_valid_rate,
@@ -220,7 +223,7 @@ async def run_all_evaluations() -> dict[str, Any]:
             "overall_accuracy": saf.overall_accuracy,
             "max_latency_ms": saf.max_latency_ms,
         },
-        "muse_wonder_judge": {
+        "conversation_rubric_judge": {
             "model_judge": judge.model_judge,
             "overall_score": judge.overall_score,
             "verdict": judge.verdict,
@@ -232,21 +235,8 @@ async def run_all_evaluations() -> dict[str, Any]:
     return report
 
 
-def _run_coro_offline_safe(coro: Any) -> Any:
-    """Step a coroutine directly without Windows loopback socketpair when running offline."""
-    from app.ai.llm import MetaLLMClient
-
-    if MetaLLMClient().is_live_api_configured():
-        return asyncio.run(coro)
-    try:
-        while True:
-            coro.send(None)
-    except StopIteration as stop:
-        return stop.value
-
-
 def main() -> None:
-    report = _run_coro_offline_safe(run_all_evaluations())
+    report = run_all_evaluations()
     print(json.dumps(report, indent=2))
     if not report["all_gates_passed"]:
         sys.exit(1)

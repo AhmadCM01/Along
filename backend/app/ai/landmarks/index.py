@@ -138,7 +138,7 @@ class LandmarkVectorIndex:
             "version": self.version,
             "dim": EMBEDDING_DIM,
             "n_vectors": len(self.entries),
-            "embedding_model": get_settings().EMBEDDING_MODEL,
+            "embedding_model": getattr(get_settings(), "EMBEDDING_MODEL", "deterministic-ngram-768d"),
         }
         (target_dir / "manifest.json").write_text(
             json.dumps(manifest, indent=2), encoding="utf-8"

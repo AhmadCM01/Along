@@ -337,7 +337,7 @@ export function AbujaCorridorMap({
         ) : (
           /* Meta AI Pipeline Observability Trace */
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {/* Stage 1: Muse Voice Transcribe */}
+            {/* Stage 1: Speech Recognition */}
             <div
               style={{
                 background: "#17221E",
@@ -348,15 +348,14 @@ export function AbujaCorridorMap({
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 800, fontSize: 12, color: "#F59E0B" }}>
-                  1. SPEECH RECOGNITION (ASR) • META MUSE VOICE TRANSCRIBE
+                  1. SPEECH RECOGNITION (ASR)
                 </span>
                 <span className="tabular-nums" style={{ fontSize: 11, color: "#9FB0A7" }}>
-                  Latency: {voiceLatencyMs || 112}ms
+                  {voiceLatencyMs ? `${voiceLatencyMs}ms [Demo data]` : "Sample transcript (no ASR run)"}
                 </span>
               </div>
               <div style={{ fontSize: 12, color: "#F3F6F4", marginTop: 4 }}>
-                Model: <strong>{voiceModel || "Muse Voice Transcribe"}</strong> with Abuja Vocabulary Conditioning
-                (Dutse, Berger, Wuse, Agbero, Kujera).
+                Status: <strong>{voiceModel || "Sample transcript (no ASR run)"}</strong> [Non-Meta ASR / Fallback fixture]
               </div>
             </div>
 
@@ -371,19 +370,18 @@ export function AbujaCorridorMap({
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 800, fontSize: 12, color: "#00A86B" }}>
-                  2. MULTILINGUAL NLU &amp; SLOTS • META MUSE SPARK / WONDER
+                  2. MULTILINGUAL NLU &amp; SLOTS
                 </span>
                 <span className="tabular-nums" style={{ fontSize: 11, color: "#9FB0A7" }}>
-                  Latency: {nluLatencyMs}ms
+                  {nluLatencyMs ? `${nluLatencyMs}ms [Demo data]` : "Deterministic fallback"}
                 </span>
               </div>
               <div style={{ fontSize: 12, color: "#F3F6F4", marginTop: 4 }}>
-                Model: <strong>{nluModel}</strong> • Detects Pidgin, Hausa, and English intents. Identifies relational
-                modifiers (e.g. &ldquo;that Oando after Katampe bridge&rdquo;).
+                Extractor / Model: <strong>{nluModel || "none (local_fallback)"}</strong>
               </div>
             </div>
 
-            {/* Stage 3: Meta FAISS 768-D Index */}
+            {/* Stage 3: Character N-Gram Hashing & FAISS */}
             <div
               style={{
                 background: "#17221E",
@@ -394,19 +392,19 @@ export function AbujaCorridorMap({
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 800, fontSize: 12, color: "#00A86B" }}>
-                  3. VECTOR RETRIEVAL &amp; HYBRID RANKING • META FAISS 768-D
+                  3. RETRIEVAL &amp; HYBRID RANKING • CHARACTER N-GRAM HASHING + FAISS
                 </span>
                 <span className="tabular-nums" style={{ fontSize: 11, color: "#9FB0A7" }}>
-                  Latency: {faissLatencyMs}ms (p95 &lt; 3.1ms)
+                  {faissLatencyMs ? `${faissLatencyMs}ms [Demo data]` : "In-process hash"}
                 </span>
               </div>
               <div className="tabular-nums" style={{ fontSize: 12, color: "#F3F6F4", marginTop: 4 }}>
                 Formula: 0.65*Cos({cosineScore}) + 0.25*JW({jwScore}) + 0.10*Pop({popScore}) ={" "}
-                <strong style={{ color: "#F59E0B" }}>{finalScore}</strong> (Snaps to 24 Private Filling Stations).
+                <strong style={{ color: "#F59E0B" }}>{finalScore}</strong> [Demo data] (Snaps to 24 Private Filling Stations).
               </div>
             </div>
 
-            {/* Stage 4: SAM 3.1 Driver KYC & Safety Guard */}
+            {/* Stage 4: Safety Gate & Vehicle Inspection */}
             <div
               style={{
                 background: "#17221E",
@@ -417,15 +415,15 @@ export function AbujaCorridorMap({
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 800, fontSize: 12, color: "#008751" }}>
-                  4. COMPUTER VISION &amp; SAFETY • META SAM 3.1 + LLAMA GUARD 4
+                  4. SAFETY GATE &amp; VEHICLE INSPECTION • RULE-BASED SAFETY GATE
                 </span>
                 <span style={{ fontSize: 11, color: "#9FB0A7" }}>
-                  Guard: &lt; 1.2ms
+                  Gate: Active
                 </span>
               </div>
               <div style={{ fontSize: 12, color: "#F3F6F4", marginTop: 4 }}>
-                Vehicle KYC verified by <strong>SAM 3.1</strong> (Cabin segmentation IoU 0.94, Plate ABJ-412K).
-                SOS distress keywords monitored by <strong>Llama Guard 4</strong> for zero roadside kidnapping.
+                SOS distress keywords monitored by <strong>Rule-based safety gate</strong> for zero roadside kidnapping.
+                Vehicle photo check: <strong>Glimmer vision check [Demo driver profile: ABJ-412K]</strong>.
               </div>
             </div>
           </div>

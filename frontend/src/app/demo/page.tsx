@@ -58,16 +58,16 @@ const HUMAN_STORIES: StoryPreset[] = [
     unitFare: "₦900",
     totalFare: "₦1,800",
     otp: "4829",
-    nluModel: "Muse-Spark-1.3",
-    nluLatencyMs: 84,
-    faissLatencyMs: 2.8,
+    nluModel: "Deterministic rule-based extractor [Demo data]",
+    nluLatencyMs: 0,
+    faissLatencyMs: 0,
     cosineScore: 0.98,
     jwScore: 1.0,
     popScore: 0.98,
     finalScore: 0.985,
     driverMode: "SMARTPHONE",
     botReply:
-      "Pod POD-842A Don Set! Wait for Safe Anchor: A.A. Rano Filling Station (Inside Station, No Agbero Wahala). Driver: Musa Danjuma (Toyota Corolla Silver, ABJ-412K). Boarding OTP: 4829.",
+      "Pod POD-842A [Demo data] Don Set! Wait for Safe Anchor: A.A. Rano Filling Station (Inside Station, No Agbero Wahala). Demo driver profile: Musa Danjuma (Toyota Corolla Silver, ABJ-412K [Demo data]). Boarding OTP: 4829.",
   },
   {
     id: "story_2",
@@ -83,16 +83,16 @@ const HUMAN_STORIES: StoryPreset[] = [
     unitFare: "₦700",
     totalFare: "₦700",
     otp: "5192",
-    nluModel: "Muse-Wonder",
-    nluLatencyMs: 142,
-    faissLatencyMs: 3.1,
+    nluModel: "Deterministic rule-based extractor [Demo data]",
+    nluLatencyMs: 0,
+    faissLatencyMs: 0,
     cosineScore: 0.94,
     jwScore: 0.92,
     popScore: 0.99,
     finalScore: 0.94,
     driverMode: "SMARTPHONE",
     botReply:
-      "Along Corridor Quote (BWR-DUT-WUS): Pickup at Bovas Sokale -> Drop-off at Oando Filling Station (After Katampe Bridge). Mid-Corridor Zone Fare: ₦700 (saves 22% vs terminal fare). Seat Reload enabled at Oando!",
+      "Along Corridor Quote (BWR-DUT-WUS): Pickup at Bovas Sokale -> Drop-off at Oando Filling Station (After Katampe Bridge). Mid-Corridor Zone Fare: ₦700 (Simulated escrow). Seat Reload enabled at Oando!",
   },
   {
     id: "story_3",
@@ -102,8 +102,8 @@ const HUMAN_STORIES: StoryPreset[] = [
     initialMessage: "Ina Bwari zan je Kasuwar Wuse kujera biyu",
     isVoice: true,
     voiceDuration: "0:05",
-    voiceModel: "Muse Voice Transcribe",
-    voiceLatencyMs: 112,
+    voiceModel: "Sample transcript (no ASR run)",
+    voiceLatencyMs: 0,
     corridorId: "BWR-DUT-WUS",
     originName: "Bwari Central Market (LMK-BWR-MKT)",
     destName: "Wuse Market Main Gate",
@@ -112,16 +112,16 @@ const HUMAN_STORIES: StoryPreset[] = [
     unitFare: "₦1,800",
     totalFare: "₦3,600",
     otp: "7314",
-    nluModel: "Muse-Spark-1.3",
-    nluLatencyMs: 76,
-    faissLatencyMs: 3.4,
+    nluModel: "Deterministic rule-based extractor [Demo data]",
+    nluLatencyMs: 0,
+    faissLatencyMs: 0,
     cosineScore: 0.96,
     jwScore: 0.95,
     popScore: 0.98,
     finalScore: 0.96,
     driverMode: "SMARTPHONE",
     botReply:
-      "An Samu Motar Pod POD-910C! Direba: Ibrahim Suleiman (Honda Accord, KWL-809X). Wurin Haduwa: NIPCO Filling Station Bwari. Lambar Shiga Mota (OTP): 7314.",
+      "An Samu Motar Pod POD-910C [Demo data]! Direba: Demo driver profile: Ibrahim Suleiman (Honda Accord, KWL-809X [Demo data]). Wurin Haduwa: NIPCO Filling Station Bwari. Lambar Shiga Mota (OTP): 7314.",
   },
   {
     id: "story_4",
@@ -137,16 +137,16 @@ const HUMAN_STORIES: StoryPreset[] = [
     unitFare: "₦700",
     totalFare: "₦700",
     otp: "4829",
-    nluModel: "Llama-3.3-70B",
-    nluLatencyMs: 165,
-    faissLatencyMs: 2.9,
+    nluModel: "Deterministic rule-based extractor [Demo data]",
+    nluLatencyMs: 0,
+    faissLatencyMs: 0,
     cosineScore: 0.97,
     jwScore: 0.98,
     popScore: 0.98,
     finalScore: 0.974,
     driverMode: "FEATURE_PHONE_2G",
     botReply:
-      "Pod POD-551K Matched on GWL-LUG-AR1! Driver Mallam Sani accepted via 2G Voice Call (DTMF 1). Meet inside Conoil Filling Station Lugbe. Boarding OTP: 4829.",
+      "Pod POD-551K [Demo data] Matched on GWL-LUG-AR1! Driver Mallam Sani accepted via 2G Voice Call (DTMF 1). Meet inside Conoil Filling Station Lugbe. Boarding OTP: 4829.",
   },
   {
     id: "story_5",
@@ -162,9 +162,9 @@ const HUMAN_STORIES: StoryPreset[] = [
     unitFare: "₦800",
     totalFare: "₦800",
     otp: "9911",
-    nluModel: "Llama Guard 4 + Deterministic Guard",
-    nluLatencyMs: 1.2,
-    faissLatencyMs: 1.8,
+    nluModel: "Rule-based safety gate",
+    nluLatencyMs: 0,
+    faissLatencyMs: 0,
     cosineScore: 1.0,
     jwScore: 1.0,
     popScore: 1.0,
@@ -172,7 +172,7 @@ const HUMAN_STORIES: StoryPreset[] = [
     driverMode: "SMARTPHONE",
     isSos: true,
     botReply:
-      "SOS EMERGENCY ALERT ACTIVATED! Along Safety Command Center has locked trip POD-842A, notified emergency contacts, and alerted Abuja Police Highway Patrol with live GPS telemetry.",
+      "SOS EMERGENCY ALERT ACTIVATED! Along Safety Command Center has locked trip POD-842A [Demo data], notified emergency contacts, and alerted Abuja Police Highway Patrol with live GPS telemetry.",
   },
 ];
 
@@ -180,6 +180,7 @@ export default function JudgeCockpitPage() {
   const [activeStory, setActiveStory] = useState<StoryPreset>(HUMAN_STORIES[0]);
   const [activeLocale, setActiveLocale] = useState<"en" | "pcm" | "ha">("pcm");
   const [midCorridorActive, setMidCorridorActive] = useState(false);
+  const [isFindingRide, setIsFindingRide] = useState(false);
   const [driverMode, setDriverMode] = useState<"SMARTPHONE" | "FEATURE_PHONE_2G">("SMARTPHONE");
   const [showProblemDrawer, setShowProblemDrawer] = useState(false);
   const [mobileTab, setMobileTab] = useState<"whatsapp" | "map" | "driver">("whatsapp");
@@ -260,6 +261,8 @@ export default function JudgeCockpitPage() {
         timestamp: "12:46",
       },
     ];
+    setMessages(newMessages);
+    setIsFindingRide(true);
 
     // Check if user triggered SOS keyword
     const isSosQuery =
@@ -267,33 +270,40 @@ export default function JudgeCockpitPage() {
       text.toLowerCase().includes("help") ||
       text.toLowerCase().includes("one chance");
 
-    if (isSosQuery) {
-      newMessages.push({
-        id: botMsgId,
-        sender: "bot",
-        text: "SOS EMERGENCY LOCKDOWN! Safety Command Center notified. Patrol unit tracking live coordinates on corridor.",
-        timestamp: "12:46",
-        isSos: true,
-      });
-    } else {
-      newMessages.push({
-        id: botMsgId,
-        sender: "bot",
-        text: `Along Pod Quote Generated (${activeStory.corridorId}): Safe pickup inside ${activeStory.anchorName}. Fixed Escrow fare locked.`,
-        timestamp: "12:46",
-        quoteData: {
-          corridorId: activeStory.corridorId,
-          anchorName: activeStory.anchorName,
-          destName: activeStory.destName,
-          seats: activeStory.seats,
-          unitFare: activeStory.unitFare,
-          totalFare: activeStory.totalFare,
-          otp: activeStory.otp,
-        },
-      });
-    }
-
-    setMessages(newMessages);
+    setTimeout(() => {
+      setIsFindingRide(false);
+      if (isSosQuery) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: "SOS EMERGENCY LOCKDOWN! Safety Command Center notified. Patrol unit tracking live coordinates on corridor.",
+            timestamp: "12:46",
+            isSos: true,
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: "bot",
+            text: `Along Pod Quote Generated (${activeStory.corridorId}): Safe pickup inside ${activeStory.anchorName}. Fixed Escrow fare locked.`,
+            timestamp: "12:46",
+            quoteData: {
+              corridorId: activeStory.corridorId,
+              anchorName: activeStory.anchorName,
+              destName: activeStory.destName,
+              seats: activeStory.seats,
+              unitFare: activeStory.unitFare,
+              totalFare: activeStory.totalFare,
+              otp: activeStory.otp,
+            },
+          },
+        ]);
+      }
+    }, 1500);
   };
 
   const handleConfirmBooking = () => {
@@ -302,7 +312,7 @@ export default function JudgeCockpitPage() {
       {
         id: `confirm_${Date.now()}`,
         sender: "bot",
-        text: `✓ Booking Confirmed! ₦${activeStory.totalFare} locked in Paystack Double-Entry Escrow. Driver Musa Danjuma is entering the filling station forecourt now. Show OTP ${activeStory.otp} when entering car.`,
+        text: `✓ Booking Confirmed! ₦${activeStory.totalFare} locked in Simulated escrow. Demo driver profile: Musa Danjuma (Toyota Corolla Silver, ABJ-412K [Demo data]) is entering the filling station forecourt now. Show OTP ${activeStory.otp} when entering car.`,
         timestamp: "12:47",
       },
     ]);
@@ -453,14 +463,14 @@ export default function JudgeCockpitPage() {
               color: "#9FB0A7",
             }}
           >
-            <strong style={{ color: "#F3F6F4" }}>The Real-World Abuja Challenge:</strong> In Abuja, Nigeria, over 1.8
-            million daily commuters face violent &ldquo;One-Chance&rdquo; roadside carjackings and aggressive Agbero tout
+            <strong style={{ color: "#F3F6F4" }}>The Real-World Abuja Challenge:</strong> In Abuja, Nigeria, an estimated 1.8
+            million daily commuters (illustrative estimate) face violent &ldquo;One-Chance&rdquo; roadside carjackings and aggressive Agbero tout
             extortion (₦1,250 in illegal fees per round trip).
             <br />
             <strong style={{ color: "#00A86B" }}>The Along Solution:</strong> Along pairs verified commuters into 4-seat
             sedan pods waiting inside private, well-lit filling station forecourts (A.A. Rano, Bovas, Oando, Conoil).
-            Commuters use WhatsApp in English, Pidgin, or Hausa. Orchestrated by Meta models (Muse Voice Transcribe,
-            Muse Spark, FAISS 768-D, SAM 3.1, Llama Guard 4).
+            Commuters use WhatsApp in English, Pidgin, or Hausa. Orchestrated with character n-gram hashing, FAISS vector index,
+            Rule-based safety gate, and Meta open-weight models when configured.
           </div>
         )}
 
@@ -475,7 +485,7 @@ export default function JudgeCockpitPage() {
           }}
         >
           <span style={{ fontSize: 11, color: "#8696A0", whiteSpace: "nowrap", fontWeight: 700 }}>
-            Interactive Stories:
+            Interactive Stories [Demo data]:
           </span>
           {HUMAN_STORIES.map((story) => {
             const isSelected = story.id === activeStory.id;
@@ -505,6 +515,39 @@ export default function JudgeCockpitPage() {
           })}
         </div>
       </header>
+
+      {/* Persistent Fallback Mode Banner */}
+      <div
+        style={{
+          background: "rgba(217, 119, 6, 0.15)",
+          borderBottom: "1px solid #D97706",
+          color: "#F59E0B",
+          padding: "7px 18px",
+          fontSize: 12,
+          fontWeight: 700,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 14 }}>⚠️</span>
+          <span>Fallback mode: no Meta model used for part of this request</span>
+        </div>
+        <span
+          style={{
+            fontSize: 11,
+            color: "#9FB0A7",
+            fontWeight: 600,
+            background: "#17221E",
+            padding: "2px 8px",
+            borderRadius: 4,
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          Demo Presets • Local Rule-Based Fallback
+        </span>
+      </div>
 
       {/* Mobile Tab Switcher (< 1200px) */}
       <div
@@ -595,6 +638,7 @@ export default function JudgeCockpitPage() {
             onTriggerSos={handleTriggerSos}
             activeLocale={activeLocale}
             onChangeLocale={setActiveLocale}
+            isProcessing={isFindingRide}
           />
         </section>
 

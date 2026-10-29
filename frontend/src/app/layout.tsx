@@ -1,11 +1,12 @@
 import React from "react";
 import type { Metadata } from "next";
 import "./globals.css";
+import { AlongTripProvider } from "@/context/AlongTripContext";
 
 export const metadata: Metadata = {
   title: "Along: AI-Orchestrated Shared Corridor Transit for Abuja",
   description:
-    "Book shared 4-seat corridor rides in Abuja by voice or text in English, Pidgin, or Hausa. Safe filling-station forecourts, double-entry escrow, and family tracking.",
+    "Book shared 4-seat corridor rides in Abuja by voice or text in English, Pidgin, or Hausa. Safe filling-station forecourts, double-entry escrow, and live trip tracking.",
   manifest: "/manifest.json",
 };
 
@@ -33,7 +34,7 @@ export default function RootLayout({
               (function() {
                 try {
                   var stored = localStorage.getItem('along-theme');
-                  var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                  var theme = stored || 'light';
                   document.documentElement.setAttribute('data-theme', theme);
                 } catch (e) {}
               })();
@@ -41,7 +42,9 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <AlongTripProvider>{children}</AlongTripProvider>
+      </body>
     </html>
   );
 }

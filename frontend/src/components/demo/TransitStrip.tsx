@@ -1,27 +1,41 @@
+"use client";
+
 import React from "react";
+import { useAlongTrip } from "@/context/AlongTripContext";
 
 export interface TransitStripProps {
   activeCorridorId?: string;
   onSelectCorridor?: (id: string) => void;
 }
 
-const CORRIDORS = [
-  { id: "BWR-DUT-WUS", name: "Bwari to Wuse", fare: "₦900" },
-  { id: "ZUB-KUB-WUS", name: "Zuba to Wuse", fare: "₦900" },
-  { id: "ZUB-DEI-DUT", name: "Zuba to Dutse", fare: "₦700" },
-  { id: "ZUB-KRM-JAB", name: "Zuba to Jabi", fare: "₦700" },
-  { id: "GWL-LUG-AR1", name: "Gwagwalada to Area 1", fare: "₦1,000" },
-  { id: "MRB-NYA-CEN", name: "Mararaba to Central", fare: "₦600" },
+export const CORRIDORS_LIST = [
+  { id: "BWR-DUT-WUS", name: "Bwari to Wuse", fare: "₦900", samplePrompt: "Abeg I dey Dutse first gate, two seats go Berger" },
+  { id: "ZUB-KUB-WUS", name: "Zuba to Wuse", fare: "₦900", samplePrompt: "I dey Zuba interchange, one seat to Wuse Zone 4" },
+  { id: "ZUB-DEI-DUT", name: "Zuba to Dutse", fare: "₦700", samplePrompt: "From Dei-Dei market, I need ride go Dutse Alhaji" },
+  { id: "ZUB-KRM-JAB", name: "Zuba to Jabi", fare: "₦700", samplePrompt: "Karmo market junction to Jabi park two seats" },
+  { id: "GWL-LUG-AR1", name: "Gwagwalada to Area 1", fare: "₦1,000", samplePrompt: "I dey Police signboard Lugbe, 1 seat go Area 1" },
+  { id: "MRB-NYA-CEN", name: "Mararaba to Central", fare: "₦600", samplePrompt: "Mararaba bridge to Area 10 Central business district" },
 ];
 
 /**
  * Thin Transit Strip Diagram.
  * Sentence case, neutral grey lines, active line highlighted with brand green.
+ * Clicking any line switches the active corridor and updates the live route map!
  */
 export function TransitStrip({
-  activeCorridorId = "BWR-DUT-WUS",
+  activeCorridorId,
   onSelectCorridor,
 }: TransitStripProps) {
+  const trip = useAlongTrip();
+  const currentId = activeCorridorId || trip.activeCorridorId || "BWR-DUT-WUS";
+
+  const handleSelect = (id: string) => {
+    trip.setActiveCorridorId(id);
+    if (onSelectCorridor) {
+      onSelectCorridor(id);
+    }
+  };
+
   return (
     <div
       style={{
@@ -46,7 +60,7 @@ export function TransitStrip({
           Active Abuja Corridors
         </span>
         <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-          6 lines · 24 safe filling-station forecourts
+          6 lines · 24 safe filling-station forecourts (tap to preview)
         </span>
       </div>
 
@@ -57,12 +71,13 @@ export function TransitStrip({
           gap: 8,
         }}
       >
-        {CORRIDORS.map((c) => {
-          const isActive = c.id === activeCorridorId;
+        {CORRIDORS_LIST.map((c) => {
+          const isActive = c.id === currentId;
           return (
-            <div
+            <button
               key={c.id}
-              onClick={() => onSelectCorridor && onSelectCorridor(c.id)}
+              type="button"
+              onClick={() => handleSelect(c.id)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -71,9 +86,11 @@ export function TransitStrip({
                 borderRadius: "var(--radius-button)",
                 background: isActive ? "var(--brand-soft)" : "var(--bg-paper)",
                 border: `1px solid ${isActive ? "var(--brand-primary)" : "var(--border-subtle)"}`,
-                cursor: onSelectCorridor ? "pointer" : "default",
+                cursor: "pointer",
                 transition: "all 150ms ease",
+                textAlign: "left",
               }}
+              title={`Switch map to ${c.name} (${c.fare}/seat)`}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span
@@ -87,7 +104,7 @@ export function TransitStrip({
                 />
                 <span
                   style={{
-                    fontSize: 13,
+                    fontSize: 12.5,
                     fontWeight: isActive ? 700 : 500,
                     color: isActive ? "var(--brand-primary)" : "var(--text-ink)",
                   }}
@@ -98,14 +115,14 @@ export function TransitStrip({
               <span
                 className="tabular-nums"
                 style={{
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontWeight: 600,
-                  color: "var(--text-muted)",
+                  color: isActive ? "var(--brand-primary)" : "var(--text-muted)",
                 }}
               >
                 {c.fare}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>

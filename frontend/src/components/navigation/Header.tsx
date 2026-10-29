@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/brand/Wordmark";
+import { useAlongTrip } from "@/context/AlongTripContext";
 
 export interface HeaderProps {
   activeLocale?: "en" | "pcm" | "ha";
@@ -14,15 +15,15 @@ export interface HeaderProps {
 }
 
 export function Header({
-  activeLocale = "en",
+  activeLocale = "pcm",
   onChangeLocale,
   activeShareToken,
   onToggleBehindTheScenes,
   behindTheScenesOpen = false,
 }: HeaderProps) {
   const pathname = usePathname();
+  const trip = useAlongTrip();
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -40,7 +41,8 @@ export function Header({
     } catch {}
   };
 
-  const familyHref = activeShareToken ? `/t/${activeShareToken}` : "/t/tok_demo_family_123";
+  const shareToken = activeShareToken || trip.activeShareToken || "share-bwr-4817";
+  const trackerHref = `/t/${shareToken}`;
 
   return (
     <header
@@ -48,7 +50,7 @@ export function Header({
         width: "100%",
         maxWidth: 1280,
         margin: "0 auto",
-        padding: "16px 20px",
+        padding: "14px 20px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -61,7 +63,7 @@ export function Header({
     >
       {/* Brand Wordmark */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Link href="/" aria-label="Along Home">
+        <Link href="/" aria-label="Along Home" style={{ textDecoration: "none" }}>
           <Wordmark size="md" />
         </Link>
       </div>
@@ -82,13 +84,14 @@ export function Header({
         <Link
           href="/"
           style={{
-            padding: "6px 16px",
+            padding: "6px 18px",
             borderRadius: "var(--radius-chip)",
-            fontSize: 14,
+            fontSize: 13.5,
             fontWeight: pathname === "/" ? 700 : 500,
             background: pathname === "/" ? "var(--brand-primary)" : "transparent",
             color: pathname === "/" ? "var(--brand-ink)" : "var(--text-muted)",
             transition: "all 150ms ease",
+            textDecoration: "none",
           }}
         >
           Ride
@@ -96,38 +99,42 @@ export function Header({
         <Link
           href="/driver"
           style={{
-            padding: "6px 16px",
+            padding: "6px 18px",
             borderRadius: "var(--radius-chip)",
-            fontSize: 14,
+            fontSize: 13.5,
             fontWeight: pathname === "/driver" ? 700 : 500,
             background: pathname === "/driver" ? "var(--brand-primary)" : "transparent",
             color: pathname === "/driver" ? "var(--brand-ink)" : "var(--text-muted)",
             transition: "all 150ms ease",
+            textDecoration: "none",
+            position: "relative",
           }}
         >
           Driver
         </Link>
         <Link
-          href={familyHref}
+          href={trackerHref}
           style={{
-            padding: "6px 16px",
+            padding: "6px 18px",
             borderRadius: "var(--radius-chip)",
-            fontSize: 14,
+            fontSize: 13.5,
             fontWeight: pathname.startsWith("/t/") ? 700 : 500,
             background: pathname.startsWith("/t/") ? "var(--brand-primary)" : "transparent",
             color: pathname.startsWith("/t/") ? "var(--brand-ink)" : "var(--text-muted)",
             transition: "all 150ms ease",
+            textDecoration: "none",
           }}
         >
-          Family
+          Tracker
         </Link>
       </nav>
 
       {/* Utilities: Language, Theme Toggle, Behind The Scenes */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {/* Language Selector */}
+        {/* Language Selector (Hidden on small mobile screens to prevent congestion; available in chat) */}
         {onChangeLocale && (
           <div
+            className="along-header-lang"
             style={{
               display: "flex",
               alignItems: "center",
@@ -142,13 +149,15 @@ export function Header({
                 key={loc}
                 onClick={() => onChangeLocale(loc)}
                 style={{
-                  minHeight: 32,
+                  minHeight: 28,
                   padding: "2px 8px",
                   borderRadius: "var(--radius-chip)",
                   fontSize: 12,
                   fontWeight: activeLocale === loc ? 700 : 500,
                   background: activeLocale === loc ? "var(--brand-soft)" : "transparent",
                   color: activeLocale === loc ? "var(--brand-primary)" : "var(--text-muted)",
+                  border: "none",
+                  cursor: "pointer",
                 }}
                 aria-label={`Switch to ${loc === "en" ? "English" : loc === "pcm" ? "Pidgin" : "Hausa"}`}
               >
@@ -162,9 +171,9 @@ export function Header({
         <button
           onClick={toggleTheme}
           style={{
-            width: 38,
-            height: 38,
-            minHeight: 38,
+            width: 36,
+            height: 36,
+            minHeight: 36,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
@@ -173,107 +182,46 @@ export function Header({
             borderRadius: "50%",
             color: "var(--text-ink)",
             fontSize: 16,
+            cursor: "pointer",
           }}
           aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-          title={theme === "light" ? "Dark mode" : "Light mode"}
+          title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
         >
           {theme === "light" ? "☼" : "☾"}
         </button>
 
-        {/* Behind The Scenes Toggle */}
+        {/* Telemetry Toggle */}
         {onToggleBehindTheScenes && (
           <button
             onClick={onToggleBehindTheScenes}
             style={{
               padding: "6px 12px",
-              minHeight: 38,
+              minHeight: 36,
               borderRadius: "var(--radius-button)",
               background: behindTheScenesOpen ? "var(--brand-soft)" : "var(--bg-surface)",
               color: behindTheScenesOpen ? "var(--brand-primary)" : "var(--text-ink)",
               border: `1px solid ${behindTheScenesOpen ? "var(--brand-primary)" : "var(--border-subtle)"}`,
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 600,
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
+              cursor: "pointer",
             }}
-            aria-label="Toggle behind the scenes AI inspector"
+            aria-label="Toggle live AI pipeline telemetry"
           >
             <span>Telemetry</span>
-            <span style={{ fontSize: 11 }}>{behindTheScenesOpen ? "▲" : "▼"}</span>
+            <span style={{ fontSize: 10 }}>{behindTheScenesOpen ? "▲" : "▼"}</span>
           </button>
         )}
-
-        {/* Overflow Menu */}
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            style={{
-              width: 38,
-              height: 38,
-              minHeight: 38,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-subtle)",
-              borderRadius: "50%",
-              color: "var(--text-ink)",
-              fontSize: 16,
-              fontWeight: 700,
-            }}
-            aria-label="Open menu"
-          >
-            ···
-          </button>
-
-          {menuOpen && (
-            <div
-              style={{
-                position: "absolute",
-                top: 44,
-                right: 0,
-                background: "var(--bg-surface)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "var(--radius-card)",
-                boxShadow: "var(--shadow-soft)",
-                padding: "6px 0",
-                minWidth: 180,
-                zIndex: 50,
-              }}
-            >
-              <Link
-                href="/ops"
-                onClick={() => setMenuOpen(false)}
-                style={{
-                  display: "block",
-                  padding: "8px 16px",
-                  fontSize: 13,
-                  color: "var(--text-ink)",
-                }}
-              >
-                Operations (demo)
-              </Link>
-              <Link
-                href="/demo"
-                onClick={() => setMenuOpen(false)}
-                style={{
-                  display: "block",
-                  padding: "8px 16px",
-                  fontSize: 13,
-                  color: "var(--text-ink)",
-                }}
-              >
-                Judge cockpit mode
-              </Link>
-            </div>
-          )}
-        </div>
       </div>
 
       <style jsx>{`
         @media (max-width: 768px) {
           .along-nav-segmented {
+            display: none !important;
+          }
+          .along-header-lang {
             display: none !important;
           }
         }

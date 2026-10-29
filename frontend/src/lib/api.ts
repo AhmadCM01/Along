@@ -178,7 +178,17 @@ export interface LiveReplayDoc {
   runs: ReplayRunItem[];
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export function getApiBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    return `http://${window.location.hostname}:8000`;
+  }
+  return "http://localhost:8000";
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 async function parseJsonResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -200,7 +210,7 @@ export async function sendDemoChat(input: {
   audio_fixture_id?: string | null;
   is_peak?: boolean;
 }): Promise<DemoChatResponse> {
-  const url = `${API_BASE_URL}/api/v1/demo/chat`;
+  const url = `${getApiBaseUrl()}/api/v1/demo/chat`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -218,7 +228,7 @@ export async function transcribeAudio(
   audioBlob: Blob | File,
   filename = "voice_note.ogg"
 ): Promise<ASRResponse> {
-  const url = `${API_BASE_URL}/api/v1/demo/asr`;
+  const url = `${getApiBaseUrl()}/api/v1/demo/asr`;
   const formData = new FormData();
   formData.append("file", audioBlob, filename);
 
@@ -230,7 +240,7 @@ export async function transcribeAudio(
 }
 
 export async function getPublicTripShare(shareToken: string): Promise<PublicTripShareResponse> {
-  const url = `${API_BASE_URL}/api/v1/trips/share/${encodeURIComponent(shareToken)}`;
+  const url = `${getApiBaseUrl()}/api/v1/trips/share/${encodeURIComponent(shareToken)}`;
   const res = await fetch(url);
   return parseJsonResponse<PublicTripShareResponse>(res);
 }
@@ -242,7 +252,7 @@ export async function triggerPublicTripSos(shareToken: string): Promise<{
   driver_plate: string;
   message: string;
 }> {
-  const url = `${API_BASE_URL}/api/v1/trips/share/${encodeURIComponent(shareToken)}/sos`;
+  const url = `${getApiBaseUrl()}/api/v1/trips/share/${encodeURIComponent(shareToken)}/sos`;
   const res = await fetch(url, { method: "POST" });
   return parseJsonResponse(res);
 }
@@ -262,7 +272,7 @@ export async function getCorridorDrivers(): Promise<{
     status: string;
   }>;
 }> {
-  const url = `${API_BASE_URL}/api/v1/drivers`;
+  const url = `${getApiBaseUrl()}/api/v1/drivers`;
   const res = await fetch(url);
   return parseJsonResponse(res);
 }
@@ -272,7 +282,7 @@ export async function updateDriverStatus(
   status: "ONLINE" | "OFFLINE",
   details?: { corridor_id?: string; anchor_id?: string; direction?: string }
 ): Promise<{ status: string; driver: Record<string, unknown> }> {
-  const url = `${API_BASE_URL}/api/v1/drivers/${encodeURIComponent(driverId)}/status`;
+  const url = `${getApiBaseUrl()}/api/v1/drivers/${encodeURIComponent(driverId)}/status`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -305,7 +315,7 @@ export async function verifyBoardingOtp(
   escrow_state?: string;
   pod_status?: string;
 }> {
-  const url = `${API_BASE_URL}/api/v1/drivers/${encodeURIComponent(driverId)}/pods/${encodeURIComponent(podId)}/verify-otp`;
+  const url = `${getApiBaseUrl()}/api/v1/drivers/${encodeURIComponent(driverId)}/pods/${encodeURIComponent(podId)}/verify-otp`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -338,7 +348,7 @@ export async function getOpsOverview(): Promise<{
   active_sos_count: number;
   sos_alerts: Array<Record<string, unknown>>;
 }> {
-  const url = `${API_BASE_URL}/api/v1/ops/overview`;
+  const url = `${getApiBaseUrl()}/api/v1/ops/overview`;
   const res = await fetch(url);
   return parseJsonResponse(res);
 }
@@ -349,7 +359,7 @@ export async function getLiveReplayFile(): Promise<{
   replay: LiveReplayDoc | null;
 }> {
   try {
-    const backendRes = await fetch(`${API_BASE_URL}/api/v1/demo/replay/live`);
+    const backendRes = await fetch(`${getApiBaseUrl()}/api/v1/demo/replay/live`);
     if (backendRes.ok) {
       const data = await backendRes.json();
       if (data.available && data.replay) {

@@ -13,7 +13,7 @@
     "recall_at_1": 1.0,
     "recall_at_3": 1.0,
     "mrr": 1.0,
-    "p95_latency_ms": 6.51
+    "p95_latency_ms": 13.572
   },
   "safety_guard": {
     "total_cases": 9,
@@ -21,7 +21,7 @@
     "injection_block_rate": 1.0,
     "false_positive_rate": 0.0,
     "overall_accuracy": 1.0,
-    "max_latency_ms": 0.037
+    "max_latency_ms": 0.046
   },
   "conversation_rubric_judge": {
     "model_judge": "deterministic_rubric",

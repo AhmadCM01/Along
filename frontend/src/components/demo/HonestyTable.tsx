@@ -43,17 +43,19 @@ export function HonestyTable() {
         padding: "16px 20px",
         boxShadow: "var(--shadow-soft)",
       }}
+      aria-label="Evaluation Transparency Table"
     >
       <div style={{ marginBottom: 12 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-ink)" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-ink)", margin: 0 }}>
           What runs live vs simulated
         </h3>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2, marginBottom: 0 }}>
           Full technical honesty for Meta AI Hackathon evaluators.
         </p>
       </div>
 
-      <div style={{ overflowX: "auto" }}>
+      {/* Desktop Table View */}
+      <div className="along-honesty-desktop" style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr
@@ -84,7 +86,7 @@ export function HonestyTable() {
                     style={{
                       fontSize: 11,
                       fontWeight: 700,
-                      padding: "2px 6px",
+                      padding: "2px 8px",
                       borderRadius: 4,
                       background: r.status === "Live" ? "var(--brand-soft)" : "var(--signal-soft)",
                       color: r.status === "Live" ? "var(--brand-primary)" : "var(--signal-ink)",
@@ -101,6 +103,56 @@ export function HonestyTable() {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile Card Stack View */}
+      <div className="along-honesty-mobile" style={{ display: "none", flexDirection: "column", gap: 8 }}>
+        {rows.map((r, i) => (
+          <div
+            key={i}
+            style={{
+              padding: "10px 12px",
+              background: "var(--bg-paper)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "var(--radius-button)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text-ink)" }}>
+                {r.capability}
+              </span>
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  padding: "1px 6px",
+                  borderRadius: 4,
+                  background: r.status === "Live" ? "var(--brand-soft)" : "var(--signal-soft)",
+                  color: r.status === "Live" ? "var(--brand-primary)" : "var(--signal-ink)",
+                }}
+              >
+                {r.status}
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: 11.5, color: "var(--text-muted)", lineHeight: 1.35 }}>
+              {r.details}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .along-honesty-desktop {
+            display: none !important;
+          }
+          .along-honesty-mobile {
+            display: flex !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,20 +1,90 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { AlongLogo } from "@/components/brand/AlongLogo";
-import { ShieldCheckIcon, SosBeaconIcon } from "@/components/icons/AlongIcons";
+import {
+  getOpsOverview,
+  getCorridorDrivers,
+} from "@/lib/api";
 
-const ANCHOR_TELEMETRY = [
-  { id: "ANC-DUT-01", name: "A.A. Rano Filling Station (Dutse First Gate)", corridor: "BWR-DUT-WUS", queuedRiders: 12, activePods: 3, driversInBay: 4 },
-  { id: "ANC-SOK-01", name: "Bovas Filling Station (Sokale Roundabout)", corridor: "BWR-DUT-WUS", queuedRiders: 8, activePods: 2, driversInBay: 3 },
-  { id: "ANC-OAN-01", name: "Oando Filling Station (After Katampe Bridge)", corridor: "BWR-DUT-WUS", queuedRiders: 7, activePods: 2, driversInBay: 2 },
-  { id: "ANC-KUB-01", name: "NNPC Mega Station (Kubwa Express)", corridor: "ZUB-KUB-WUS", queuedRiders: 11, activePods: 3, driversInBay: 4 },
-  { id: "ANC-LUG-01", name: "Conoil Filling Station (Lugbe Police Signboard)", corridor: "GWL-LUG-AR1", queuedRiders: 15, activePods: 4, driversInBay: 5 },
-  { id: "ANC-MRB-01", name: "Matrix Filling Station (Orange Market Mararaba)", corridor: "MRB-NYA-CEN", queuedRiders: 14, activePods: 4, driversInBay: 4 },
-];
+interface OpsData {
+  brand: string;
+  city: string;
+  network: {
+    active_corridors: number;
+    fare_zones: number;
+    private_filling_station_anchors: number;
+    indexed_landmarks: number;
+    seeded_drivers: number;
+    live_online_drivers: number;
+  };
+  ledger_audit: {
+    trial_balance_kobo: number;
+    is_balanced: boolean;
+    agbero_extortion_avoided_naira: string;
+  };
+  active_sos_count: number;
+  sos_alerts: Array<Record<string, unknown>>;
+}
+
+interface DriverRow {
+  id: string;
+  full_name: string;
+  phone_e164: string;
+  phone_mode: string;
+  corridor_id: string;
+  vehicle_make_model: string;
+  vehicle_color: string;
+  plate_number: string;
+  seat_capacity: number;
+  status: string;
+}
 
 export default function OpsCommandCenterPage() {
+  const [ops, setOps] = useState<OpsData | null>(null);
+  const [drivers, setDrivers] = useState<DriverRow[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [elapsedSec, setElapsedSec] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    let cancelled = false;
+
+    setLoading(true);
+    setError(null);
+    const start = Date.now();
+    timer = setInterval(() => {
+      setElapsedSec(Math.round((Date.now() - start) / 100) / 10);
+    }, 100);
+
+    Promise.all([getOpsOverview(), getCorridorDrivers()])
+      .then(([opsRes, driversRes]) => {
+        if (!cancelled) {
+          setOps(opsRes as OpsData);
+          setDrivers(driversRes.drivers || []);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setError(msg);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+          if (timer) clearInterval(timer);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (timer) clearInterval(timer);
+    };
+  }, []);
+
   return (
     <main
       style={{
@@ -81,44 +151,107 @@ export default function OpsCommandCenterPage() {
         </div>
       </header>
 
-      {/* Top KPI Row */}
-      <section
-        className="tabular-nums"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gap: 14,
-          marginBottom: 24,
-        }}
-      >
-        <div style={{ background: "#111916", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
-          <div style={{ fontSize: 11, color: "#9FB0A7" }}>ACTIVE CORRIDORS</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#00A86B", marginTop: 4 }}>6 / 6</div>
-          <div style={{ fontSize: 11, color: "#9FB0A7" }}>20 Zones | 140 Landmarks</div>
+      {loading && (
+        <div
+          style={{
+            background: "#111916",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 12,
+            padding: 20,
+            textAlign: "center",
+            marginBottom: 20,
+            color: "#9FB0A7",
+            fontSize: 13,
+          }}
+        >
+          Fetching live operations overview ({elapsedSec.toFixed(1)}s elapsed)...
         </div>
-        <div style={{ background: "#111916", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
-          <div style={{ fontSize: 11, color: "#9FB0A7" }}>PRIVATE STATION ANCHORS</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#F3F6F4", marginTop: 4 }}>24 Bays</div>
-          <div style={{ fontSize: 11, color: "#00A86B" }}>Zero FCTA Clampdown Risk</div>
-        </div>
-        <div style={{ background: "#111916", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
-          <div style={{ fontSize: 11, color: "#9FB0A7" }}>KOBO LEDGER AUDIT</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#00A86B", marginTop: 4 }}>0 Kobo</div>
-          <div style={{ fontSize: 11, color: "#9FB0A7" }}>Double-Entry Balanced</div>
-        </div>
-        <div style={{ background: "#111916", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
-          <div style={{ fontSize: 11, color: "#9FB0A7" }}>AGBERO FEES AVOIDED</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#F59E0B", marginTop: 4 }}>₦52,500</div>
-          <div style={{ fontSize: 11, color: "#9FB0A7" }}>₦1,250 Saved Per Pod Run</div>
-        </div>
-        <div style={{ background: "#111916", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
-          <div style={{ fontSize: 11, color: "#9FB0A7" }}>FAISS + MUSE LATENCY</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#00A86B", marginTop: 4 }}>4.2 ms</div>
-          <div style={{ fontSize: 11, color: "#9FB0A7" }}>1,208 Vector Aliases</div>
-        </div>
-      </section>
+      )}
 
-      {/* Private Filling Station Anchor Pool Table */}
+      {error && (
+        <div
+          style={{
+            background: "rgba(220,38,38,0.1)",
+            border: "1px solid #DC2626",
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 20,
+            color: "#EF4444",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          Backend Error: {error}
+        </div>
+      )}
+
+      {/* Real Top KPI Row from backend */}
+      {ops && (
+        <section
+          className="tabular-nums"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(5, 1fr)",
+            gap: 14,
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ background: "#111916", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ fontSize: 11, color: "#9FB0A7" }}>ACTIVE CORRIDORS</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: "#00A86B", marginTop: 4 }}>
+              {ops.network.active_corridors} / 6
+            </div>
+            <div style={{ fontSize: 11, color: "#9FB0A7" }}>
+              {ops.network.fare_zones} Zones | {ops.network.indexed_landmarks} Landmarks
+            </div>
+          </div>
+
+          <div style={{ background: "#111916", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ fontSize: 11, color: "#9FB0A7" }}>PRIVATE STATION ANCHORS</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: "#F3F6F4", marginTop: 4 }}>
+              {ops.network.private_filling_station_anchors} Forecourts
+            </div>
+            <div style={{ fontSize: 11, color: "#00A86B" }}>Zero FCTA Clampdown Risk</div>
+          </div>
+
+          <div style={{ background: "#111916", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ fontSize: 11, color: "#9FB0A7" }}>KOBO LEDGER AUDIT</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: "#00A86B", marginTop: 4 }}>
+              {ops.ledger_audit.trial_balance_kobo} Kobo
+            </div>
+            <div style={{ fontSize: 11, color: "#9FB0A7" }}>
+              {ops.ledger_audit.is_balanced ? "Double-Entry Balanced" : "Audit Discrepancy"}
+            </div>
+          </div>
+
+          <div style={{ background: "#111916", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ fontSize: 11, color: "#9FB0A7" }}>LIVE ONLINE DRIVERS</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: "#00A86B", marginTop: 4 }}>
+              {ops.network.live_online_drivers} / {ops.network.seeded_drivers}
+            </div>
+            <div style={{ fontSize: 11, color: "#9FB0A7" }}>Active on Abuja Corridors</div>
+          </div>
+
+          <div style={{ background: "#111916", padding: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ fontSize: 11, color: "#9FB0A7" }}>ACTIVE SOS ALERTS</div>
+            <div
+              style={{
+                fontSize: 26,
+                fontWeight: 800,
+                color: ops.active_sos_count > 0 ? "#DC2626" : "#00A86B",
+                marginTop: 4,
+              }}
+            >
+              {ops.active_sos_count}
+            </div>
+            <div style={{ fontSize: 11, color: ops.active_sos_count > 0 ? "#DC2626" : "#9FB0A7" }}>
+              {ops.active_sos_count > 0 ? "FCT Rapid Response Alerted" : "Zero Safety Incidents"}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Real Driver Fleet Manifest from Backend */}
       <section
         style={{
           background: "#111916",
@@ -128,35 +261,54 @@ export default function OpsCommandCenterPage() {
         }}
       >
         <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 14 }}>
-          Live Virtual Anchor Point Pools (Private Filling Station Forecourts)
+          Live Driver Fleet Manifest ({drivers.length} Seeded Drivers)
         </h2>
-        <table
-          className="tabular-nums"
-          style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}
-        >
-          <thead>
-            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", textAlign: "left", color: "#9FB0A7" }}>
-              <th style={{ padding: "10px 8px" }}>Anchor ID</th>
-              <th style={{ padding: "10px 8px" }}>Private Filling Station Forecourt</th>
-              <th style={{ padding: "10px 8px" }}>Corridor</th>
-              <th style={{ padding: "10px 8px" }}>Queued Riders</th>
-              <th style={{ padding: "10px 8px" }}>Active 4-Seat Pods</th>
-              <th style={{ padding: "10px 8px" }}>Drivers in Bay</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ANCHOR_TELEMETRY.map((a) => (
-              <tr key={a.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <td style={{ padding: "12px 8px", color: "#00A86B", fontWeight: 700 }}>{a.id}</td>
-                <td style={{ padding: "12px 8px", fontWeight: 600 }}>{a.name}</td>
-                <td style={{ padding: "12px 8px" }}>{a.corridor}</td>
-                <td style={{ padding: "12px 8px", color: "#F59E0B", fontWeight: 700 }}>{a.queuedRiders}</td>
-                <td style={{ padding: "12px 8px", color: "#00A86B", fontWeight: 700 }}>{a.activePods}</td>
-                <td style={{ padding: "12px 8px" }}>{a.driversInBay}</td>
+        <div style={{ overflowX: "auto" }}>
+          <table
+            className="tabular-nums"
+            style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}
+          >
+            <thead>
+              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", textAlign: "left", color: "#9FB0A7" }}>
+                <th style={{ padding: "10px 8px" }}>Driver ID</th>
+                <th style={{ padding: "10px 8px" }}>Full Name</th>
+                <th style={{ padding: "10px 8px" }}>Corridor</th>
+                <th style={{ padding: "10px 8px" }}>Vehicle</th>
+                <th style={{ padding: "10px 8px" }}>Plate Number</th>
+                <th style={{ padding: "10px 8px" }}>Phone Mode</th>
+                <th style={{ padding: "10px 8px" }}>Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {drivers.map((d) => (
+                <tr key={d.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <td style={{ padding: "12px 8px", color: "#00A86B", fontWeight: 700 }}>{d.id}</td>
+                  <td style={{ padding: "12px 8px", fontWeight: 600 }}>{d.full_name}</td>
+                  <td style={{ padding: "12px 8px" }}>{d.corridor_id}</td>
+                  <td style={{ padding: "12px 8px" }}>
+                    {d.vehicle_color} {d.vehicle_make_model}
+                  </td>
+                  <td style={{ padding: "12px 8px", fontWeight: 700 }}>{d.plate_number}</td>
+                  <td style={{ padding: "12px 8px", color: "#9FB0A7" }}>{d.phone_mode}</td>
+                  <td style={{ padding: "12px 8px" }}>
+                    <span
+                      style={{
+                        background: d.status === "ONLINE" ? "rgba(0,168,107,0.16)" : "rgba(255,255,255,0.08)",
+                        color: d.status === "ONLINE" ? "#00A86B" : "#9FB0A7",
+                        padding: "3px 8px",
+                        borderRadius: 4,
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {d.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   );

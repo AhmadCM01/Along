@@ -22,6 +22,7 @@ export interface ChatMessage {
   text: string;
   isVoice?: boolean;
   voiceDuration?: string;
+  voiceLabel?: string;
   timestamp: string;
   quoteData?: {
     corridorId: string;
@@ -31,18 +32,23 @@ export interface ChatMessage {
     unitFare: string;
     totalFare: string;
     otp: string;
+    shareToken?: string | null;
   };
   isSos?: boolean;
 }
 
 interface WhatsAppSimulatorProps {
   messages: ChatMessage[];
-  onSendMessage: (text: string, isVoice?: boolean) => void;
+  onSendMessage: (text: string) => void;
+  onSendVoiceAudio?: (blob: Blob | File, filename?: string) => void;
+  onSendSampleInput?: (text: string, locale?: "en" | "pcm" | "ha") => void;
   onConfirmBooking: () => void;
   onTriggerSos: () => void;
   activeLocale: "en" | "pcm" | "ha";
   onChangeLocale: (loc: "en" | "pcm" | "ha") => void;
   isProcessing?: boolean;
+  elapsedSeconds?: number;
+  errorMessage?: string | null;
 }
 
 const QUICK_SAMPLES = [
@@ -69,32 +75,38 @@ const QUICK_SAMPLES = [
 export function WhatsAppSimulator({
   messages,
   onSendMessage,
+  onSendVoiceAudio,
+  onSendSampleInput,
   onConfirmBooking,
   onTriggerSos,
   activeLocale,
   onChangeLocale,
   isProcessing = false,
+  elapsedSeconds,
+  errorMessage,
 }: WhatsAppSimulatorProps) {
   const [inputText, setInputText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const [elapsedSec, setElapsedSec] = useState(0);
+  const [localElapsedSec, setLocalElapsedSec] = useState(0);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isProcessing) {
-      setElapsedSec(1);
+      setLocalElapsedSec(1);
       interval = setInterval(() => {
-        setElapsedSec((prev) => prev + 1);
+        setLocalElapsedSec((prev) => prev + 1);
       }, 1000);
     } else {
-      setElapsedSec(0);
+      setLocalElapsedSec(0);
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -110,26 +122,37 @@ export function WhatsAppSimulator({
   const handleSend = () => {
     const trimmed = inputText.trim();
     if (!trimmed) return;
-    onSendMessage(trimmed, false);
+    onSendMessage(trimmed);
     setInputText("");
   };
 
   const startRecording = async () => {
+    chunksRef.current = [];
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      if (typeof navigator !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
         const recorder = new MediaRecorder(stream);
         mediaRecorderRef.current = recorder;
+
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            chunksRef.current.push(e.data);
+          }
+        };
+
         recorder.start();
+        setIsRecording(true);
+        setRecordSeconds(0);
+        timerRef.current = setInterval(() => {
+          setRecordSeconds((sec) => sec + 1);
+        }, 1000);
+      } else {
+        alert("Audio recording not supported in this browser environment.");
       }
     } catch {
-      // Browser microphone permission fallback for local simulation
+      alert("Microphone permission denied or audio device not found.");
     }
-    setIsRecording(true);
-    setRecordSeconds(0);
-    timerRef.current = setInterval(() => {
-      setRecordSeconds((sec) => sec + 1);
-    }, 1000);
   };
 
   const stopRecordingAndSend = () => {
@@ -137,30 +160,33 @@ export function WhatsAppSimulator({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      try {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
-      } catch {
-        // Safe cleanup
-      }
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === "recording") {
+      recorder.onstop = () => {
+        const mime = recorder.mimeType || "audio/webm";
+        const audioBlob = new Blob(chunksRef.current, { type: mime });
+        chunksRef.current = [];
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+          mediaStreamRef.current = null;
+        }
+        if (onSendVoiceAudio) {
+          onSendVoiceAudio(audioBlob, "voice_note.webm");
+        }
+      };
+      recorder.stop();
     }
     setIsRecording(false);
-    // Submit as recorded voice note
-    const sampleText =
-      activeLocale === "ha"
-        ? "Ina Bwari zan je Kasuwar Wuse kujera biyu"
-        : activeLocale === "pcm"
-        ? "Abeg I dey Dutse first gate, two seats go Berger"
-        : "From Sokale roundabout, drop me for that Oando after Katampe bridge";
-    onSendMessage(sampleText, true);
     setRecordSeconds(0);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onSendMessage(`[Uploaded Voice Clip: ${file.name}] Abeg I dey Dutse first gate, two seats go Berger`, true);
+      if (onSendVoiceAudio) {
+        onSendVoiceAudio(file, file.name);
+      }
+      e.target.value = "";
     }
   };
 
@@ -392,59 +418,88 @@ export function WhatsAppSimulator({
               >
                 {/* Voice Note Layout */}
                 {msg.isVoice ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <button
-                      onClick={() => togglePlayAudio(msg.id)}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: isUser ? "#25D366" : "#00A86B",
-                        cursor: "pointer",
-                        padding: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {playingAudioId === msg.id ? (
-                        <PauseCircleIcon size={30} color={isUser ? "#25D366" : "#00A86B"} />
-                      ) : (
-                        <PlayCircleIcon size={30} color={isUser ? "#25D366" : "#00A86B"} />
-                      )}
-                    </button>
-
-                    {/* Animated Waveform */}
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                      <div
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <button
+                        onClick={() => togglePlayAudio(msg.id)}
                         style={{
+                          background: "transparent",
+                          border: "none",
+                          color: isUser ? "#25D366" : "#00A86B",
+                          cursor: "pointer",
+                          padding: 0,
                           display: "flex",
                           alignItems: "center",
-                          gap: 2,
-                          height: 18,
+                          justifyContent: "center",
                         }}
                       >
-                        {[10, 18, 14, 8, 20, 12, 16, 9, 22, 14, 18, 10, 15, 7, 19, 11].map(
-                          (h, idx) => (
-                            <span
-                              key={idx}
-                              style={{
-                                width: 3,
-                                height: playingAudioId === msg.id ? (idx % 2 === 0 ? 20 : 8) : h,
-                                background: idx < 8 ? "#25D366" : "#8696A0",
-                                borderRadius: 1.5,
-                                transition: "height 0.15s ease",
-                              }}
-                            />
-                          )
+                        {playingAudioId === msg.id ? (
+                          <PauseCircleIcon size={30} color={isUser ? "#25D366" : "#00A86B"} />
+                        ) : (
+                          <PlayCircleIcon size={30} color={isUser ? "#25D366" : "#00A86B"} />
                         )}
+                      </button>
+
+                      {/* Animated Waveform */}
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 2,
+                            height: 18,
+                          }}
+                        >
+                          {[10, 18, 14, 8, 20, 12, 16, 9, 22, 14, 18, 10, 15, 7, 19, 11].map(
+                            (h, idx) => (
+                              <span
+                                key={idx}
+                                style={{
+                                  width: 3,
+                                  height: playingAudioId === msg.id ? (idx % 2 === 0 ? 20 : 8) : h,
+                                  background: idx < 8 ? "#25D366" : "#8696A0",
+                                  borderRadius: 1.5,
+                                  transition: "height 0.15s ease",
+                                }}
+                              />
+                            )
+                          )}
+                        </div>
+                        <div
+                          className="tabular-nums"
+                          style={{ fontSize: 10.5, color: "#8696A0", display: "flex", justifyContent: "space-between" }}
+                        >
+                          <span>{msg.voiceDuration || "0:04"}</span>
+                          <span>{isUser ? "Voice Note" : "Audio Response"}</span>
+                        </div>
                       </div>
-                      <div
-                        className="tabular-nums"
-                        style={{ fontSize: 10.5, color: "#8696A0", display: "flex", justifyContent: "space-between" }}
-                      >
-                        <span>{msg.voiceDuration || "0:04"}</span>
-                        <span>{isUser ? "Voice Note" : "Audio Response"}</span>
+                    </div>
+
+                    {/* Real Transcript Labeled Non-Meta ASR (Whisper) */}
+                    <div
+                      style={{
+                        marginTop: 6,
+                        paddingTop: 6,
+                        borderTop: "1px solid rgba(255,255,255,0.08)",
+                        fontSize: 12.5,
+                      }}
+                    >
+                      <div style={{ marginBottom: 3 }}>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            background: "rgba(0,168,107,0.2)",
+                            color: "#25D366",
+                            padding: "1px 6px",
+                            borderRadius: 4,
+                            fontWeight: 700,
+                            letterSpacing: "0.02em",
+                          }}
+                        >
+                          Non-Meta ASR (Whisper)
+                        </span>
                       </div>
+                      <div style={{ color: "#E9EDEF", lineHeight: 1.35 }}>{msg.text}</div>
                     </div>
                   </div>
                 ) : (
@@ -567,6 +622,25 @@ export function WhatsAppSimulator({
           );
         })}
 
+        {/* Real Error Message Banner */}
+        {errorMessage && (
+          <div
+            style={{
+              alignSelf: "center",
+              background: "rgba(239,68,68,0.15)",
+              border: "1px solid #EF4444",
+              borderRadius: 8,
+              padding: "8px 14px",
+              color: "#FCA5A5",
+              fontSize: 12,
+              maxWidth: "92%",
+              lineHeight: 1.4,
+            }}
+          >
+            <strong>Error:</strong> {errorMessage}
+          </div>
+        )}
+
         {/* Active LLM Elapsed Timer Indicator */}
         {isProcessing && (
           <div
@@ -599,7 +673,9 @@ export function WhatsAppSimulator({
                   animation: "along-skeleton-pulse 1s infinite",
                 }}
               />
-              <span className="tabular-nums">Finding ride options... ({elapsedSec}s)</span>
+              <span className="tabular-nums">
+                Finding ride options... ({elapsedSeconds !== undefined ? elapsedSeconds : localElapsedSec}s)
+              </span>
             </div>
           </div>
         )}
@@ -663,14 +739,18 @@ export function WhatsAppSimulator({
         }}
       >
         <span style={{ fontSize: 11, color: "#8696A0", alignSelf: "center", whiteSpace: "nowrap" }}>
-          Sample Notes:
+          Sample Inputs:
         </span>
         {QUICK_SAMPLES.map((sample) => (
           <button
             key={sample.id}
             onClick={() => {
               onChangeLocale(sample.locale);
-              onSendMessage(sample.text, true);
+              if (onSendSampleInput) {
+                onSendSampleInput(sample.text, sample.locale);
+              } else {
+                onSendMessage(sample.text);
+              }
             }}
             style={{
               background: "#202C33",

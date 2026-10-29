@@ -25,7 +25,19 @@ from scripts.seed import load_abuja_seed_catalog
 router = APIRouter(prefix="/api/v1/drivers", tags=["drivers"])
 
 # In-memory operational state for active pods, OTPs, and driver states (backed by Redis when attached)
-ACTIVE_PODS_STORE: dict[str, dict[str, Any]] = {}
+ACTIVE_PODS_STORE: dict[str, dict[str, Any]] = {
+    "POD-842A": {
+        "pod_id": "POD-842A",
+        "driver_id": "DRV-001",
+        "corridor_id": "BWR-DUT-WUS",
+        "anchor_lat": 9.1779,
+        "anchor_lng": 7.3736,
+        "seats_occupied": 4,
+        "boarding_otps": {"rr-demo-01": "4829"},
+        "boarded_requests": {"rr-demo-02", "rr-demo-03", "rr-demo-04"},
+        "status": "BOARDING",
+    }
+}
 DRIVER_LIVE_STATE: dict[str, dict[str, Any]] = {}
 
 
@@ -125,6 +137,9 @@ async def verify_rider_boarding_otp(
 ) -> dict[str, Any]:
     """Verify 4-digit boarding OTP within 150m of the Virtual Anchor Point and capture escrow."""
     pod = ACTIVE_PODS_STORE.get(pod_id)
+    if pod is None:
+        clean_id = pod_id.split()[0]
+        pod = ACTIVE_PODS_STORE.get(clean_id)
     if pod is None:
         raise HTTPException(status_code=404, detail="Pod not found")
 

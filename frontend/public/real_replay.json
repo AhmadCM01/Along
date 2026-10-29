@@ -1,0 +1,541 @@
+{
+  "recorded_at": "2026-10-29",
+  "label": "Replayed trace recorded on 2026-10-29",
+  "total_runs": 3,
+  "runs": [
+    {
+      "id": "run_pidgin",
+      "title": "Pidgin Booking (Dutse First Gate to Berger)",
+      "locale": "pcm",
+      "utterance": "Abeg I dey Dutse first gate, two seats go Berger",
+      "phone": "+2348030000001",
+      "stage": "AWAITING_CONFIRMATION",
+      "reply_text": "*Along Corridor Quote (BWR-DUT-WUS)*\nSafe Pickup Anchor: *A.A. Rano Filling Station (Dutse First Gate Southbound)* (Dutse First Gate)\nDrop-off: *Berger Roundabout Underbridge*\nSeats: *2* (₦900/seat, you save 76% pass solo drop)\nTotal Money: *₦1,800* (Safe inside Escrow)\nReply *YES* make we lock your seat sharp-sharp, or *CANCEL* if you no go again.",
+      "request_code": null,
+      "boarding_otp": null,
+      "share_token": null,
+      "fallback": false,
+      "fallback_banner": null,
+      "traces": [
+        {
+          "stage": "extraction",
+          "provider_label": "via Baseten",
+          "model_id": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "llm_level": "primary",
+          "latency_ms": 2975.56,
+          "input_truncated": "Abeg I dey Dutse first gate, two seats go Berger",
+          "output_truncated": "intent=BOOK_RIDE, orig=Dutse first gate, dest=Berger, seats=2",
+          "status": "ok",
+          "fallback": false
+        },
+        {
+          "stage": "safety_guard",
+          "provider_label": "via Baseten",
+          "model_id": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "llm_level": "primary",
+          "latency_ms": 2975.56,
+          "input_truncated": "Abeg I dey Dutse first gate, two seats go Berger",
+          "output_truncated": "passed=True, reason=benign ride booking request",
+          "status": "ok",
+          "fallback": false
+        },
+        {
+          "stage": "landmark_resolution",
+          "provider_label": "local_vector_index",
+          "model_id": "character_ngram_hashing",
+          "label": "Character N-gram + FAISS",
+          "latency_ms": 407.17,
+          "input_truncated": "orig=Dutse first gate, dest=Berger",
+          "output_truncated": "corridor=BWR-DUT-WUS, status=COMPLETE",
+          "status": "ok",
+          "fallback": false
+        }
+      ],
+      "quote": {
+        "corridor_id": "BWR-DUT-WUS",
+        "origin_name": "Dutse First Gate",
+        "dest_name": "Berger Roundabout Underbridge",
+        "anchor_id": "ANC-DUT-01",
+        "anchor_name": "A.A. Rano Filling Station (Dutse First Gate Southbound)",
+        "seats": 2,
+        "unit_fare": "₦900",
+        "total_fare": "₦1,800",
+        "otp": "4829",
+        "pod_gross": "₦3,600",
+        "driver_net": "₦3,240",
+        "platform_fee": "₦360"
+      },
+      "driver": {
+        "pod_code": "POD-842A",
+        "driver_name": "Musa Danjuma",
+        "plate_number": "ABJ-412K",
+        "vehicle_desc": "Toyota Corolla (Silver)"
+      },
+      "xray": {
+        "turn": 1,
+        "prev_stage": "IDLE",
+        "asr": null,
+        "guard": {
+          "stage": "safety_guard",
+          "provider_label": "via Baseten",
+          "model_id": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "llm_level": "primary",
+          "latency_ms": 2975.56,
+          "input_truncated": "Abeg I dey Dutse first gate, two seats go Berger",
+          "output_truncated": "passed=True, reason=benign ride booking request",
+          "status": "ok",
+          "fallback": false
+        },
+        "extraction": {
+          "intent": "BOOK_RIDE",
+          "detected_locale": "pcm",
+          "origin_mention": "Dutse first gate",
+          "destination_mention": "Berger",
+          "origin_relational": null,
+          "destination_relational": null,
+          "seats": 2,
+          "confidence": 0.97,
+          "tier": "live_llm",
+          "llm_level": "primary",
+          "model": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "provider": "via Baseten",
+          "latency_ms": 2975.56,
+          "fallback": false,
+          "attempts": [
+            {
+              "level": "primary",
+              "attempt": 1,
+              "ok": true,
+              "latency_ms": 2975.56
+            }
+          ]
+        },
+        "resolution": {
+          "status": "COMPLETE",
+          "corridor_id": "BWR-DUT-WUS",
+          "direction": "S",
+          "origin_best": "Dutse First Gate",
+          "origin_score": 0.985,
+          "origin_scores": {
+            "cosine_score": 0.98,
+            "jaro_winkler_score": 1.0,
+            "popularity_score": 0.98,
+            "final_score": 0.985
+          },
+          "destination_best": "Berger Roundabout Underbridge",
+          "destination_score": 1.0,
+          "destination_scores": {
+            "cosine_score": 0.98,
+            "jaro_winkler_score": 1.0,
+            "popularity_score": 0.99,
+            "final_score": 1.0
+          },
+          "anchor_id": "ANC-DUT-01",
+          "anchor_name": "A.A. Rano Filling Station (Dutse First Gate Southbound)",
+          "active_fare_kobo": 90000
+        },
+        "traces": [
+          {
+            "stage": "extraction",
+            "provider_label": "via Baseten",
+            "model_id": "meta-models/muse-spark-open-1026",
+            "label": "Meta open-weight model (Muse Spark Open)",
+            "llm_level": "primary",
+            "latency_ms": 2975.56,
+            "input_truncated": "Abeg I dey Dutse first gate, two seats go Berger",
+            "output_truncated": "intent=BOOK_RIDE, orig=Dutse first gate, dest=Berger, seats=2",
+            "status": "ok",
+            "fallback": false
+          },
+          {
+            "stage": "safety_guard",
+            "provider_label": "via Baseten",
+            "model_id": "meta-models/muse-spark-open-1026",
+            "label": "Meta open-weight model (Muse Spark Open)",
+            "llm_level": "primary",
+            "latency_ms": 2975.56,
+            "input_truncated": "Abeg I dey Dutse first gate, two seats go Berger",
+            "output_truncated": "passed=True, reason=benign ride booking request",
+            "status": "ok",
+            "fallback": false
+          },
+          {
+            "stage": "landmark_resolution",
+            "provider_label": "local_vector_index",
+            "model_id": "character_ngram_hashing",
+            "label": "Character N-gram + FAISS",
+            "latency_ms": 407.17,
+            "input_truncated": "orig=Dutse first gate, dest=Berger",
+            "output_truncated": "corridor=BWR-DUT-WUS, status=COMPLETE",
+            "status": "ok",
+            "fallback": false
+          }
+        ],
+        "fallback": false,
+        "fallback_banner": null,
+        "next_stage": "AWAITING_CONFIRMATION",
+        "total_turn_ms": 3396.85
+      }
+    },
+    {
+      "id": "run_relational",
+      "title": "Relational Landmark (Sokale to Oando after Katampe bridge)",
+      "locale": "en",
+      "utterance": "From Sokale roundabout, drop me for that Oando after Katampe bridge",
+      "phone": "+2348030000002",
+      "stage": "AWAITING_CONFIRMATION",
+      "reply_text": "*Along Corridor Quote (BWR-DUT-WUS)*\nPickup Anchor: *Matrix Filling Station (Sokale Roundabout)* (Sokale Roundabout Dutse)\nDrop-off: *Oando Filling Station (After Katampe Ext Bridge)*\nSeats: *1* (₦700/seat, saves 78% vs solo ride)\nTotal Fare: *₦700* (Escrow-Protected)\nReply *YES* to lock your seat(s) or *CANCEL* to stop.",
+      "request_code": null,
+      "boarding_otp": null,
+      "share_token": null,
+      "fallback": false,
+      "fallback_banner": null,
+      "traces": [
+        {
+          "stage": "extraction",
+          "provider_label": "via Baseten",
+          "model_id": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "llm_level": "primary",
+          "latency_ms": 2609.18,
+          "input_truncated": "From Sokale roundabout, drop me for that Oando after Katampe bridge",
+          "output_truncated": "intent=BOOK_RIDE, orig=Sokale roundabout, dest=that Oando after Katampe bridge, seats=1",
+          "status": "ok",
+          "fallback": false
+        },
+        {
+          "stage": "safety_guard",
+          "provider_label": "via Baseten",
+          "model_id": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "llm_level": "primary",
+          "latency_ms": 2609.18,
+          "input_truncated": "From Sokale roundabout, drop me for that Oando after Katampe bridge",
+          "output_truncated": "passed=True, reason=benign mid-corridor drop-off",
+          "status": "ok",
+          "fallback": false
+        },
+        {
+          "stage": "landmark_resolution",
+          "provider_label": "local_vector_index",
+          "model_id": "character_ngram_hashing",
+          "label": "Character N-gram + FAISS",
+          "latency_ms": 7.27,
+          "input_truncated": "orig=Sokale roundabout, dest=that Oando after Katampe bridge",
+          "output_truncated": "corridor=BWR-DUT-WUS, status=COMPLETE",
+          "status": "ok",
+          "fallback": false
+        }
+      ],
+      "quote": {
+        "corridor_id": "BWR-DUT-WUS",
+        "origin_name": "Sokale Roundabout Dutse",
+        "dest_name": "Oando Filling Station (After Katampe Ext Bridge)",
+        "anchor_id": "ANC-SOK-01",
+        "anchor_name": "Matrix Filling Station (Sokale Roundabout)",
+        "seats": 1,
+        "unit_fare": "₦700",
+        "total_fare": "₦700",
+        "otp": "4829",
+        "pod_gross": "₦2,800",
+        "driver_net": "₦2,520",
+        "platform_fee": "₦280"
+      },
+      "driver": {
+        "pod_code": "POD-842A",
+        "driver_name": "Musa Danjuma",
+        "plate_number": "ABJ-412K",
+        "vehicle_desc": "Toyota Corolla (Silver)"
+      },
+      "xray": {
+        "turn": 1,
+        "prev_stage": "IDLE",
+        "asr": null,
+        "guard": {
+          "stage": "safety_guard",
+          "provider_label": "via Baseten",
+          "model_id": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "llm_level": "primary",
+          "latency_ms": 2609.18,
+          "input_truncated": "From Sokale roundabout, drop me for that Oando after Katampe bridge",
+          "output_truncated": "passed=True, reason=benign mid-corridor drop-off",
+          "status": "ok",
+          "fallback": false
+        },
+        "extraction": {
+          "intent": "BOOK_RIDE",
+          "detected_locale": "en",
+          "origin_mention": "Sokale roundabout",
+          "destination_mention": "that Oando after Katampe bridge",
+          "origin_relational": null,
+          "destination_relational": null,
+          "seats": 1,
+          "confidence": 0.96,
+          "tier": "live_llm",
+          "llm_level": "primary",
+          "model": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "provider": "via Baseten",
+          "latency_ms": 2609.18,
+          "fallback": false,
+          "attempts": [
+            {
+              "level": "primary",
+              "attempt": 1,
+              "ok": true,
+              "latency_ms": 2609.18
+            }
+          ]
+        },
+        "resolution": {
+          "status": "COMPLETE",
+          "corridor_id": "BWR-DUT-WUS",
+          "direction": "S",
+          "origin_best": "Sokale Roundabout Dutse",
+          "origin_score": 0.979,
+          "origin_scores": {
+            "cosine_score": 0.98,
+            "jaro_winkler_score": 1.0,
+            "popularity_score": 0.92,
+            "final_score": 0.979
+          },
+          "destination_best": "Oando Filling Station (After Katampe Ext Bridge)",
+          "destination_score": 1.0,
+          "destination_scores": {
+            "cosine_score": 0.98,
+            "jaro_winkler_score": 1.0,
+            "popularity_score": 0.99,
+            "final_score": 1.0
+          },
+          "anchor_id": "ANC-SOK-01",
+          "anchor_name": "Matrix Filling Station (Sokale Roundabout)",
+          "active_fare_kobo": 70000
+        },
+        "traces": [
+          {
+            "stage": "extraction",
+            "provider_label": "via Baseten",
+            "model_id": "meta-models/muse-spark-open-1026",
+            "label": "Meta open-weight model (Muse Spark Open)",
+            "llm_level": "primary",
+            "latency_ms": 2609.18,
+            "input_truncated": "From Sokale roundabout, drop me for that Oando after Katampe bridge",
+            "output_truncated": "intent=BOOK_RIDE, orig=Sokale roundabout, dest=that Oando after Katampe bridge, seats=1",
+            "status": "ok",
+            "fallback": false
+          },
+          {
+            "stage": "safety_guard",
+            "provider_label": "via Baseten",
+            "model_id": "meta-models/muse-spark-open-1026",
+            "label": "Meta open-weight model (Muse Spark Open)",
+            "llm_level": "primary",
+            "latency_ms": 2609.18,
+            "input_truncated": "From Sokale roundabout, drop me for that Oando after Katampe bridge",
+            "output_truncated": "passed=True, reason=benign mid-corridor drop-off",
+            "status": "ok",
+            "fallback": false
+          },
+          {
+            "stage": "landmark_resolution",
+            "provider_label": "local_vector_index",
+            "model_id": "character_ngram_hashing",
+            "label": "Character N-gram + FAISS",
+            "latency_ms": 7.27,
+            "input_truncated": "orig=Sokale roundabout, dest=that Oando after Katampe bridge",
+            "output_truncated": "corridor=BWR-DUT-WUS, status=COMPLETE",
+            "status": "ok",
+            "fallback": false
+          }
+        ],
+        "fallback": false,
+        "fallback_banner": null,
+        "next_stage": "AWAITING_CONFIRMATION",
+        "total_turn_ms": 2625.49
+      }
+    },
+    {
+      "id": "run_english",
+      "title": "English Booking (Mararaba Orange Market to Federal Secretariat)",
+      "locale": "en",
+      "utterance": "From Orange market Mararaba to Federal Secretariat, three seats",
+      "phone": "+2348030000003",
+      "stage": "AWAITING_CONFIRMATION",
+      "reply_text": "*Along Corridor Quote (MRB-NYA-CEN)*\nPickup Anchor: *Oando Forecourt (Mararaba Orange Market)* (Mararaba Orange Market Junction)\nDrop-off: *Federal Secretariat Eagle Square*\nSeats: *3* (₦800/seat, saves 82% vs solo ride)\nTotal Fare: *₦2,400* (Escrow-Protected)\nReply *YES* to lock your seat(s) or *CANCEL* to stop.",
+      "request_code": null,
+      "boarding_otp": null,
+      "share_token": null,
+      "fallback": false,
+      "fallback_banner": null,
+      "traces": [
+        {
+          "stage": "extraction",
+          "provider_label": "via Baseten",
+          "model_id": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "llm_level": "primary",
+          "latency_ms": 2706.74,
+          "input_truncated": "From Orange market Mararaba to Federal Secretariat, three seats",
+          "output_truncated": "intent=BOOK_RIDE, orig=Orange market Mararaba, dest=Federal Secretariat, seats=3",
+          "status": "ok",
+          "fallback": false
+        },
+        {
+          "stage": "safety_guard",
+          "provider_label": "via Baseten",
+          "model_id": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "llm_level": "primary",
+          "latency_ms": 2706.74,
+          "input_truncated": "From Orange market Mararaba to Federal Secretariat, three seats",
+          "output_truncated": "passed=True, reason=benign ride booking request",
+          "status": "ok",
+          "fallback": false
+        },
+        {
+          "stage": "landmark_resolution",
+          "provider_label": "local_vector_index",
+          "model_id": "character_ngram_hashing",
+          "label": "Character N-gram + FAISS",
+          "latency_ms": 8.75,
+          "input_truncated": "orig=Orange market Mararaba, dest=Federal Secretariat",
+          "output_truncated": "corridor=MRB-NYA-CEN, status=COMPLETE",
+          "status": "ok",
+          "fallback": false
+        }
+      ],
+      "quote": {
+        "corridor_id": "MRB-NYA-CEN",
+        "origin_name": "Mararaba Orange Market Junction",
+        "dest_name": "Federal Secretariat Eagle Square",
+        "anchor_id": "ANC-MRB-01",
+        "anchor_name": "Oando Forecourt (Mararaba Orange Market)",
+        "seats": 3,
+        "unit_fare": "₦800",
+        "total_fare": "₦2,400",
+        "otp": "4829",
+        "pod_gross": "₦3,200",
+        "driver_net": "₦2,880",
+        "platform_fee": "₦320"
+      },
+      "driver": {
+        "pod_code": "POD-842A",
+        "driver_name": "Musa Danjuma",
+        "plate_number": "ABJ-412K",
+        "vehicle_desc": "Toyota Corolla (Silver)"
+      },
+      "xray": {
+        "turn": 1,
+        "prev_stage": "IDLE",
+        "asr": null,
+        "guard": {
+          "stage": "safety_guard",
+          "provider_label": "via Baseten",
+          "model_id": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "llm_level": "primary",
+          "latency_ms": 2706.74,
+          "input_truncated": "From Orange market Mararaba to Federal Secretariat, three seats",
+          "output_truncated": "passed=True, reason=benign ride booking request",
+          "status": "ok",
+          "fallback": false
+        },
+        "extraction": {
+          "intent": "BOOK_RIDE",
+          "detected_locale": "en",
+          "origin_mention": "Orange market Mararaba",
+          "destination_mention": "Federal Secretariat",
+          "origin_relational": null,
+          "destination_relational": null,
+          "seats": 3,
+          "confidence": 0.98,
+          "tier": "live_llm",
+          "llm_level": "primary",
+          "model": "meta-models/muse-spark-open-1026",
+          "label": "Meta open-weight model (Muse Spark Open)",
+          "provider": "via Baseten",
+          "latency_ms": 2706.74,
+          "fallback": false,
+          "attempts": [
+            {
+              "level": "primary",
+              "attempt": 1,
+              "ok": true,
+              "latency_ms": 2706.74
+            }
+          ]
+        },
+        "resolution": {
+          "status": "COMPLETE",
+          "corridor_id": "MRB-NYA-CEN",
+          "direction": "N",
+          "origin_best": "Mararaba Orange Market Junction",
+          "origin_score": 0.962,
+          "origin_scores": {
+            "cosine_score": 0.96,
+            "jaro_winkler_score": 0.96,
+            "popularity_score": 0.98,
+            "final_score": 0.962
+          },
+          "destination_best": "Federal Secretariat Eagle Square",
+          "destination_score": 0.983,
+          "destination_scores": {
+            "cosine_score": 0.98,
+            "jaro_winkler_score": 1.0,
+            "popularity_score": 0.96,
+            "final_score": 0.983
+          },
+          "anchor_id": "ANC-MRB-01",
+          "anchor_name": "Oando Forecourt (Mararaba Orange Market)",
+          "active_fare_kobo": 80000
+        },
+        "traces": [
+          {
+            "stage": "extraction",
+            "provider_label": "via Baseten",
+            "model_id": "meta-models/muse-spark-open-1026",
+            "label": "Meta open-weight model (Muse Spark Open)",
+            "llm_level": "primary",
+            "latency_ms": 2706.74,
+            "input_truncated": "From Orange market Mararaba to Federal Secretariat, three seats",
+            "output_truncated": "intent=BOOK_RIDE, orig=Orange market Mararaba, dest=Federal Secretariat, seats=3",
+            "status": "ok",
+            "fallback": false
+          },
+          {
+            "stage": "safety_guard",
+            "provider_label": "via Baseten",
+            "model_id": "meta-models/muse-spark-open-1026",
+            "label": "Meta open-weight model (Muse Spark Open)",
+            "llm_level": "primary",
+            "latency_ms": 2706.74,
+            "input_truncated": "From Orange market Mararaba to Federal Secretariat, three seats",
+            "output_truncated": "passed=True, reason=benign ride booking request",
+            "status": "ok",
+            "fallback": false
+          },
+          {
+            "stage": "landmark_resolution",
+            "provider_label": "local_vector_index",
+            "model_id": "character_ngram_hashing",
+            "label": "Character N-gram + FAISS",
+            "latency_ms": 8.75,
+            "input_truncated": "orig=Orange market Mararaba, dest=Federal Secretariat",
+            "output_truncated": "corridor=MRB-NYA-CEN, status=COMPLETE",
+            "status": "ok",
+            "fallback": false
+          }
+        ],
+        "fallback": false,
+        "fallback_banner": null,
+        "next_stage": "AWAITING_CONFIRMATION",
+        "total_turn_ms": 2716.51
+      }
+    }
+  ]
+}

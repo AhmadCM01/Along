@@ -6,22 +6,29 @@ import {
   PinLocationIcon,
   ShieldCheckIcon,
 } from "@/components/icons/AlongIcons";
+import { ActiveResolverScores } from "@/hooks/useAlongChat";
+import { StageTrace } from "@/lib/api";
 
 interface AbujaCorridorMapProps {
   corridorId: string;
   originName: string;
   destName: string;
   anchorName: string;
-  midCorridorActive: boolean;
-  nluModel: string;
-  nluLatencyMs: number;
+  midCorridorActive?: boolean;
+  traces?: StageTrace[];
+  resolverScores?: ActiveResolverScores | null;
+  isLoading?: boolean;
+  elapsedSeconds?: number;
+  errorMessage?: string | null;
+  nluModel?: string;
+  nluLatencyMs?: number;
   voiceModel?: string;
   voiceLatencyMs?: number;
-  faissLatencyMs: number;
-  cosineScore: number;
-  jwScore: number;
-  popScore: number;
-  finalScore: number;
+  faissLatencyMs?: number;
+  cosineScore?: number;
+  jwScore?: number;
+  popScore?: number;
+  finalScore?: number;
 }
 
 // Authoritative Abuja Corridor Waypoints along BWR-DUT-WUS
@@ -40,16 +47,12 @@ export function AbujaCorridorMap({
   originName,
   destName,
   anchorName,
-  midCorridorActive,
-  nluModel,
-  nluLatencyMs,
-  voiceModel,
-  voiceLatencyMs,
-  faissLatencyMs,
-  cosineScore,
-  jwScore,
-  popScore,
-  finalScore,
+  midCorridorActive = false,
+  traces = [],
+  resolverScores = null,
+  isLoading = false,
+  elapsedSeconds = 0,
+  errorMessage = null,
 }: AbujaCorridorMapProps) {
   const [activeTab, setActiveTab] = useState<"map" | "observability">("map");
 
@@ -332,100 +335,165 @@ export function AbujaCorridorMap({
                     : "Terminal Route: 36.5 km • Zero Roadside Stopping"}
                 </div>
               </div>
+
+              {/* Real Resolver Scores from Backend Response */}
+              {resolverScores && (resolverScores.originScores || resolverScores.destScores) && (
+                <div
+                  style={{
+                    background: "#17221E",
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,168,107,0.25)",
+                    gridColumn: "1 / -1",
+                  }}
+                >
+                  <div style={{ color: "#00A86B", fontSize: 11, fontWeight: 800, letterSpacing: "0.04em", marginBottom: 6 }}>
+                    REAL RESOLVER SCORES: 0.65*Cos + 0.25*JW + 0.10*Pop
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {resolverScores.originScores && (
+                      <div style={{ background: "#111916", padding: 8, borderRadius: 8, fontSize: 11.5 }}>
+                        <div style={{ color: "#9FB0A7", fontSize: 10, fontWeight: 700 }}>
+                          ORIGIN: {resolverScores.originName}
+                        </div>
+                        <div className="tabular-nums" style={{ marginTop: 2, color: "#F3F6F4", fontSize: 11 }}>
+                          Cos: {resolverScores.originScores.cosine_score} | JW: {resolverScores.originScores.jaro_winkler_score} | Pop: {resolverScores.originScores.popularity_score}
+                        </div>
+                        <div className="tabular-nums" style={{ marginTop: 2, color: "#F59E0B", fontWeight: 700 }}>
+                          Score: {resolverScores.originScores.final_score}
+                        </div>
+                      </div>
+                    )}
+                    {resolverScores.destScores && (
+                      <div style={{ background: "#111916", padding: 8, borderRadius: 8, fontSize: 11.5 }}>
+                        <div style={{ color: "#9FB0A7", fontSize: 10, fontWeight: 700 }}>
+                          DESTINATION: {resolverScores.destName}
+                        </div>
+                        <div className="tabular-nums" style={{ marginTop: 2, color: "#F3F6F4", fontSize: 11 }}>
+                          Cos: {resolverScores.destScores.cosine_score} | JW: {resolverScores.destScores.jaro_winkler_score} | Pop: {resolverScores.destScores.popularity_score}
+                        </div>
+                        <div className="tabular-nums" style={{ marginTop: 2, color: "#F59E0B", fontWeight: 700 }}>
+                          Score: {resolverScores.destScores.final_score}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         ) : (
-          /* Meta AI Pipeline Observability Trace */
+          /* AI Inspector: renders ONLY fields returned by backend traces */
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {/* Stage 1: Speech Recognition */}
-            <div
-              style={{
-                background: "#17221E",
-                borderRadius: 10,
-                padding: 12,
-                borderLeft: "4px solid #F59E0B",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 800, fontSize: 12, color: "#F59E0B" }}>
-                  1. SPEECH RECOGNITION (ASR)
-                </span>
-                <span className="tabular-nums" style={{ fontSize: 11, color: "#9FB0A7" }}>
-                  {voiceLatencyMs ? `${voiceLatencyMs}ms [Demo data]` : "Sample transcript (no ASR run)"}
+            {/* Loading text with real elapsed seconds */}
+            {isLoading && (
+              <div
+                style={{
+                  background: "#17221E",
+                  borderRadius: 10,
+                  padding: 12,
+                  borderLeft: "4px solid #00A86B",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  color: "#25D366",
+                  fontSize: 12.5,
+                }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#25D366",
+                    animation: "along-skeleton-pulse 1s infinite",
+                  }}
+                />
+                <span className="tabular-nums">
+                  Loading real pipeline trace from backend... ({elapsedSeconds || 0}s)
                 </span>
               </div>
-              <div style={{ fontSize: 12, color: "#F3F6F4", marginTop: 4 }}>
-                Status: <strong>{voiceModel || "Sample transcript (no ASR run)"}</strong> [Non-Meta ASR / Fallback fixture]
-              </div>
-            </div>
+            )}
 
-            {/* Stage 2: Intent & Slot Extraction */}
-            <div
-              style={{
-                background: "#17221E",
-                borderRadius: 10,
-                padding: 12,
-                borderLeft: "4px solid #00A86B",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 800, fontSize: 12, color: "#00A86B" }}>
-                  2. MULTILINGUAL NLU &amp; SLOTS
-                </span>
-                <span className="tabular-nums" style={{ fontSize: 11, color: "#9FB0A7" }}>
-                  {nluLatencyMs ? `${nluLatencyMs}ms [Demo data]` : "Deterministic fallback"}
-                </span>
+            {/* Real error message banner */}
+            {errorMessage && (
+              <div
+                style={{
+                  background: "rgba(239,68,68,0.15)",
+                  border: "1px solid #EF4444",
+                  borderRadius: 10,
+                  padding: 12,
+                  color: "#FCA5A5",
+                  fontSize: 12,
+                  lineHeight: 1.4,
+                }}
+              >
+                <strong>Backend Error:</strong> {errorMessage}
               </div>
-              <div style={{ fontSize: 12, color: "#F3F6F4", marginTop: 4 }}>
-                Extractor / Model: <strong>{nluModel || "none (local_fallback)"}</strong>
-              </div>
-            </div>
+            )}
 
-            {/* Stage 3: Character N-Gram Hashing & FAISS */}
-            <div
-              style={{
-                background: "#17221E",
-                borderRadius: 10,
-                padding: 12,
-                borderLeft: "4px solid #00A86B",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 800, fontSize: 12, color: "#00A86B" }}>
-                  3. RETRIEVAL &amp; HYBRID RANKING • CHARACTER N-GRAM HASHING + FAISS
-                </span>
-                <span className="tabular-nums" style={{ fontSize: 11, color: "#9FB0A7" }}>
-                  {faissLatencyMs ? `${faissLatencyMs}ms [Demo data]` : "In-process hash"}
-                </span>
+            {/* Backend trace items: stage, provider label, model id, measured latency, fallback flag */}
+            {traces && traces.length > 0 ? (
+              traces.map((trace, idx) => (
+                <div
+                  key={`${trace.stage}_${idx}`}
+                  style={{
+                    background: "#17221E",
+                    borderRadius: 10,
+                    padding: 12,
+                    borderLeft: `4px solid ${trace.fallback ? "#F59E0B" : "#00A86B"}`,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span
+                      style={{
+                        fontWeight: 800,
+                        fontSize: 12,
+                        color: trace.fallback ? "#F59E0B" : "#00A86B",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Stage: {trace.stage}
+                    </span>
+                    <span className="tabular-nums" style={{ fontSize: 11, color: "#9FB0A7" }}>
+                      {trace.latency_ms} ms
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#F3F6F4", marginTop: 4 }}>
+                    Provider Label: <strong>{trace.provider_label}</strong>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#F3F6F4", marginTop: 2 }}>
+                    Model ID: <strong>{trace.model_id}</strong>
+                  </div>
+                  <div className="tabular-nums" style={{ fontSize: 11, color: "#9FB0A7", marginTop: 2 }}>
+                    Measured Latency: <strong>{trace.latency_ms} ms</strong>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: trace.fallback ? "#F59E0B" : "#25D366",
+                      marginTop: 4,
+                      fontWeight: 700,
+                    }}
+                  >
+                    Fallback Flag: <strong>{trace.fallback ? "true" : "false"}</strong>
+                  </div>
+                </div>
+              ))
+            ) : !isLoading && !errorMessage ? (
+              <div
+                style={{
+                  padding: 16,
+                  background: "#17221E",
+                  borderRadius: 10,
+                  color: "#8696A0",
+                  fontSize: 12,
+                  textAlign: "center",
+                }}
+              >
+                No trace recorded yet. Send a message to inspect the live backend trace.
               </div>
-              <div className="tabular-nums" style={{ fontSize: 12, color: "#F3F6F4", marginTop: 4 }}>
-                Formula: 0.65*Cos({cosineScore}) + 0.25*JW({jwScore}) + 0.10*Pop({popScore}) ={" "}
-                <strong style={{ color: "#F59E0B" }}>{finalScore}</strong> [Demo data] (Snaps to 24 Private Filling Stations).
-              </div>
-            </div>
-
-            {/* Stage 4: Safety Gate & Vehicle Inspection */}
-            <div
-              style={{
-                background: "#17221E",
-                borderRadius: 10,
-                padding: 12,
-                borderLeft: "4px solid #008751",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 800, fontSize: 12, color: "#008751" }}>
-                  4. SAFETY GATE &amp; VEHICLE INSPECTION • RULE-BASED SAFETY GATE
-                </span>
-                <span style={{ fontSize: 11, color: "#9FB0A7" }}>
-                  Gate: Active
-                </span>
-              </div>
-              <div style={{ fontSize: 12, color: "#F3F6F4", marginTop: 4 }}>
-                SOS distress keywords monitored by <strong>Rule-based safety gate</strong> for zero roadside kidnapping.
-                Vehicle photo check: <strong>Glimmer vision check [Demo driver profile: ABJ-412K]</strong>.
-              </div>
-            </div>
+            ) : null}
           </div>
         )}
       </div>

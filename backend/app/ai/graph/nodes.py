@@ -383,6 +383,7 @@ async def execute_conversation_turn(
         return state
 
     # 11. Both origin and destination are present -> Resolve full route, snap to Anchor, and compute Fare Quote
+    t_res_start = time.perf_counter()
     quote = resolve_route_and_quote(
         origin_mention=state.origin_mention,
         destination_mention=state.destination_mention,
@@ -390,6 +391,20 @@ async def execute_conversation_turn(
         destination_relational=extracted.destination_relational,
         is_peak=is_peak,
     )
+    res_latency_ms = round((time.perf_counter() - t_res_start) * 1000.0, 2)
+
+    res_trace = {
+        "stage": "landmark_resolution",
+        "provider_label": "local_vector_index",
+        "model_id": "character_ngram_hashing",
+        "label": "Character N-gram + FAISS",
+        "latency_ms": res_latency_ms,
+        "input_truncated": f"orig={state.origin_mention}, dest={state.destination_mention}"[:100],
+        "output_truncated": f"corridor={quote.corridor_id}, status={quote.status}"[:100],
+        "status": "ok",
+        "fallback": False,
+    }
+    traces.append(res_trace)
 
     xray["resolution"] = {
         "status": quote.status,
@@ -397,8 +412,20 @@ async def execute_conversation_turn(
         "direction": quote.direction,
         "origin_best": quote.origin.best.canonical_name if quote.origin.best else None,
         "origin_score": quote.origin.best.final_score if quote.origin.best else 0.0,
+        "origin_scores": {
+            "cosine_score": round(quote.origin.best.cosine_score, 4),
+            "jaro_winkler_score": round(quote.origin.best.jaro_winkler_score, 4),
+            "popularity_score": round(quote.origin.best.popularity_score, 4),
+            "final_score": round(quote.origin.best.final_score, 4),
+        } if quote.origin.best else None,
         "destination_best": quote.destination.best.canonical_name if quote.destination.best else None,
         "destination_score": quote.destination.best.final_score if quote.destination.best else 0.0,
+        "destination_scores": {
+            "cosine_score": round(quote.destination.best.cosine_score, 4),
+            "jaro_winkler_score": round(quote.destination.best.jaro_winkler_score, 4),
+            "popularity_score": round(quote.destination.best.popularity_score, 4),
+            "final_score": round(quote.destination.best.final_score, 4),
+        } if quote.destination.best else None,
         "anchor_id": quote.anchor_snap.anchor.id if (quote.anchor_snap and quote.anchor_snap.anchor) else None,
         "anchor_name": quote.anchor_snap.anchor.name if (quote.anchor_snap and quote.anchor_snap.anchor) else None,
         "active_fare_kobo": quote.active_fare_kobo,

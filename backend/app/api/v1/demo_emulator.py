@@ -8,16 +8,21 @@ Provides:
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
+from app.ai.asr import transcribe_voice_note
 from app.ai.graph.workflow import AlongConversationWorkflow
 from app.api.v1.webhooks_whatsapp import get_webhook_redis_store
 from app.core.money import format_naira
 
 router = APIRouter(prefix="/api/v1/demo", tags=["demo-cockpit"])
+
+REPLAY_FILE_PATH = Path(__file__).resolve().parents[4] / "data" / "replays" / "real_replay.json"
 
 
 class DemoChatInput(BaseModel):
@@ -183,6 +188,69 @@ async def get_demo_replay(replay_id: str) -> dict[str, Any]:
     }
 
 
+@router.get("/replay/live")
+async def get_live_replay() -> dict[str, Any]:
+    """Return real traces recorded from live runs, or indicate unavailable if file does not exist."""
+    if not REPLAY_FILE_PATH.exists():
+        return {
+            "available": False,
+            "recorded_at": None,
+            "error": "No live replay file found on disk",
+        }
+    try:
+        data = json.loads(REPLAY_FILE_PATH.read_text(encoding="utf-8"))
+        return {
+            "available": True,
+            "recorded_at": data.get("recorded_at"),
+            "replay": data,
+        }
+    except Exception as exc:
+        return {
+            "available": False,
+            "error": str(exc),
+        }
+
+
+@router.post("/asr")
+async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
+    """Transcribe inbound audio via real ASR pipeline with honest labeling."""
+    content_type = request.headers.get("content-type", "")
+    raw_body = await request.body()
+    audio_bytes = raw_body
+    filename = "voice_note.ogg"
+
+    if "multipart/form-data" in content_type:
+        import email
+        import email.policy
+        msg = email.message_from_bytes(
+            b"Content-Type: " + content_type.encode("utf-8") + b"\r\n\r\n" + raw_body,
+            policy=email.policy.default,
+        )
+        for part in msg.iter_parts():
+            payload = part.get_payload(decode=True)
+            if payload:
+                audio_bytes = payload
+                fname = part.get_filename()
+                if fname:
+                    filename = fname
+                break
+
+    res = await transcribe_voice_note(
+        audio_bytes,
+        filename=filename,
+    )
+    return {
+        "status": "ok",
+        "transcript": res.transcript,
+        "detected_language": res.detected_language,
+        "model_used": res.model_used,
+        "provider": res.provider,
+        "label": "Non-Meta ASR (Whisper)",
+        "latency_ms": res.latency_ms,
+        "fallback": res.fallback,
+    }
+
+
 @router.post("/chat")
 async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[str, Any]:
     """Execute a live conversational turn in the Judge Cockpit with honest fallback flags."""
@@ -204,11 +272,13 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
 
     fallback_active = bool(state.xray_trace.get("fallback", True))
     fallback_banner = state.xray_trace.get("fallback_banner")
+    traces_list = state.xray_trace.get("traces", [])
 
     return {
         "status": "ok",
         "fallback": fallback_active,
         "fallback_banner": fallback_banner,
+        "traces": traces_list,
         "pane1_whatsapp": {
             "phone": state.phone_e164,
             "locale": state.locale,

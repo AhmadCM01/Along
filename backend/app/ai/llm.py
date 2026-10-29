@@ -198,6 +198,7 @@ class LLMCallResult:
     requested_model: str = ""
     http_status: int | None = None
     retryable: bool = True
+    is_timeout: bool = False
     finish_reason: str | None = None
     reasoning_present: bool = False
     reasoning_chars: int = 0
@@ -347,7 +348,7 @@ class MetaLLMClient:
         if extra_body:
             payload.update(extra_body)
 
-        def _failure(error: str, status: int | None, retryable: bool) -> LLMCallResult:
+        def _failure(error: str, status: int | None, retryable: bool, is_timeout: bool = False) -> LLMCallResult:
             return LLMCallResult(
                 model_used="none",
                 provider=endpoint.display(call_succeeded=False),
@@ -363,6 +364,7 @@ class MetaLLMClient:
                 requested_model=endpoint.model,
                 http_status=status,
                 retryable=retryable,
+                is_timeout=is_timeout,
             )
 
         try:
@@ -376,7 +378,7 @@ class MetaLLMClient:
                     json=payload,
                 )
         except httpx.TimeoutException as exc:
-            return _failure(f"timeout after {timeout:.0f}s ({type(exc).__name__})", None, True)
+            return _failure(f"timeout after {timeout:.0f}s ({type(exc).__name__})", None, False, is_timeout=True)
         except httpx.HTTPError as exc:
             return _failure(f"{type(exc).__name__}: {exc}", None, True)
 
@@ -443,28 +445,70 @@ class MetaLLMClient:
         `validate` may raise to reject a parsed JSON answer (counts as a failed attempt).
         """
         start = time.perf_counter()
+        budget_sec = float(self.settings.LLM_REQUEST_BUDGET_SECONDS)
         attempts: list[dict[str, Any]] = []
 
         for endpoint in self.endpoints(levels):
+            elapsed = time.perf_counter() - start
+            remaining_budget = budget_sec - elapsed
+            if remaining_budget <= 0:
+                logger.warning(
+                    "llm_request_budget_exhausted",
+                    elapsed_sec=round(elapsed, 2),
+                    budget_sec=budget_sec,
+                )
+                break
+
+            configured_timeout = float(
+                timeout_sec
+                if timeout_sec is not None
+                else (
+                    self.settings.LLM_TIMEOUT_SECONDS
+                    if endpoint.level == "primary"
+                    else self.settings.LLM_FALLBACK_TIMEOUT_SECONDS
+                )
+            )
+
             bad_json = False
             cur_max_tokens = max_tokens
-            for attempt in range(1 + RETRIES_PER_LEVEL):
+            max_attempts = 1 + RETRIES_PER_LEVEL if endpoint.level == "primary" else 1
+
+            for attempt in range(max_attempts):
+                elapsed = time.perf_counter() - start
+                remaining_budget = budget_sec - elapsed
+                if remaining_budget <= 0:
+                    logger.warning(
+                        "llm_request_budget_exhausted_during_retry",
+                        elapsed_sec=round(elapsed, 2),
+                        budget_sec=budget_sec,
+                    )
+                    break
+
+                call_timeout = min(configured_timeout, remaining_budget)
+                if call_timeout <= 0:
+                    break
+
                 res = await self.call_endpoint(
                     endpoint,
                     messages=build_messages(bad_json),
                     temperature=temperature,
                     max_tokens=cur_max_tokens,
-                    timeout_sec=timeout_sec,
+                    timeout_sec=call_timeout,
                 )
                 failure: str | None = res.error
+                is_length_failure = False
+                is_json_failure = False
+
                 if failure is None:
                     if res.finish_reason == "length":
+                        is_length_failure = True
                         failure = (
                             f"finish_reason is length (max_tokens={cur_max_tokens} exhausted by "
                             f"{res.completion_tokens} tokens, reasoning_tokens={res.reasoning_tokens})"
                         )
                         cur_max_tokens = cur_max_tokens * 2
                     elif res.parsed_json is None:
+                        is_json_failure = True
                         failure = (
                             "empty final answer (finish_reason="
                             f"{res.finish_reason}, reasoning_present={res.reasoning_present})"
@@ -476,6 +520,7 @@ class MetaLLMClient:
                         try:
                             validate(res.parsed_json)
                         except Exception as exc:
+                            is_json_failure = True
                             failure = self._redact(f"schema validation failed: {str(exc)[:200]}")
                             bad_json = True
 
@@ -502,7 +547,12 @@ class MetaLLMClient:
                     http_status=res.http_status,
                     error=failure,
                 )
-                if res.error is not None and not res.retryable:
+
+                # Retry primary only on length or JSON parse failure, not on timeout (go straight to fallback)
+                if endpoint.level == "primary":
+                    if res.is_timeout or (not is_length_failure and not is_json_failure):
+                        break
+                else:
                     break
 
         latency_ms = round((time.perf_counter() - start) * 1000.0, 2)

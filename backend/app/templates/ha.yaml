@@ -39,6 +39,7 @@ pooling_started: |
   Lambar Bukata: `{request_code}`
   Tashar Dauka: *{anchor_name}*
   Wurin Sauka: *{dest_name}*
+  Lambar Shiga Mota (OTP): *{boarding_otp}*
   Kudin Escrow: *{total_fare_naira}* (kujera {seats})
   Ana hada ku mutum 4 a mota daya ({current_seats}/4 sun cika).
 

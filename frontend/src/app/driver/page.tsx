@@ -35,7 +35,7 @@ export default function DriverCompanionPage() {
   const [statusLoading, setStatusLoading] = useState<boolean>(false);
   const [statusElapsedSec, setStatusElapsedSec] = useState<number>(0);
 
-  const [otpCode, setOtpCode] = useState<string>("4829");
+  const [otpCode, setOtpCode] = useState<string>("");
   const [boardedCount, setBoardedCount] = useState<number>(3);
   const [escrowState, setEscrowState] = useState<string>("PENDING_BOARDING");
   const [podStatus, setPodStatus] = useState<string>("BOARDING");
@@ -420,7 +420,7 @@ export default function DriverCompanionPage() {
                 maxLength={4}
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value)}
-                placeholder="4829"
+                placeholder="OTP"
                 className="tabular-nums"
                 style={{
                   width: 90,

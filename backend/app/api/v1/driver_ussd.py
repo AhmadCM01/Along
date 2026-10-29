@@ -87,7 +87,7 @@ async def handle_driver_ussd_session(body: USSDSessionRequest) -> PlainTextRespo
             content=f"END You are now ONLINE at {anchor_name} (2G Voice/USSD Mode). Wait for voice call dispatch."
         )
 
-    # Option 2: Verify Rider 4-Digit Boarding OTP via USSD (`*384*247*2*4829#`)
+    # Option 2: Verify Rider 4-Digit Boarding OTP via USSD (`*384*247*2*<OTP>#`)
     if choice == "2":
         if len(parts) == 1:
             return PlainTextResponse(content="CON Enter Rider 4-Digit Boarding OTP:")

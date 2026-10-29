@@ -9,6 +9,7 @@ Provides:
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -17,8 +18,11 @@ from pydantic import BaseModel
 
 from app.ai.asr import transcribe_voice_note
 from app.ai.graph.workflow import AlongConversationWorkflow
+from app.api.v1.drivers import ACTIVE_PODS_STORE
 from app.api.v1.webhooks_whatsapp import get_webhook_redis_store
+from app.core.ids import generate_boarding_otp, generate_share_token
 from app.core.money import format_naira
+from app.core.security import hash_otp_code
 
 router = APIRouter(prefix="/api/v1/demo", tags=["demo-cockpit"])
 
@@ -87,7 +91,7 @@ GUIDED_SCENARIOS: list[dict[str, Any]] = [
         "highlights": [
             "Matches commuter at Conoil Filling Station (Lugbe Police Signboard) on GWL-LUG-AR1",
             "Dispatches Pod to Mallam Sani (2G Nokia 105 driver, Demo profile) via Voice IVR",
-            "Driver verifies 4-digit boarding OTP via *384*247*2*4829# USSD with zero mobile data required",
+            "Driver verifies 4-digit boarding OTP via *384*247*2*<OTP># USSD with zero mobile data required",
         ],
     },
     {
@@ -266,6 +270,32 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
         is_peak=body.is_peak,
     )
 
+    if not state.boarding_otp:
+        state.boarding_otp = generate_boarding_otp()
+    if not state.share_token:
+        state.share_token = generate_share_token()
+
+    # Store HMAC of the boarding OTP in active pod store for constant-time driver verification
+    pod_key = (state.pod_code or "POD-842A").split()[0]
+    pod_entry = ACTIVE_PODS_STORE.setdefault(
+        pod_key,
+        {
+            "pod_id": pod_key,
+            "driver_id": "DRV-001",
+            "corridor_id": state.corridor_id or "BWR-DUT-WUS",
+            "anchor_lat": 9.1779,
+            "anchor_lng": 7.3736,
+            "seats_occupied": 4,
+            "status": "BOARDING",
+            "boarded_requests": {"rr-demo-02", "rr-demo-03", "rr-demo-04"},
+        },
+    )
+    pod_entry.setdefault("boarding_otp_hashes", {})["rr-demo-01"] = hash_otp_code(
+        state.boarding_otp, context_id="rr-demo-01"
+    )
+    pod_entry.setdefault("otp_created_at", {})["rr-demo-01"] = time.time()
+    pod_entry.setdefault("otp_attempts", {})["rr-demo-01"] = 0
+
     gross_pod_kobo = max(state.total_fare_kobo, state.unit_fare_kobo * 4)
     driver_net_kobo = int(round(gross_pod_kobo * 0.90))
     platform_fee_kobo = gross_pod_kobo - driver_net_kobo
@@ -315,6 +345,6 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
             "vehicle_desc": "Toyota Corolla (Silver)",
             "phone_mode": "SMARTPHONE_AND_2G_USSD",
             "ussd_shortcode": "*384*247#",
-            "boarding_otp_expected": state.boarding_otp or "4829",
+            "boarding_otp_expected": state.boarding_otp or "",
         },
     }

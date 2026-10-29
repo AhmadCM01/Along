@@ -25,7 +25,7 @@ export function DriverCabinSimulator({
   driverMode,
   onToggleDriverMode,
 }: DriverCabinSimulatorProps) {
-  const [otpInput, setOtpInput] = useState("4829");
+  const [otpInput, setOtpInput] = useState("");
   const [otpCaptured, setOtpCaptured] = useState(false);
 
   // Dynamic Back-Right seat state based on mid-corridor reload
@@ -167,7 +167,7 @@ export function DriverCabinSimulator({
             >
               <div style={{ color: "#93C5FD", fontWeight: 700 }}>[SMS DISPATCH MANIFEST]</div>
               <div style={{ marginTop: 2 }}>
-                Pod POD-842A [Demo data]: {totalRiders} Seats. Pickup: {anchorName}. Dial *384*247*2*4829# to capture escrow (Simulated escrow).
+                Pod POD-842A [Demo data]: {totalRiders} Seats. Pickup: {anchorName}. Dial *384*247*2*&lt;OTP&gt;# to capture escrow (Simulated escrow).
               </div>
             </div>
           </div>

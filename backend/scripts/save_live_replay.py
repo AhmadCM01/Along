@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from app.ai.graph.workflow import AlongConversationWorkflow
+from app.core.ids import generate_boarding_otp
 from app.core.money import format_naira
 
 
@@ -99,7 +100,7 @@ async def record_live_runs() -> dict[str, Any]:
                 "seats": state.seats,
                 "unit_fare": format_naira(state.unit_fare_kobo),
                 "total_fare": format_naira(state.total_fare_kobo),
-                "otp": state.boarding_otp or "4829",
+                "otp": state.boarding_otp or generate_boarding_otp(),
                 "pod_gross": format_naira(gross_pod_kobo),
                 "driver_net": format_naira(driver_net_kobo),
                 "platform_fee": format_naira(platform_fee_kobo),

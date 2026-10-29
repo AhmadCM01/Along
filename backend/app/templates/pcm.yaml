@@ -39,6 +39,7 @@ pooling_started: |
   Request Code: `{request_code}`
   Pickup Anchor: *{anchor_name}*
   Drop-off: *{dest_name}*
+  Your Boarding Code (OTP): *{boarding_otp}*
   Escrow Hold: *{total_fare_naira}* ({seats} seat(s))
   We dey pair you inside 4-person Along pod ({current_seats}/4 seats full).
 

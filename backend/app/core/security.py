@@ -38,16 +38,23 @@ def verify_paystack_signature(raw_body: bytes, signature_header: str | None, sec
     return hmac.compare_digest(expected_hex, signature_header.strip())
 
 
-def hash_otp_code(code: str, context_id: str, pepper: str | None = None) -> str:
+def hash_otp_code(code: str, context_id: str = "", pepper: str | None = None) -> str:
     """Compute HMAC-SHA256 hash of a 4-digit or 6-digit OTP bound to a request or phone."""
     effective_pepper = pepper if pepper is not None else get_settings().OTP_PEPPER
-    msg = f"{context_id}:{code.strip()}".encode("utf-8")
+    msg = f"{context_id}:{code.strip()}".encode("utf-8") if context_id else code.strip().encode("utf-8")
     return hmac.new(effective_pepper.encode("utf-8"), msg, hashlib.sha256).hexdigest()
 
 
-def verify_otp_code(code: str, context_id: str, expected_hash: str, pepper: str | None = None) -> bool:
+def verify_otp_code(
+    code: str,
+    context_id: str = "",
+    expected_hash: str = "",
+    pepper: str | None = None,
+) -> bool:
     """Verify an OTP code against its stored HMAC-SHA256 hash in constant time."""
-    actual = hash_otp_code(code, context_id, pepper=pepper)
+    if not expected_hash:
+        return False
+    actual = hash_otp_code(code, context_id=context_id, pepper=pepper)
     return hmac.compare_digest(actual, expected_hash)
 
 

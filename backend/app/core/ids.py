@@ -16,8 +16,8 @@ def new_uuid7_str() -> str:
 
 
 def generate_boarding_otp() -> str:
-    """Generate a 4-digit numeric boarding OTP code."""
-    return "".join(secrets.choice(_DIGITS) for _ in range(4))
+    """Generate a random 4-digit numeric boarding OTP code using Python's secrets module."""
+    return f"{secrets.randbelow(10000):04d}"
 
 
 def generate_short_code(prefix: str = "REQ") -> str:

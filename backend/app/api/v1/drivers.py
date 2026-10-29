@@ -12,6 +12,8 @@ Endpoints:
 
 from __future__ import annotations
 
+import hmac
+import time
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -19,12 +21,15 @@ from pydantic import BaseModel, Field
 
 from app.ai.vision_sam import verify_vehicle_photo_sam
 from app.core.config import BusinessRules
+from app.core.ids import generate_boarding_otp
+from app.core.security import hash_otp_code, verify_otp_code
 from app.matching.corridor import haversine_distance_m
 from scripts.seed import load_abuja_seed_catalog
 
 router = APIRouter(prefix="/api/v1/drivers", tags=["drivers"])
 
 # In-memory operational state for active pods, OTPs, and driver states (backed by Redis when attached)
+_initial_demo_otp = generate_boarding_otp()
 ACTIVE_PODS_STORE: dict[str, dict[str, Any]] = {
     "POD-842A": {
         "pod_id": "POD-842A",
@@ -33,7 +38,11 @@ ACTIVE_PODS_STORE: dict[str, dict[str, Any]] = {
         "anchor_lat": 9.1779,
         "anchor_lng": 7.3736,
         "seats_occupied": 4,
-        "boarding_otps": {"rr-demo-01": "4829"},
+        "boarding_otp_hashes": {
+            "rr-demo-01": hash_otp_code(_initial_demo_otp, context_id="rr-demo-01")
+        },
+        "otp_created_at": {"rr-demo-01": time.time()},
+        "otp_attempts": {"rr-demo-01": 0},
         "boarded_requests": {"rr-demo-02", "rr-demo-03", "rr-demo-04"},
         "status": "BOARDING",
     }
@@ -152,15 +161,49 @@ async def verify_rider_boarding_otp(
             detail=f"Driver is {int(dist_m)}m from anchor (must be within {BusinessRules.ANCHOR_GEOFENCE_M}m geofence)",
         )
 
-    attempts_map: dict[str, int] = pod.setdefault("otp_attempts", {})
     req_id = body.ride_request_id
+    attempts_map: dict[str, int] = pod.setdefault("otp_attempts", {})
     attempts = attempts_map.get(req_id, 0)
-    if attempts >= BusinessRules.OTP_MAX_ATTEMPTS:
-        raise HTTPException(status_code=429, detail="Maximum OTP attempts (3) exceeded")
+    if attempts >= BusinessRules.OTP_MAX_ATTEMPTS or pod.get("otp_locked", {}).get(req_id):
+        raise HTTPException(
+            status_code=429,
+            detail=f"Maximum OTP attempts ({BusinessRules.OTP_MAX_ATTEMPTS}) exceeded. Verification locked.",
+        )
 
-    expected_otp = pod.get("boarding_otps", {}).get(req_id)
-    if expected_otp != body.otp_code:
+    # 30-minute expiration check
+    created_at = pod.get("otp_created_at", {}).get(req_id)
+    if created_at is not None:
+        if time.time() - float(created_at) > BusinessRules.OTP_EXPIRATION_SECONDS:
+            raise HTTPException(
+                status_code=410,
+                detail="Boarding OTP has expired (30 minute limit)",
+            )
+
+    stored_hash = (
+        pod.get("boarding_otp_hashes", {}).get(req_id)
+        or pod.get("boarding_otps", {}).get(req_id)
+    )
+    if not stored_hash:
+        raise HTTPException(status_code=404, detail="No boarding OTP registered for request")
+
+    # Constant time compare
+    is_valid = False
+    if len(stored_hash) == 64:
+        if verify_otp_code(body.otp_code, context_id=req_id, expected_hash=stored_hash):
+            is_valid = True
+        elif verify_otp_code(body.otp_code, context_id="", expected_hash=stored_hash):
+            is_valid = True
+    else:
+        is_valid = hmac.compare_digest(body.otp_code, stored_hash)
+
+    if not is_valid:
         attempts_map[req_id] = attempts + 1
+        if attempts_map[req_id] >= BusinessRules.OTP_MAX_ATTEMPTS:
+            pod.setdefault("otp_locked", {})[req_id] = True
+            raise HTTPException(
+                status_code=429,
+                detail=f"Maximum OTP attempts ({BusinessRules.OTP_MAX_ATTEMPTS}) exceeded. Verification locked.",
+            )
         raise HTTPException(status_code=400, detail="Invalid 4-digit boarding OTP")
 
     boarded_set: set[str] = pod.setdefault("boarded_requests", set())

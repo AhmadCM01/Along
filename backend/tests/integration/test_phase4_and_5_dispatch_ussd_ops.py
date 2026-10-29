@@ -12,10 +12,14 @@ Verifies:
 
 from __future__ import annotations
 
+import time
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.api.v1.drivers import ACTIVE_PODS_STORE
+from app.core.ids import generate_boarding_otp
+from app.core.security import hash_otp_code
 from app.main import create_app
 from app.matching.dispatcher import DriverDispatcher
 from app.matching.pool import QueuedRideRequest, enqueue_paid_ride_request
@@ -163,20 +167,25 @@ def test_p4_t2_and_t4_drivers_sam_kyc_otp_geofence_ussd_and_trip_share() -> None
     assert "verified" in kyc_res.json()
 
     # 3. 4-digit Boarding OTP verification with 150m geofence enforcement
+    # Stored only as HMAC using OTP_PEPPER, verified with constant time compare
+    test_otp = generate_boarding_otp()
+    test_req_id = "REQ-1"
     ACTIVE_PODS_STORE["POD-OTP-1"] = {
         "pod_id": "POD-OTP-1",
         "status": "DRIVER_ASSIGNED",
         "anchor_lat": 9.1779,
         "anchor_lng": 7.3736,
         "seats_occupied": 1,
-        "boarding_otps": {"REQ-1": "4829"},
+        "boarding_otp_hashes": {test_req_id: hash_otp_code(test_otp, context_id=test_req_id)},
+        "otp_created_at": {test_req_id: time.time()},
+        "otp_attempts": {test_req_id: 0},
     }
     # Outside 150m geofence -> rejected with 422
     far_otp = client.post(
         "/api/v1/drivers/DRV-001/pods/POD-OTP-1/verify-otp",
         json={
-            "ride_request_id": "REQ-1",
-            "otp_code": "4829",
+            "ride_request_id": test_req_id,
+            "otp_code": test_otp,
             "driver_lat": 9.1900,
             "driver_lng": 7.3900,
         },
@@ -187,8 +196,8 @@ def test_p4_t2_and_t4_drivers_sam_kyc_otp_geofence_ussd_and_trip_share() -> None
     good_otp = client.post(
         "/api/v1/drivers/DRV-001/pods/POD-OTP-1/verify-otp",
         json={
-            "ride_request_id": "REQ-1",
-            "otp_code": "4829",
+            "ride_request_id": test_req_id,
+            "otp_code": test_otp,
             "driver_lat": 9.1779,
             "driver_lng": 7.3736,
         },
@@ -211,11 +220,12 @@ def test_p4_t2_and_t4_drivers_sam_kyc_otp_geofence_ussd_and_trip_share() -> None
     )
     assert "END You are now ONLINE at A.A. Rano Dutse First Gate" in ussd_online.text
 
+    ussd_otp_code = generate_boarding_otp()
     ussd_otp = client.post(
         "/api/v1/ussd/driver",
-        json={"sessionId": "USSD_2", "phoneNumber": "+2348030001111", "text": "2*4829"},
+        json={"sessionId": "USSD_2", "phoneNumber": "+2348030001111", "text": f"2*{ussd_otp_code}"},
     )
-    assert "END OTP 4829 Verified! Escrow CAPTURED." in ussd_otp.text
+    assert f"END OTP {ussd_otp_code} Verified! Escrow CAPTURED." in ussd_otp.text
 
     ivr_accept = client.post(
         "/api/v1/voice/driver-ivr",

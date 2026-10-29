@@ -172,7 +172,7 @@ export function useAlongChat(initialPhone = "+2348031234567") {
         seats: 2,
         unitFare: ledger.unit_fare_naira,
         totalFare: ledger.total_fare_naira,
-        otp: whatsapp.boarding_otp || "4829",
+        otp: whatsapp.boarding_otp || "",
         shareToken: whatsapp.share_token,
         podGross: ledger.pod_gross_naira,
         driverNet: ledger.driver_net_90pct_naira,

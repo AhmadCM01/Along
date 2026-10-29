@@ -286,6 +286,7 @@ async def execute_conversation_turn(
             "pooling_started",
             state.locale,
             request_code=state.request_code,
+            boarding_otp=state.boarding_otp,
             anchor_name=state.anchor_name or state.origin_name or "Corridor Anchor",
             dest_name=state.destination_name or "Destination",
             total_fare_naira=format_naira(state.total_fare_kobo),
@@ -543,6 +544,10 @@ async def execute_conversation_turn(
     state.total_fare_kobo = quote.active_fare_kobo * state.seats
     state.savings_pct = quote.savings_pct
     state.stage = "AWAITING_CONFIRMATION"
+    state.request_id = state.request_id or new_uuid7_str()
+    state.request_code = state.request_code or generate_short_code("REQ")
+    state.boarding_otp = state.boarding_otp or generate_boarding_otp()
+    state.share_token = state.share_token or generate_share_token()
 
     state.last_reply_text = render_template(
         "quote_ready",

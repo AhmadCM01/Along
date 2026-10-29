@@ -42,7 +42,8 @@ class BusinessRules:
     DRIVER_SEARCH_RADIUS_M: int = 3000
     DRIVER_STALE_HEARTBEAT_S: int = 45
     BOARDING_GRACE_S: int = 180
-    OTP_MAX_ATTEMPTS: int = 3
+    OTP_MAX_ATTEMPTS: int = 5
+    OTP_EXPIRATION_SECONDS: int = 1800
     PLATFORM_COMMISSION_BPS: int = 1000
     LATE_CANCEL_FEE_BPS: int = 2000
     NO_SHOW_FEE_BPS: int = 5000
@@ -77,7 +78,9 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_MODEL: str = "meta/llama-3.2-11b-vision-instruct"
     LLM_PROVIDER_LABEL: str = "nvidia_free_endpoint"
-    LLM_TIMEOUT_SECONDS: int = 8
+    LLM_TIMEOUT_SECONDS: int = 12
+    LLM_FALLBACK_TIMEOUT_SECONDS: int = 20
+    LLM_REQUEST_BUDGET_SECONDS: int = 30
     LLM_MAX_TOKENS: int = 1500
 
     # Level 2: Fallback OpenAI-Compatible LLM Endpoint (disabled when key is empty)

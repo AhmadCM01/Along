@@ -1,20 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import {
-  PauseCircleIcon,
-  PlayCircleIcon,
-  ShieldCheckIcon,
-  VoiceWaveIcon,
-  WhatsAppDoubleCheckIcon,
-  WhatsAppLockIcon,
-  WhatsAppMicIcon,
-  WhatsAppPaperclipIcon,
-  WhatsAppPhoneCallIcon,
-  WhatsAppSendIcon,
-  WhatsAppSmileyIcon,
-  WhatsAppVideoCallIcon,
-} from "@/components/icons/AlongIcons";
+import { CorridorNode } from "@/components/brand/CorridorNode";
+import { DepartureNumeral } from "@/components/ui/DepartureNumeral";
 
 export interface ChatMessage {
   id: string;
@@ -45,30 +33,30 @@ interface WhatsAppSimulatorProps {
   onConfirmBooking: () => void;
   onTriggerSos: () => void;
   activeLocale: "en" | "pcm" | "ha";
-  onChangeLocale: (loc: "en" | "pcm" | "ha") => void;
+  onChangeLocale?: (loc: "en" | "pcm" | "ha") => void;
   isProcessing?: boolean;
   elapsedSeconds?: number;
   errorMessage?: string | null;
 }
 
-const QUICK_SAMPLES = [
+const SAMPLE_CHIPS = [
   {
-    id: "sample_pcm",
-    label: "Pidgin Voice Note",
+    id: "pcm_dutse",
+    label: "Pidgin: Dutse to Berger",
     text: "Abeg I dey Dutse first gate, two seats go Berger",
     locale: "pcm" as const,
   },
   {
-    id: "sample_ha",
-    label: "Hausa Voice Note",
-    text: "Ina Bwari zan je Kasuwar Wuse kujera biyu",
-    locale: "ha" as const,
-  },
-  {
-    id: "sample_rel",
-    label: "Relational English",
+    id: "rel_sokale",
+    label: "Landmark: Sokale to Katampe Oando",
     text: "From Sokale roundabout, drop me for that Oando after Katampe bridge",
     locale: "en" as const,
+  },
+  {
+    id: "ha_bwari",
+    label: "Hausa: Bwari to Wuse",
+    text: "Ina Bwari zan je Kasuwar Wuse kujera biyu",
+    locale: "ha" as const,
   },
 ];
 
@@ -80,7 +68,6 @@ export function WhatsAppSimulator({
   onConfirmBooking,
   onTriggerSos,
   activeLocale,
-  onChangeLocale,
   isProcessing = false,
   elapsedSeconds,
   errorMessage,
@@ -88,8 +75,6 @@ export function WhatsAppSimulator({
   const [inputText, setInputText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
-  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const [localElapsedSec, setLocalElapsedSec] = useState(0);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -99,25 +84,10 @@ export function WhatsAppSimulator({
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (isProcessing) {
-      setLocalElapsedSec(1);
-      interval = setInterval(() => {
-        setLocalElapsedSec((prev) => prev + 1);
-      }, 1000);
-    } else {
-      setLocalElapsedSec(0);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isProcessing]);
-
-  useEffect(() => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
-  }, [messages, isRecording]);
+  }, [messages, isRecording, isProcessing]);
 
   const handleSend = () => {
     const trimmed = inputText.trim();
@@ -129,7 +99,7 @@ export function WhatsAppSimulator({
   const startRecording = async () => {
     chunksRef.current = [];
     try {
-      if (typeof navigator !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaStreamRef.current = stream;
         const recorder = new MediaRecorder(stream);
@@ -145,10 +115,10 @@ export function WhatsAppSimulator({
         setIsRecording(true);
         setRecordSeconds(0);
         timerRef.current = setInterval(() => {
-          setRecordSeconds((sec) => sec + 1);
+          setRecordSeconds((s) => s + 1);
         }, 1000);
       } else {
-        alert("Audio recording not supported in this browser environment.");
+        alert("Audio recording is not supported in this browser.");
       }
     } catch {
       alert("Microphone permission denied or audio device not found.");
@@ -182,16 +152,10 @@ export function WhatsAppSimulator({
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (onSendVoiceAudio) {
-        onSendVoiceAudio(file, file.name);
-      }
+    if (file && onSendVoiceAudio) {
+      onSendVoiceAudio(file, file.name);
       e.target.value = "";
     }
-  };
-
-  const togglePlayAudio = (id: string) => {
-    setPlayingAudioId((curr) => (curr === id ? null : id));
   };
 
   return (
@@ -200,686 +164,382 @@ export function WhatsAppSimulator({
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        background: "#0B141A",
-        borderRadius: 16,
+        background: "var(--bg-surface)",
+        borderRadius: "var(--radius-card)",
+        border: "1px solid var(--border-subtle)",
         overflow: "hidden",
-        border: "1px solid rgba(255,255,255,0.1)",
-        boxShadow: "0 18px 48px rgba(0,0,0,0.5)",
+        boxShadow: "var(--shadow-soft)",
       }}
+      aria-label="WhatsApp Bot Chat Simulator"
     >
-      {/* Mobile Device Status Bar */}
-      <div
-        style={{
-          background: "#1F2C34",
-          padding: "6px 14px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontSize: 11,
-          color: "#8696A0",
-          letterSpacing: "0.04em",
-          borderBottom: "1px solid rgba(255,255,255,0.04)",
-        }}
-      >
-        <span className="tabular-nums" style={{ fontWeight: 700, color: "#E9EDEF" }}>
-          12:45
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span>MTN-NG 4G</span>
-          <span style={{ fontSize: 10 }}>● 98%</span>
-        </div>
-      </div>
-
-      {/* WhatsApp Header */}
+      {/* Bot Chat Header */}
       <header
         style={{
-          background: "#1F2C34",
-          padding: "10px 14px",
+          background: "var(--bg-paper)",
+          padding: "12px 18px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          color: "#E9EDEF",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid var(--border-subtle)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Avatar with Verified Shield */}
-          <div style={{ position: "relative" }}>
-            <div
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: "50%",
-                background: "#008751",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 800,
-                fontSize: 15,
-                color: "#FFFFFF",
-              }}
-            >
-              Al
-            </div>
-            <div
-              style={{
-                position: "absolute",
-                bottom: -2,
-                right: -2,
-                background: "#00A86B",
-                borderRadius: "50%",
-                padding: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <ShieldCheckIcon size={12} color="#FFFFFF" />
-            </div>
-          </div>
-
+          <CorridorNode size={22} variant="pickup" />
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>Along Abuja Transit</span>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-ink)" }}>
+              Along Transit Bot
             </div>
-            <div style={{ fontSize: 11, color: "#25D366" }}>
-              Verified WhatsApp Business Account
+            <div style={{ fontSize: 11.5, color: "var(--brand-primary)", fontWeight: 600 }}>
+              Live WhatsApp Bot Pipeline · {activeLocale === "pcm" ? "Nigerian Pidgin" : activeLocale === "ha" ? "Hausa" : "English"}
             </div>
           </div>
         </div>
 
-        {/* Action Call Icons */}
-        <div style={{ display: "flex", alignItems: "center", gap: 14, color: "#AEBAC1" }}>
-          <WhatsAppVideoCallIcon size={18} color="#AEBAC1" />
-          <WhatsAppPhoneCallIcon size={17} color="#AEBAC1" />
-          <span style={{ fontSize: 18, cursor: "pointer" }}>⋮</span>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+          Verified Service
         </div>
       </header>
 
-      {/* Language Selector Banner */}
-      <div
-        style={{
-          background: "#182229",
-          padding: "6px 12px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          fontSize: 11.5,
-          borderBottom: "1px solid rgba(255,255,255,0.04)",
-        }}
-      >
-        <span style={{ color: "#8696A0" }}>WhatsApp Bot Language:</span>
-        <div style={{ display: "flex", gap: 4 }}>
-          {(["pcm", "ha", "en"] as const).map((loc) => {
-            const isSelected = activeLocale === loc;
-            const label = loc === "pcm" ? "Pidgin" : loc === "ha" ? "Hausa" : "English";
-            return (
-              <button
-                key={loc}
-                onClick={() => onChangeLocale(loc)}
-                style={{
-                  background: isSelected ? "#008751" : "transparent",
-                  color: isSelected ? "#FFFFFF" : "#8696A0",
-                  border: isSelected ? "none" : "1px solid rgba(255,255,255,0.1)",
-                  padding: "2px 8px",
-                  borderRadius: 4,
-                  fontSize: 11,
-                  fontWeight: isSelected ? 700 : 500,
-                  cursor: "pointer",
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Chat Messages Body with WhatsApp Wallpaper */}
+      {/* Messages Scroll Area */}
       <div
         ref={chatScrollRef}
         style={{
           flex: 1,
-          padding: 14,
+          padding: "16px",
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
-          gap: 10,
-          background: "#0B141A",
-          backgroundImage:
-            "radial-gradient(#182229 1px, transparent 1px), radial-gradient(#182229 1px, #0B141A 1px)",
-          backgroundSize: "24px 24px",
-          backgroundPosition: "0 0, 12px 12px",
+          gap: 12,
+          background: "var(--bg-paper)",
         }}
       >
-        {/* End-to-End Encryption Banner */}
-        <div
-          style={{
-            alignSelf: "center",
-            background: "#182229",
-            color: "#FFD279",
-            padding: "6px 12px",
-            borderRadius: 8,
-            fontSize: 11,
-            textAlign: "center",
-            maxWidth: "92%",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-          }}
-        >
-          <WhatsAppLockIcon size={12} color="#FFD279" />
-          <span>
-            Messages and calls are end-to-end encrypted. No one outside of this chat can read or listen.
-          </span>
-        </div>
-
-        {/* Date Chip */}
-        <div
-          style={{
-            alignSelf: "center",
-            background: "#182229",
-            color: "#8696A0",
-            padding: "3px 10px",
-            borderRadius: 6,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.03em",
-          }}
-        >
-          TODAY
-        </div>
-
-        {/* Message Stream */}
-        {messages.map((msg) => {
-          const isUser = msg.sender === "user";
-
+        {messages.map((m) => {
+          const isUser = m.sender === "user";
           return (
             <div
-              key={msg.id}
+              key={m.id}
               style={{
                 alignSelf: isUser ? "flex-end" : "flex-start",
-                maxWidth: isUser ? "85%" : "92%",
-                position: "relative",
+                maxWidth: "85%",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
               }}
             >
-              {/* Message Bubble Body */}
               <div
                 style={{
-                  background: isUser ? "#005C4B" : "#202C33",
-                  color: "#E9EDEF",
-                  padding: msg.isVoice ? "8px 12px 6px" : "8px 12px",
-                  borderRadius: isUser ? "10px 2px 10px 10px" : "2px 10px 10px 10px",
-                  fontSize: 13,
-                  lineHeight: 1.4,
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.35)",
+                  background: isUser ? "var(--brand-soft)" : "var(--bg-surface)",
+                  color: "var(--text-ink)",
+                  border: `1px solid ${isUser ? "rgba(11, 110, 79, 0.25)" : "var(--border-subtle)"}`,
+                  borderRadius: isUser ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                  padding: "10px 14px",
+                  fontSize: 14.5,
+                  lineHeight: 1.45,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                 }}
               >
-                {/* Voice Note Layout */}
-                {msg.isVoice ? (
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <button
-                        onClick={() => togglePlayAudio(msg.id)}
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          color: isUser ? "#25D366" : "#00A86B",
-                          cursor: "pointer",
-                          padding: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {playingAudioId === msg.id ? (
-                          <PauseCircleIcon size={30} color={isUser ? "#25D366" : "#00A86B"} />
-                        ) : (
-                          <PlayCircleIcon size={30} color={isUser ? "#25D366" : "#00A86B"} />
-                        )}
-                      </button>
-
-                      {/* Animated Waveform */}
-                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 2,
-                            height: 18,
-                          }}
-                        >
-                          {[10, 18, 14, 8, 20, 12, 16, 9, 22, 14, 18, 10, 15, 7, 19, 11].map(
-                            (h, idx) => (
-                              <span
-                                key={idx}
-                                style={{
-                                  width: 3,
-                                  height: playingAudioId === msg.id ? (idx % 2 === 0 ? 20 : 8) : h,
-                                  background: idx < 8 ? "#25D366" : "#8696A0",
-                                  borderRadius: 1.5,
-                                  transition: "height 0.15s ease",
-                                }}
-                              />
-                            )
-                          )}
-                        </div>
-                        <div
-                          className="tabular-nums"
-                          style={{ fontSize: 10.5, color: "#8696A0", display: "flex", justifyContent: "space-between" }}
-                        >
-                          <span>{msg.voiceDuration || "0:04"}</span>
-                          <span>{isUser ? "Voice Note" : "Audio Response"}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Real Transcript Labeled Non-Meta ASR (Whisper) */}
-                    <div
-                      style={{
-                        marginTop: 6,
-                        paddingTop: 6,
-                        borderTop: "1px solid rgba(255,255,255,0.08)",
-                        fontSize: 12.5,
-                      }}
-                    >
-                      <div style={{ marginBottom: 3 }}>
-                        <span
-                          style={{
-                            fontSize: 10,
-                            background: "rgba(0,168,107,0.2)",
-                            color: "#25D366",
-                            padding: "1px 6px",
-                            borderRadius: 4,
-                            fontWeight: 700,
-                            letterSpacing: "0.02em",
-                          }}
-                        >
-                          Non-Meta ASR (Whisper)
-                        </span>
-                      </div>
-                      <div style={{ color: "#E9EDEF", lineHeight: 1.35 }}>{msg.text}</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div>{msg.text}</div>
-                )}
-
-                {/* Structured WhatsApp Corridor Quote Card */}
-                {msg.quoteData && (
+                {/* Voice Note Pill */}
+                {m.isVoice && (
                   <div
                     style={{
-                      background: "#182229",
-                      borderRadius: 8,
-                      marginTop: 8,
-                      padding: 10,
-                      border: "1px solid rgba(255,255,255,0.06)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 6,
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      color: "var(--brand-primary)",
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: 10.5,
-                        fontWeight: 700,
-                        color: "#00A86B",
-                        letterSpacing: "0.04em",
-                        marginBottom: 4,
-                      }}
-                    >
-                      SAFE ANCHOR PASS • {msg.quoteData.corridorId}
-                    </div>
-
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>
-                      {msg.quoteData.anchorName}
-                    </div>
-                    <div style={{ fontSize: 12, color: "#8696A0", marginBottom: 6 }}>
-                      Drop-off: {msg.quoteData.destName}
-                    </div>
-
-                    <div
-                      className="tabular-nums"
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 6,
-                        padding: "6px 0",
-                        borderTop: "1px solid rgba(255,255,255,0.06)",
-                        fontSize: 11.5,
-                      }}
-                    >
-                      <div>
-                        Seats: <strong>{msg.quoteData.seats}</strong>
-                      </div>
-                      <div>
-                        Per Seat: <strong>{msg.quoteData.unitFare}</strong>
-                      </div>
-                      <div>
-                        Escrow: <strong style={{ color: "#F59E0B" }}>{msg.quoteData.totalFare}</strong>
-                      </div>
-                      <div>
-                        Boarding OTP: <strong style={{ color: "#25D366" }}>{msg.quoteData.otp}</strong>
-                      </div>
-                    </div>
-
-                    {/* WhatsApp Native-Style Interactive Buttons */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 8 }}>
-                      <button
-                        onClick={onConfirmBooking}
-                        style={{
-                          background: "#008751",
-                          color: "#FFFFFF",
-                          border: "none",
-                          padding: "8px 10px",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span>✓ Confirm Pod Booking (Lock Escrow)</span>
-                      </button>
-
-                      <button
-                        onClick={onTriggerSos}
-                        style={{
-                          background: "transparent",
-                          color: "#EF4444",
-                          border: "1px solid rgba(239,68,68,0.3)",
-                          padding: "6px 10px",
-                          borderRadius: 6,
-                          fontSize: 11.5,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <span>⚠ Report Emergency / SOS</span>
-                      </button>
-                    </div>
+                    <span>🎙️ Voice Note</span>
+                    <span style={{ fontSize: 10.5, color: "var(--text-muted)" }}>
+                      Non-Meta ASR (Whisper)
+                    </span>
                   </div>
                 )}
 
-                {/* Timestamp & Double Checkmarks */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    gap: 3,
-                    marginTop: 4,
-                    fontSize: 10.5,
-                    color: "#8696A0",
-                  }}
-                >
-                  <span className="tabular-nums">{msg.timestamp}</span>
-                  {isUser && <WhatsAppDoubleCheckIcon size={14} color="#53BDEB" />}
-                </div>
+                <div>{m.text}</div>
+
+                {/* Embedded Quote Card if returned */}
+                {m.quoteData && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: "10px 12px",
+                      background: "var(--bg-paper)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "var(--radius-input)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                        Corridor {m.quoteData.corridorId}
+                      </span>
+                      <DepartureNumeral size="sm" variant="brand">
+                        {m.quoteData.totalFare}
+                      </DepartureNumeral>
+                    </div>
+
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>
+                      Pickup: {m.quoteData.anchorName}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+                      Drop: {m.quoteData.destName}
+                    </div>
+
+                    <button
+                      onClick={onConfirmBooking}
+                      disabled={isProcessing}
+                      style={{
+                        marginTop: 4,
+                        background: "var(--brand-primary)",
+                        color: "var(--brand-ink)",
+                        borderRadius: "var(--radius-button)",
+                        padding: "8px 14px",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      Book this pod ({m.quoteData.totalFare})
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div
+                style={{
+                  fontSize: 10.5,
+                  color: "var(--text-muted)",
+                  alignSelf: isUser ? "flex-end" : "flex-start",
+                  padding: "0 4px",
+                }}
+              >
+                {m.timestamp}
               </div>
             </div>
           );
         })}
 
-        {/* Real Error Message Banner */}
-        {errorMessage && (
-          <div
-            style={{
-              alignSelf: "center",
-              background: "rgba(239,68,68,0.15)",
-              border: "1px solid #EF4444",
-              borderRadius: 8,
-              padding: "8px 14px",
-              color: "#FCA5A5",
-              fontSize: 12,
-              maxWidth: "92%",
-              lineHeight: 1.4,
-            }}
-          >
-            <strong>Error:</strong> {errorMessage}
-          </div>
-        )}
-
-        {/* Active LLM Elapsed Timer Indicator */}
+        {/* Processing Indicator */}
         {isProcessing && (
           <div
             style={{
               alignSelf: "flex-start",
-              maxWidth: "85%",
-              position: "relative",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "12px 12px 12px 2px",
+              padding: "8px 14px",
+              fontSize: 12.5,
+              color: "var(--text-muted)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
-            <div
-              style={{
-                background: "#202C33",
-                color: "#E9EDEF",
-                padding: "8px 14px",
-                borderRadius: "2px 10px 10px 10px",
-                fontSize: 13,
-                lineHeight: 1.4,
-                boxShadow: "0 1px 2px rgba(0,0,0,0.35)",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: "#25D366",
-                  animation: "along-skeleton-pulse 1s infinite",
-                }}
-              />
-              <span className="tabular-nums">
-                Finding ride options... ({elapsedSeconds !== undefined ? elapsedSeconds : localElapsedSec}s)
-              </span>
-            </div>
+            <CorridorNode size={14} variant="loading" />
+            <span>Processing request ({elapsedSeconds || 1}s)...</span>
           </div>
         )}
 
-        {/* Live Audio Recording Visualizer Bar */}
-        {isRecording && (
+        {/* Error message */}
+        {errorMessage && (
           <div
             style={{
-              alignSelf: "center",
-              background: "#182229",
-              border: "1px solid #EF4444",
-              borderRadius: 20,
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              color: "#EF4444",
-              fontSize: 12,
-              fontWeight: 700,
-              boxShadow: "0 4px 14px rgba(239,68,68,0.2)",
+              background: "var(--danger-soft)",
+              border: "1px solid var(--danger-red)",
+              color: "var(--danger-red)",
+              borderRadius: 8,
+              padding: "8px 12px",
+              fontSize: 12.5,
+              fontWeight: 600,
             }}
           >
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                background: "#EF4444",
-                animation: "along-skeleton-pulse 1s infinite",
-              }}
-            />
-            <span className="tabular-nums">Recording Voice Note: 0:{recordSeconds.toString().padStart(2, "0")}</span>
-            <button
-              onClick={stopRecordingAndSend}
-              style={{
-                background: "#008751",
-                color: "#FFFFFF",
-                border: "none",
-                borderRadius: 12,
-                padding: "4px 10px",
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Send Audio
-            </button>
+            {errorMessage}
           </div>
         )}
       </div>
 
-      {/* Quick Voice Chips Bar */}
+      {/* Quick Sample Input Chips */}
       <div
         style={{
-          background: "#111B21",
-          padding: "6px 10px",
           display: "flex",
           gap: 6,
+          padding: "8px 12px",
+          background: "var(--bg-surface)",
+          borderTop: "1px solid var(--border-subtle)",
           overflowX: "auto",
-          borderTop: "1px solid rgba(255,255,255,0.04)",
         }}
       >
-        <span style={{ fontSize: 11, color: "#8696A0", alignSelf: "center", whiteSpace: "nowrap" }}>
-          Sample Inputs:
-        </span>
-        {QUICK_SAMPLES.map((sample) => (
+        {SAMPLE_CHIPS.map((chip) => (
           <button
-            key={sample.id}
-            onClick={() => {
-              onChangeLocale(sample.locale);
-              if (onSendSampleInput) {
-                onSendSampleInput(sample.text, sample.locale);
-              } else {
-                onSendMessage(sample.text);
-              }
-            }}
+            key={chip.id}
+            onClick={() => onSendSampleInput && onSendSampleInput(chip.text, chip.locale)}
+            disabled={isProcessing}
             style={{
-              background: "#202C33",
-              color: "#E9EDEF",
-              border: "1px solid rgba(255,255,255,0.06)",
-              padding: "4px 9px",
-              borderRadius: 12,
-              fontSize: 11,
               whiteSpace: "nowrap",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
+              padding: "5px 10px",
+              borderRadius: "var(--radius-chip)",
+              background: "var(--bg-paper)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--text-ink)",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: isProcessing ? "not-allowed" : "pointer",
             }}
           >
-            <VoiceWaveIcon size={12} color="#25D366" />
-            <span>{sample.label}</span>
+            {chip.label}
           </button>
         ))}
       </div>
 
-      {/* WhatsApp Input Footer */}
+      {/* Input Action Bar */}
       <footer
         style={{
-          background: "#202C33",
-          padding: "8px 10px",
+          padding: "10px 14px",
+          background: "var(--bg-surface)",
+          borderTop: "1px solid var(--border-subtle)",
           display: "flex",
           alignItems: "center",
           gap: 8,
         }}
       >
-        <button
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#8696A0",
-            cursor: "pointer",
-            padding: 4,
-            display: "flex",
-            alignItems: "center",
-          }}
-          title="Smiley emoji"
-        >
-          <WhatsAppSmileyIcon size={20} color="#8696A0" />
-        </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="audio/*"
+          style={{ display: "none" }}
+          onChange={handleFileUpload}
+        />
 
+        {/* Upload Audio Button */}
         <button
           onClick={() => fileInputRef.current?.click()}
+          disabled={isProcessing || isRecording}
           style={{
-            background: "transparent",
-            border: "none",
-            color: "#8696A0",
-            cursor: "pointer",
-            padding: 4,
-            display: "flex",
+            width: 38,
+            height: 38,
+            minHeight: 38,
+            display: "inline-flex",
             alignItems: "center",
+            justifyContent: "center",
+            background: "var(--bg-paper)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "50%",
+            fontSize: 15,
+            color: "var(--text-muted)",
           }}
-          title="Upload audio note"
+          aria-label="Upload recorded voice note"
+          title="Upload voice audio"
         >
-          <WhatsAppPaperclipIcon size={18} color="#8696A0" />
+          📎
         </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="audio/*"
-          onChange={handleFileUpload}
-          style={{ display: "none" }}
-        />
 
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSend();
-          }}
-          placeholder="Type a message (e.g. Dutse to Berger 2 seats)..."
-          style={{
-            flex: 1,
-            background: "#2A3942",
-            border: "none",
-            borderRadius: 8,
-            padding: "8px 12px",
-            color: "#E9EDEF",
-            fontSize: 13,
-            outline: "none",
-          }}
-        />
+        {/* Recording or Text Input */}
+        {isRecording ? (
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "var(--danger-soft)",
+              border: "1px solid var(--danger-red)",
+              borderRadius: "var(--radius-input)",
+              padding: "6px 12px",
+            }}
+          >
+            <span style={{ fontSize: 13, color: "var(--danger-red)", fontWeight: 700 }}>
+              🔴 Recording ({recordSeconds}s)...
+            </span>
+            <button
+              onClick={stopRecordingAndSend}
+              style={{
+                background: "var(--danger-red)",
+                color: "var(--danger-ink)",
+                border: "none",
+                borderRadius: "var(--radius-chip)",
+                padding: "4px 10px",
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              Send audio
+            </button>
+          </div>
+        ) : (
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            placeholder="Type your trip in English, Pidgin, or Hausa..."
+            disabled={isProcessing}
+            style={{
+              flex: 1,
+              padding: "10px 14px",
+              borderRadius: "var(--radius-input)",
+              background: "var(--bg-paper)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--text-ink)",
+              fontSize: 14,
+              outline: "none",
+            }}
+          />
+        )}
 
-        {/* Dynamic Action Button: Mic when empty, Send Arrow when text entered */}
-        {inputText.trim() ? (
+        {/* Mic Button (MediaRecorder API) */}
+        {!isRecording && (
+          <button
+            onClick={startRecording}
+            disabled={isProcessing}
+            style={{
+              width: 38,
+              height: 38,
+              minHeight: 38,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "var(--bg-paper)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "50%",
+              fontSize: 15,
+              color: "var(--brand-primary)",
+            }}
+            aria-label="Record voice note"
+            title="Record audio"
+          >
+            🎙️
+          </button>
+        )}
+
+        {/* Send Button */}
+        {!isRecording && (
           <button
             onClick={handleSend}
+            disabled={isProcessing || !inputText.trim()}
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              background: "#00A884",
-              border: "none",
-              color: "#FFFFFF",
-              cursor: "pointer",
-              display: "flex",
+              width: 38,
+              height: 38,
+              minHeight: 38,
+              display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <WhatsAppSendIcon size={16} color="#FFFFFF" />
-          </button>
-        ) : (
-          <button
-            onClick={isRecording ? stopRecordingAndSend : startRecording}
-            style={{
-              width: 36,
-              height: 36,
+              background: inputText.trim() ? "var(--brand-primary)" : "var(--bg-paper)",
+              color: inputText.trim() ? "var(--brand-ink)" : "var(--text-muted)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "50%",
-              background: isRecording ? "#EF4444" : "#00A884",
-              border: "none",
-              color: "#FFFFFF",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              transition: "background 0.2s ease",
+              fontSize: 15,
+              cursor: inputText.trim() ? "pointer" : "default",
             }}
-            title={isRecording ? "Stop recording" : "Hold or click to record voice note"}
+            aria-label="Send message"
           >
-            <WhatsAppMicIcon size={18} color="#FFFFFF" />
+            ➔
           </button>
         )}
       </footer>

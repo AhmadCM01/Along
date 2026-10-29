@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { AlongLogo } from "@/components/brand/AlongLogo";
-import { SteeringWheelIcon } from "@/components/icons/AlongIcons";
+import { Header } from "@/components/navigation/Header";
+import { BottomTabBar } from "@/components/navigation/BottomTabBar";
+import { DepartureNumeral } from "@/components/ui/DepartureNumeral";
+import { CorridorNode } from "@/components/brand/CorridorNode";
 import {
   getCorridorDrivers,
   updateDriverStatus,
@@ -20,7 +21,7 @@ interface DriverSummary {
   status: string;
 }
 
-export default function DriverCompanionPage() {
+export default function DriverPage() {
   const [driver, setDriver] = useState<DriverSummary>({
     id: "DRV-001",
     full_name: "Musa Danjuma",
@@ -33,15 +34,11 @@ export default function DriverCompanionPage() {
 
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [statusLoading, setStatusLoading] = useState<boolean>(false);
-  const [statusElapsedSec, setStatusElapsedSec] = useState<number>(0);
-
   const [otpCode, setOtpCode] = useState<string>("");
   const [boardedCount, setBoardedCount] = useState<number>(3);
   const [escrowState, setEscrowState] = useState<string>("PENDING_BOARDING");
   const [podStatus, setPodStatus] = useState<string>("BOARDING");
-
   const [otpLoading, setOtpLoading] = useState<boolean>(false);
-  const [otpElapsedSec, setOtpElapsedSec] = useState<number>(0);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpSuccessMessage, setOtpSuccessMessage] = useState<string | null>(null);
 
@@ -63,9 +60,7 @@ export default function DriverCompanionPage() {
           setIsOnline(first.status === "ONLINE");
         }
       })
-      .catch(() => {
-        // Keep default driver state if backend unreachable
-      });
+      .catch(() => {});
 
     return () => {
       cancelled = true;
@@ -75,11 +70,6 @@ export default function DriverCompanionPage() {
   async function handleStatusToggle() {
     if (statusLoading) return;
     setStatusLoading(true);
-    const start = Date.now();
-    const timer = setInterval(() => {
-      setStatusElapsedSec(Math.round((Date.now() - start) / 100) / 10);
-    }, 100);
-
     const nextStatus = isOnline ? "OFFLINE" : "ONLINE";
     try {
       await updateDriverStatus(driver.id, nextStatus, {
@@ -87,10 +77,8 @@ export default function DriverCompanionPage() {
       });
       setIsOnline(!isOnline);
     } catch {
-      // Toggle locally for demo continuity
       setIsOnline(!isOnline);
     } finally {
-      clearInterval(timer);
       setStatusLoading(false);
     }
   }
@@ -100,11 +88,6 @@ export default function DriverCompanionPage() {
     setOtpLoading(true);
     setOtpError(null);
     setOtpSuccessMessage(null);
-
-    const start = Date.now();
-    const timer = setInterval(() => {
-      setOtpElapsedSec(Math.round((Date.now() - start) / 100) / 10);
-    }, 100);
 
     try {
       const res = await verifyBoardingOtp(
@@ -119,379 +102,309 @@ export default function DriverCompanionPage() {
       setEscrowState(res.escrow_state || "CAPTURED");
       setPodStatus(res.pod_status || "IN_TRANSIT");
       setOtpSuccessMessage(
-        `OTP Verified. Escrow captured: 90% Driver net guaranteed. Pod status: ${res.pod_status || "IN_TRANSIT"}.`
+        `Code verified. Escrow captured: 90% driver net guaranteed. Pod status: ${res.pod_status || "IN_TRANSIT"}.`
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setOtpError(msg);
     } finally {
-      clearInterval(timer);
       setOtpLoading(false);
     }
   }
 
-  const bgCanvas = "#EEF2EF";
-  const bgPhone = "#FFFFFF";
-  const textPrimary = "#0A1410";
-  const textSecondary = "#374740";
-  const borderCol = "rgba(10,20,16,0.12)";
-
   return (
     <div
       style={{
-        minHeight: "100vh",
-        background: bgCanvas,
-        color: textPrimary,
+        minHeight: "100dvh",
+        background: "var(--bg-paper)",
+        color: "var(--text-ink)",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px 16px",
-        fontFamily: "Inter, 'Plus Jakarta Sans', sans-serif",
       }}
     >
-      {/* Top Navigation */}
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 440,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 14,
-        }}
-      >
-        <Link href="/">
-          <AlongLogo variant="light" size="sm" />
-        </Link>
-        <span
-          style={{
-            background: "rgba(0,135,81,0.12)",
-            color: "#008751",
-            padding: "5px 12px",
-            borderRadius: 999,
-            fontSize: 12,
-            fontWeight: 800,
-          }}
-        >
-          DRIVER DISPATCH & MANIFEST
-        </span>
-      </div>
+      <Header />
 
-      {/* Realistic Mobile Device Frame */}
-      <div
+      <main
         style={{
           width: "100%",
-          maxWidth: 440,
-          background: bgPhone,
-          borderRadius: 28,
-          border: "4px solid #D6DFD9",
-          overflow: "hidden",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+          maxWidth: 600,
+          margin: "0 auto",
+          padding: "24px 20px 80px",
           display: "flex",
           flexDirection: "column",
+          gap: 20,
         }}
       >
-        {/* Mobile Device Status Bar */}
-        <div
+        {/* Title & Online Toggle */}
+        <section
           style={{
-            background: "#E2E8E4",
-            padding: "8px 16px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            fontSize: 11,
-            color: "#374740",
-            borderBottom: `1px solid ${borderCol}`,
           }}
         >
-          <span className="tabular-nums" style={{ fontWeight: 700, color: textPrimary }}>
-            12:45
-          </span>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span>MTN-NG 4G</span>
-            <span>● 94%</span>
+          <div>
+            <h1 style={{ fontSize: 24, fontWeight: 800 }}>Driver dispatch & manifest</h1>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
+              Corridor {driver.corridor_id} · Pod POD-842A
+            </p>
           </div>
-        </div>
 
-        {/* Driver Companion Main Content */}
-        <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Driver Identity Card & Online Toggle */}
-          <div
+          <button
+            onClick={handleStatusToggle}
+            disabled={statusLoading}
             style={{
-              background: "#F7F8F6",
-              borderRadius: 14,
-              padding: 14,
-              border: `1px solid ${borderCol}`,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              background: isOnline ? "var(--brand-primary)" : "var(--bg-surface)",
+              color: isOnline ? "var(--brand-ink)" : "var(--text-muted)",
+              border: `1px solid ${isOnline ? "var(--brand-primary)" : "var(--border-subtle)"}`,
+              padding: "8px 16px",
+              borderRadius: "var(--radius-chip)",
+              fontWeight: 700,
+              fontSize: 13,
             }}
           >
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 16 }}>{driver.full_name}</div>
-              <div className="tabular-nums" style={{ fontSize: 12, color: textSecondary }}>
-                Plate: <strong>{driver.plate_number}</strong> ({driver.vehicle_make_model})
+            {statusLoading ? "Updating..." : isOnline ? "Online" : "Offline"}
+          </button>
+        </section>
+
+        {/* Driver Summary Card */}
+        <section
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "var(--radius-card)",
+            padding: "16px 20px",
+            boxShadow: "var(--shadow-soft)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{driver.full_name}</div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
+              {driver.vehicle_make_model}
+            </div>
+          </div>
+          <DepartureNumeral size="md" variant="neutral">
+            {driver.plate_number}
+          </DepartureNumeral>
+        </section>
+
+        {/* 4-Seat Manifest Grid */}
+        <section
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "var(--radius-card)",
+            padding: "20px",
+            boxShadow: "var(--shadow-soft)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>
+              Seat manifest ({boardedCount}/4 boarded)
+            </span>
+            <DepartureNumeral size="sm" variant={escrowState === "CAPTURED" ? "brand" : "amber"}>
+              {escrowState}
+            </DepartureNumeral>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {/* Driver */}
+            <div
+              style={{
+                background: "var(--bg-paper)",
+                borderRadius: "var(--radius-button)",
+                padding: "12px",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700 }}>
+                DRIVER
               </div>
-              <div style={{ fontSize: 11.5, color: "#008751", fontWeight: 600, marginTop: 2 }}>
-                Corridor: {driver.corridor_id}
+              <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
+                {driver.full_name}
               </div>
             </div>
 
-            <button
-              onClick={handleStatusToggle}
-              disabled={statusLoading}
+            {/* Passenger 1 */}
+            <div
               style={{
-                background: isOnline ? "#008751" : "#64756D",
-                color: "#FFFFFF",
-                border: "none",
-                padding: "8px 16px",
-                borderRadius: 999,
-                fontWeight: 800,
-                fontSize: 12.5,
-                cursor: statusLoading ? "not-allowed" : "pointer",
-                opacity: statusLoading ? 0.7 : 1,
+                background: "var(--brand-soft)",
+                borderRadius: "var(--radius-button)",
+                padding: "12px",
+                border: "1px solid rgba(11, 110, 79, 0.25)",
               }}
             >
-              {statusLoading
-                ? `${statusElapsedSec.toFixed(1)}s...`
-                : isOnline
-                ? "ONLINE"
-                : "OFFLINE"}
+              <div style={{ fontSize: 11, color: "var(--brand-primary)", fontWeight: 700 }}>
+                FRONT SEAT · BOARDED
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
+                Amina Bello
+              </div>
+              <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Drop: Wuse Market</div>
+            </div>
+
+            {/* Passenger 2 */}
+            <div
+              style={{
+                background: "var(--brand-soft)",
+                borderRadius: "var(--radius-button)",
+                padding: "12px",
+                border: "1px solid rgba(11, 110, 79, 0.25)",
+              }}
+            >
+              <div style={{ fontSize: 11, color: "var(--brand-primary)", fontWeight: 700 }}>
+                BACK LEFT · BOARDED
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
+                Emeka Nwosu
+              </div>
+              <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Drop: Berger</div>
+            </div>
+
+            {/* Passenger 3 */}
+            <div
+              style={{
+                background: "var(--brand-soft)",
+                borderRadius: "var(--radius-button)",
+                padding: "12px",
+                border: "1px solid rgba(11, 110, 79, 0.25)",
+              }}
+            >
+              <div style={{ fontSize: 11, color: "var(--brand-primary)", fontWeight: 700 }}>
+                BACK MIDDLE · BOARDED
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
+                Bello K.
+              </div>
+              <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Drop: Mabushi</div>
+            </div>
+
+            {/* Passenger 4 (Pending or Boarded) */}
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                background: boardedCount >= 4 ? "var(--brand-soft)" : "var(--signal-soft)",
+                borderRadius: "var(--radius-button)",
+                padding: "12px 14px",
+                border: `1px solid ${boardedCount >= 4 ? "rgba(11, 110, 79, 0.3)" : "var(--signal-amber)"}`,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: boardedCount >= 4 ? "var(--brand-primary)" : "var(--signal-ink)",
+                  }}
+                >
+                  BACK RIGHT: {boardedCount >= 4 ? "BOARDED" : "AWAITING BOARDING CODE"}
+                </span>
+                <DepartureNumeral size="sm" variant={boardedCount >= 4 ? "brand" : "amber"}>
+                  ₦900
+                </DepartureNumeral>
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4 }}>
+                Tunde A.
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                Drop: Katampe Oando · Status: {boardedCount >= 4 ? "Boarded" : "Awaiting OTP"}
+              </div>
+            </div>
+          </div>
+
+          {/* OTP Verification Input Form */}
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <input
+              type="text"
+              maxLength={4}
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value)}
+              placeholder="OTP"
+              className="tabular-nums"
+              style={{
+                width: 100,
+                padding: "10px",
+                fontSize: 18,
+                fontWeight: 700,
+                textAlign: "center",
+                borderRadius: "var(--radius-button)",
+                border: "1px solid var(--border-strong)",
+                background: "var(--bg-paper)",
+                color: "var(--text-ink)",
+                outline: "none",
+              }}
+            />
+
+            <button
+              onClick={handleVerifyOtp}
+              disabled={otpLoading}
+              style={{
+                flex: 1,
+                background: "var(--brand-primary)",
+                color: "var(--brand-ink)",
+                borderRadius: "var(--radius-button)",
+                fontSize: 14,
+                fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              {otpLoading ? (
+                <>
+                  <CorridorNode size={16} variant="loading" />
+                  <span>Verifying...</span>
+                </>
+              ) : boardedCount >= 4 ? (
+                <span>All 4 passengers boarded</span>
+              ) : (
+                <span>Verify passenger code</span>
+              )}
             </button>
           </div>
 
-          {/* 4-Seat Cabin Schematic & Manifest */}
-          <div
-            style={{
-              background: "#F7F8F6",
-              borderRadius: 14,
-              padding: 14,
-              border: `1px solid ${borderCol}`,
-            }}
-          >
+          {otpError && (
             <div
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 10,
+                padding: "8px 12px",
+                background: "var(--danger-soft)",
+                border: "1px solid var(--danger-red)",
+                color: "var(--danger-red)",
+                borderRadius: "var(--radius-input)",
+                fontSize: 12.5,
+                fontWeight: 600,
               }}
             >
-              <span style={{ fontWeight: 800, fontSize: 13.5 }}>
-                Pod POD-842A ({boardedCount}/4 Boarded)
-              </span>
-              <span
-                className="tabular-nums"
-                style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  color: escrowState === "CAPTURED" ? "#008751" : "#D97706",
-                  background: escrowState === "CAPTURED" ? "rgba(0,135,81,0.1)" : "rgba(217,119,6,0.1)",
-                  padding: "3px 8px",
-                  borderRadius: 6,
-                }}
-              >
-                {escrowState}
-              </span>
+              {otpError}
             </div>
+          )}
 
-            {/* 4-Seat Visual Diagram */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-              {/* Driver */}
-              <div
-                style={{
-                  background: "#FFFFFF",
-                  borderRadius: 8,
-                  padding: 8,
-                  border: `1px solid ${borderCol}`,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <SteeringWheelIcon size={18} color="#374740" />
-                <div>
-                  <div style={{ fontSize: 9.5, color: textSecondary, fontWeight: 700 }}>DRIVER</div>
-                  <div style={{ fontSize: 11.5, fontWeight: 700 }}>{driver.full_name}</div>
-                </div>
-              </div>
-
-              {/* Front Passenger */}
-              <div
-                style={{
-                  background: "#E8F5E9",
-                  borderRadius: 8,
-                  padding: 8,
-                  borderLeft: "3px solid #008751",
-                  borderTop: `1px solid ${borderCol}`,
-                  borderRight: `1px solid ${borderCol}`,
-                  borderBottom: `1px solid ${borderCol}`,
-                }}
-              >
-                <div style={{ fontSize: 9.5, color: "#006B3F", fontWeight: 700 }}>FRONT PASSENGER</div>
-                <div style={{ fontSize: 11.5, fontWeight: 700 }}>Amina Bello</div>
-                <div style={{ fontSize: 10, color: textSecondary }}>Drop: Wuse Market</div>
-              </div>
-
-              {/* Back Left */}
-              <div
-                style={{
-                  background: "#FFFFFF",
-                  borderRadius: 8,
-                  padding: 8,
-                  borderLeft: "3px solid #008751",
-                  borderTop: `1px solid ${borderCol}`,
-                  borderRight: `1px solid ${borderCol}`,
-                  borderBottom: `1px solid ${borderCol}`,
-                }}
-              >
-                <div style={{ fontSize: 9.5, color: "#006B3F", fontWeight: 700 }}>BACK LEFT</div>
-                <div style={{ fontSize: 11.5, fontWeight: 700 }}>Emeka Nwosu</div>
-                <div style={{ fontSize: 10, color: textSecondary }}>Drop: Berger Roundabout</div>
-              </div>
-
-              {/* Back Middle */}
-              <div
-                style={{
-                  background: "#FFFFFF",
-                  borderRadius: 8,
-                  padding: 8,
-                  borderLeft: "3px solid #008751",
-                  borderTop: `1px solid ${borderCol}`,
-                  borderRight: `1px solid ${borderCol}`,
-                  borderBottom: `1px solid ${borderCol}`,
-                }}
-              >
-                <div style={{ fontSize: 9.5, color: "#006B3F", fontWeight: 700 }}>BACK MIDDLE</div>
-                <div style={{ fontSize: 11.5, fontWeight: 700 }}>Bello K.</div>
-                <div style={{ fontSize: 10, color: textSecondary }}>Drop: Mabushi Bridge</div>
-              </div>
-
-              {/* Back Right: Mid-Corridor Reload Slot */}
-              <div
-                style={{
-                  gridColumn: "1 / -1",
-                  background:
-                    boardedCount >= 4 ? "#E8F5E9" : "rgba(217,119,6,0.12)",
-                  borderRadius: 8,
-                  padding: 9,
-                  border:
-                    boardedCount >= 4
-                      ? "1px solid #008751"
-                      : "2px solid #F59E0B",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span
-                    style={{
-                      fontSize: 10.5,
-                      fontWeight: 800,
-                      color: boardedCount >= 4 ? "#008751" : "#D97706",
-                    }}
-                  >
-                    BACK RIGHT: MID-CORRIDOR RELOAD SLOT
-                  </span>
-                  <span
-                    className="tabular-nums"
-                    style={{
-                      background: boardedCount >= 4 ? "#008751" : "#D97706",
-                      color: "#FFFFFF",
-                      padding: "2px 6px",
-                      borderRadius: 4,
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                    }}
-                  >
-                    ₦700
-                  </span>
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 800, marginTop: 2 }}>Tunde A.</div>
-                <div style={{ fontSize: 11, color: textSecondary }}>
-                  Drop: Oando Katampe (km 26.1) - Status: {boardedCount >= 4 ? "Boarded" : "Awaiting OTP"}
-                </div>
-              </div>
+          {otpSuccessMessage && (
+            <div
+              style={{
+                padding: "8px 12px",
+                background: "var(--brand-soft)",
+                border: "1px solid var(--brand-primary)",
+                color: "var(--brand-primary)",
+                borderRadius: "var(--radius-input)",
+                fontSize: 12.5,
+                fontWeight: 600,
+              }}
+            >
+              {otpSuccessMessage}
             </div>
+          )}
+        </section>
+      </main>
 
-            {/* Forecourt Boarding OTP Verification */}
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                type="text"
-                maxLength={4}
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-                placeholder="OTP"
-                className="tabular-nums"
-                style={{
-                  width: 90,
-                  padding: "8px 10px",
-                  fontSize: 18,
-                  fontWeight: 800,
-                  borderRadius: 8,
-                  border: "2px solid #008751",
-                  textAlign: "center",
-                  outline: "none",
-                }}
-              />
-              <button
-                onClick={handleVerifyOtp}
-                disabled={otpLoading}
-                style={{
-                  flex: 1,
-                  background: boardedCount >= 4 ? "#006B3F" : "#008751",
-                  color: "#FFFFFF",
-                  border: "none",
-                  borderRadius: 8,
-                  fontWeight: 800,
-                  fontSize: 13,
-                  cursor: otpLoading ? "not-allowed" : "pointer",
-                  opacity: otpLoading ? 0.7 : 1,
-                }}
-              >
-                {otpLoading
-                  ? `Verifying OTP (${otpElapsedSec.toFixed(1)}s)...`
-                  : boardedCount >= 4
-                  ? "✓ All 4 Boarded: " + podStatus
-                  : "Verify OTP (150m Geofence Lock)"}
-              </button>
-            </div>
-
-            {otpError && (
-              <div
-                style={{
-                  marginTop: 10,
-                  padding: "8px 10px",
-                  borderRadius: 6,
-                  background: "#FEF2F2",
-                  border: "1px solid #DC2626",
-                  color: "#DC2626",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                Backend Error: {otpError}
-              </div>
-            )}
-
-            {otpSuccessMessage && (
-              <div
-                style={{
-                  marginTop: 10,
-                  padding: "8px 10px",
-                  borderRadius: 6,
-                  background: "#E8F5E9",
-                  border: "1px solid #008751",
-                  color: "#006B3F",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                {otpSuccessMessage}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <BottomTabBar activeShareToken="tok_demo_family_123" />
     </div>
   );
 }

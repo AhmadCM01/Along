@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Along | AI-Orchestrated Shared Corridor Transit for Abuja",
+  title: "Along: AI-Orchestrated Shared Corridor Transit for Abuja",
   description:
-    "Pair into 4-seat corridor pods via WhatsApp in English, Nigerian Pidgin, or Hausa. Safe private filling station anchors, double-entry kobo escrow, and zero Agbero extortion.",
+    "Book shared 4-seat corridor rides in Abuja by voice or text in English, Pidgin, or Hausa. Safe filling-station forecourts, double-entry escrow, and family tracking.",
   manifest: "/manifest.json",
 };
 
@@ -15,20 +15,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" data-theme="dark-command">
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap"
           rel="stylesheet"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem('along-theme');
+                  var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                  document.documentElement.setAttribute('data-theme', theme);
+                } catch (e) {}
+              })();
+            `,
+          }}
         />
       </head>
       <body>{children}</body>

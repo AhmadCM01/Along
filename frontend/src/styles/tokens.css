@@ -1,50 +1,131 @@
-/* Along Dual-Surface Adaptive Design Tokens (§14.1.2) */
+/* Along Transit Map Design System Tokens
+   Restrained 60/30/10 Palette, Light Default, High Contrast WCAG AA/AAA
+*/
 
 :root,
-[data-theme="dark-command"] {
-  --bg-canvas: #0A0F0D;
-  --bg-surface-1: #111916;
-  --bg-surface-2: #17221E;
-  --bg-surface-3: #1E2C27;
-  --bg-glass: rgba(17, 25, 22, 0.84);
+[data-theme="light"] {
+  color-scheme: light;
 
-  --text-primary: #F3F6F4;
-  --text-secondary: #9FB0A7;
-  --text-muted: #687A71;
+  /* 60% Canvas & Surfaces */
+  --bg-paper: #F7F6F2;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
 
-  --brand-emerald: #00A86B;
-  --brand-emerald-deep: #008751;
-  --brand-emerald-subtle: rgba(0, 168, 107, 0.14);
-  --brand-amber: #F59E0B;
-  --brand-amber-subtle: rgba(245, 158, 11, 0.14);
+  /* Text & Ink */
+  --text-ink: #111513;
+  --text-muted: #5C645F;
+  --text-faint: #88938C;
 
-  --status-danger: #EF4444;
-  --status-danger-subtle: rgba(239, 68, 68, 0.16);
+  /* Hairlines & Borders */
+  --border-subtle: #E3E1DA;
+  --border-strong: #C4C0B4;
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(0, 168, 107, 0.38);
+  /* 30% Brand Accents (Only primary buttons, links, focus, active route) */
+  --brand-primary: #0B6E4F;
+  --brand-hover: #08553D;
+  --brand-soft: #E3F1EA;
+  --brand-ink: #FFFFFF;
+
+  /* 10% Signals: Amber (Escrow & Boarding only, max one per screen) */
+  --signal-amber: #FFB020;
+  --signal-ink: #111513;
+  --signal-soft: #FFF4DE;
+
+  /* 10% Signals: Red (SOS and real errors only) */
+  --danger-red: #C9302C;
+  --danger-hover: #AA2421;
+  --danger-ink: #FFFFFF;
+  --danger-soft: #FDE8E7;
+
+  /* Corridors: active is brand, all others neutral grey */
+  --corridor-inactive: #D0CCC2;
+  --corridor-active: #0B6E4F;
+
+  /* Geometry & Radii */
+  --radius-card: 12px;
+  --radius-chip: 999px;
+  --radius-button: 10px;
+  --radius-input: 10px;
+
+  /* Shadows */
+  --shadow-soft: 0 4px 20px -2px rgba(17, 21, 19, 0.06), 0 2px 6px -1px rgba(17, 21, 19, 0.04);
+  --shadow-drawer: 0 -8px 32px rgba(17, 21, 19, 0.12);
+
+  /* Typography Stacks */
+  --font-heading: "Bricolage Grotesque", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Instrument Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Backward Compatibility Aliases */
+  --bg-canvas: var(--bg-paper);
+  --bg-surface-1: var(--bg-surface);
+  --bg-surface-2: var(--bg-paper);
+  --bg-surface-3: var(--brand-soft);
+  --text-primary: var(--text-ink);
+  --text-secondary: var(--text-muted);
+  --brand-emerald: var(--brand-primary);
+  --brand-emerald-deep: var(--brand-hover);
+  --brand-emerald-subtle: var(--brand-soft);
+  --brand-amber: var(--signal-amber);
+  --brand-amber-subtle: var(--signal-soft);
+  --status-danger: var(--danger-red);
+  --status-danger-subtle: var(--danger-soft);
 }
 
-[data-theme="light-daylight"] {
-  --bg-canvas: #F7F8F6;
-  --bg-surface-1: #FFFFFF;
-  --bg-surface-2: #EEF2EF;
-  --bg-surface-3: #E2E9E4;
-  --bg-glass: rgba(255, 255, 255, 0.92);
+[data-theme="dark"] {
+  color-scheme: dark;
 
-  --text-primary: #0A1410;
-  --text-secondary: #374740;
-  --text-muted: #64756D;
+  /* 60% Canvas & Surfaces */
+  --bg-paper: #0C0F0D;
+  --bg-surface: #151A17;
+  --bg-surface-elevated: #1B221E;
 
-  --brand-emerald: #008751;
-  --brand-emerald-deep: #006B3F;
-  --brand-emerald-subtle: rgba(0, 135, 81, 0.10);
-  --brand-amber: #D97706;
-  --brand-amber-subtle: rgba(217, 119, 6, 0.12);
+  /* Text & Ink */
+  --text-ink: #EEF1EE;
+  --text-muted: #9AA59E;
+  --text-faint: #6A756E;
 
-  --status-danger: #DC2626;
-  --status-danger-subtle: rgba(220, 38, 38, 0.12);
+  /* Hairlines & Borders */
+  --border-subtle: #232B26;
+  --border-strong: #3A463F;
 
-  --border-subtle: rgba(10, 20, 16, 0.10);
-  --border-strong: rgba(0, 135, 81, 0.42);
+  /* 30% Brand Accents (Uses dark ink text for WCAG AA compliance on buttons) */
+  --brand-primary: #34C98A;
+  --brand-hover: #2BB37A;
+  --brand-soft: #12261D;
+  --brand-ink: #0C0F0D;
+
+  /* 10% Signals: Amber (Escrow & Boarding only) */
+  --signal-amber: #FFC247;
+  --signal-ink: #0C0F0D;
+  --signal-soft: #2D2311;
+
+  /* 10% Signals: Red (SOS and real errors only) */
+  --danger-red: #EF5B54;
+  --danger-hover: #D84740;
+  --danger-ink: #0C0F0D;
+  --danger-soft: #2E1514;
+
+  /* Corridors: active is brand, all others neutral grey */
+  --corridor-inactive: #2A342E;
+  --corridor-active: #34C98A;
+
+  /* Shadows */
+  --shadow-soft: 0 4px 24px -2px rgba(0, 0, 0, 0.45);
+  --shadow-drawer: 0 -8px 32px rgba(0, 0, 0, 0.6);
+
+  /* Backward Compatibility Aliases */
+  --bg-canvas: var(--bg-paper);
+  --bg-surface-1: var(--bg-surface);
+  --bg-surface-2: var(--bg-paper);
+  --bg-surface-3: var(--brand-soft);
+  --text-primary: var(--text-ink);
+  --text-secondary: var(--text-muted);
+  --brand-emerald: var(--brand-primary);
+  --brand-emerald-deep: var(--brand-hover);
+  --brand-emerald-subtle: var(--brand-soft);
+  --brand-amber: var(--signal-amber);
+  --brand-amber-subtle: var(--signal-soft);
+  --status-danger: var(--danger-red);
+  --status-danger-subtle: var(--danger-soft);
 }

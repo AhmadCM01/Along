@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { AlongLogo } from "@/components/brand/AlongLogo";
-import { ShieldCheckIcon, SosBeaconIcon } from "@/components/icons/AlongIcons";
+import { Header } from "@/components/navigation/Header";
+import { BottomTabBar } from "@/components/navigation/BottomTabBar";
+import { DepartureNumeral } from "@/components/ui/DepartureNumeral";
+import { CorridorNode } from "@/components/brand/CorridorNode";
 import {
   getPublicTripShare,
   triggerPublicTripSos,
   PublicTripShareResponse,
 } from "@/lib/api";
 
-export default function PublicTripSharePage({
+export default function FamilyTrackingPage({
   params,
 }: {
   params: Promise<{ shareToken: string }>;
@@ -24,18 +26,11 @@ export default function PublicTripSharePage({
   const [sosActive, setSosActive] = useState<boolean>(false);
   const [sosLoading, setSosLoading] = useState<boolean>(false);
   const [sosFeedback, setSosFeedback] = useState<string | null>(null);
-  const [elapsedSec, setElapsedSec] = useState<number>(0);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
     let cancelled = false;
-
     setLoading(true);
     setError(null);
-    const start = Date.now();
-    timer = setInterval(() => {
-      setElapsedSec(Math.round((Date.now() - start) / 100) / 10);
-    }, 100);
 
     getPublicTripShare(shareToken)
       .then((res) => {
@@ -53,13 +48,11 @@ export default function PublicTripSharePage({
       .finally(() => {
         if (!cancelled) {
           setLoading(false);
-          if (timer) clearInterval(timer);
         }
       });
 
     return () => {
       cancelled = true;
-      if (timer) clearInterval(timer);
     };
   }, [shareToken]);
 
@@ -73,191 +66,211 @@ export default function PublicTripSharePage({
       setSosFeedback(res.message || "FCT Dispatch and Operations notified");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setSosFeedback(`Error triggering SOS: ${msg}`);
+      setSosFeedback(`Error: ${msg}`);
     } finally {
       setSosLoading(false);
     }
   }
 
   return (
-    <main
+    <div
       style={{
-        minHeight: "100vh",
-        background: "#F7F8F6",
-        color: "#0A1410",
-        padding: "24px 16px 56px",
+        minHeight: "100dvh",
+        background: "var(--bg-paper)",
+        color: "var(--text-ink)",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      <div style={{ maxWidth: 480, margin: "0 auto" }}>
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
-          }}
-        >
-          <Link href="/">
-            <AlongLogo variant="light" size="md" />
-          </Link>
-          <span
-            style={{
-            background: "rgba(0,135,81,0.12)",
-            color: "#008751",
-            padding: "5px 12px",
-            borderRadius: 999,
-            fontSize: 12,
-            fontWeight: 800,
-          }}
-        >
-            LIVE FAMILY SAFETY TRACKER
-          </span>
-        </header>
+      <Header activeShareToken={shareToken} />
+
+      <main
+        style={{
+          width: "100%",
+          maxWidth: 600,
+          margin: "0 auto",
+          padding: "24px 20px 80px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 800 }}>Live family trip tracker</h1>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
+            Real-time Abuja corridor safety monitoring
+          </p>
+        </div>
 
         {loading && (
           <div
             style={{
-              background: "#FFFFFF",
-              border: "1px solid rgba(10,20,16,0.1)",
-              borderRadius: 16,
-              padding: 24,
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "var(--radius-card)",
+              padding: "24px",
               textAlign: "center",
-              marginBottom: 14,
               fontSize: 13,
-              color: "#374740",
+              color: "var(--text-muted)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
             }}
           >
-            Fetching live trip telemetry ({elapsedSec.toFixed(1)}s elapsed)...
+            <CorridorNode size={16} variant="loading" />
+            <span>Connecting to live trip telemetry...</span>
           </div>
         )}
 
         {error && (
           <div
             style={{
-              background: "#FEF2F2",
-              border: "1px solid #DC2626",
-              color: "#DC2626",
-              borderRadius: 16,
-              padding: 16,
-              marginBottom: 14,
+              background: "var(--danger-soft)",
+              border: "1px solid var(--danger-red)",
+              color: "var(--danger-red)",
+              borderRadius: "var(--radius-card)",
+              padding: "16px",
               fontSize: 13,
               fontWeight: 600,
             }}
           >
-            Backend Error: {error}
+            Failed to load trip: {error}
           </div>
         )}
 
         {trip && (
-          <div
+          <section
             style={{
-              background: "#FFFFFF",
-              border: "1px solid rgba(10,20,16,0.1)",
-              borderRadius: 16,
-              padding: 18,
-              marginBottom: 14,
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "var(--radius-card)",
+              padding: "20px",
+              boxShadow: "var(--shadow-soft)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#008751" }}>
-                  {trip.pod_code} | {trip.corridor_id}
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand-primary)" }}>
+                  Corridor {trip.corridor_id} · Pod {trip.pod_code}
                 </div>
-                <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>
-                  {trip.driver.full_name} ({trip.driver.plate_number})
+                <div style={{ fontSize: 17, fontWeight: 800, marginTop: 4 }}>
+                  {trip.driver.full_name}
                 </div>
-                <div style={{ fontSize: 13, color: "#374740" }}>
-                  {trip.driver.vehicle_desc} | Escrow: {trip.escrow_status}
+                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
+                  {trip.driver.vehicle_desc}
                 </div>
               </div>
-              <ShieldCheckIcon size={28} color="#008751" />
+
+              <DepartureNumeral size="md" variant="neutral">
+                {trip.driver.plate_number}
+              </DepartureNumeral>
             </div>
 
             <div
-              className="tabular-nums"
               style={{
-                marginTop: 14,
-                paddingTop: 14,
-                borderTop: "1px solid rgba(10,20,16,0.08)",
+                paddingTop: 12,
+                borderTop: "1px solid var(--border-subtle)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
                 fontSize: 13,
               }}
             >
-              <div>
-                Boarded At: <strong>{trip.origin_anchor}</strong>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <CorridorNode size={14} variant="pickup" />
+                <span style={{ color: "var(--text-muted)" }}>Boarded:</span>
+                <strong>{trip.origin_anchor}</strong>
               </div>
-              <div style={{ marginTop: 4 }}>
-                Current Location:{" "}
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <CorridorNode size={14} variant="driver" />
+                <span style={{ color: "var(--text-muted)" }}>Current position:</span>
                 <strong>
-                  {trip.telemetry.current_landmark} ({trip.telemetry.is_on_corridor ? "On Corridor" : "Off Corridor"},{" "}
-                  {trip.telemetry.route_deviation_m}m dev)
+                  {trip.telemetry.current_landmark} ({trip.telemetry.is_on_corridor ? "On corridor" : "Off corridor"})
                 </strong>
               </div>
-              <div style={{ marginTop: 4 }}>
-                Destination:{" "}
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <CorridorNode size={14} variant="default" />
+                <span style={{ color: "var(--text-muted)" }}>Destination:</span>
                 <strong>
-                  {trip.destination_landmark} (ETA: {trip.telemetry.eta_minutes} mins)
+                  {trip.destination_landmark} (ETA {trip.telemetry.eta_minutes} mins)
                 </strong>
               </div>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* 1-Tap Emergency SOS Button */}
-        <div
+        {/* 1-Tap Emergency Guard */}
+        <section
           style={{
-            background: sosActive ? "#FEF2F2" : "#FFFFFF",
-            border: sosActive ? "2px solid #DC2626" : "1px solid rgba(10,20,16,0.1)",
-            borderRadius: 16,
-            padding: 18,
+            background: "var(--bg-surface)",
+            border: sosActive ? "2px solid var(--danger-red)" : "1px solid var(--border-subtle)",
+            borderRadius: "var(--radius-card)",
+            padding: "20px",
+            boxShadow: "var(--shadow-soft)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <SosBeaconIcon size={20} color="#DC2626" />
-            <span style={{ fontWeight: 800, fontSize: 15, color: "#DC2626" }}>
-              Anti-One-Chance Family Safety Guard
-            </span>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--danger-red)" }}>
+              One-tap emergency alert
+            </div>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
+              Alerts Along Operations Command and FCT Rapid Response if vehicle deviates off the corridor.
+            </p>
           </div>
-          <p style={{ fontSize: 13, color: "#374740", marginBottom: 14 }}>
-            If the vehicle deviates &gt;800m off the Abuja corridor or you need
-            immediate assistance, tap below to alert Along Operations Command
-            and FCT Rapid Response.
-          </p>
+
           <button
             onClick={handleSosClick}
             disabled={sosLoading}
             style={{
               width: "100%",
-              background: "#DC2626",
-              color: "#FFFFFF",
-              border: "none",
+              background: "var(--danger-red)",
+              color: "var(--danger-ink)",
+              borderRadius: "var(--radius-button)",
               padding: "14px",
-              borderRadius: 12,
-              fontWeight: 800,
-              fontSize: 15,
-              cursor: sosLoading ? "not-allowed" : "pointer",
-              opacity: sosLoading ? 0.7 : 1,
+              fontSize: 14,
+              fontWeight: 700,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
             }}
           >
-            {sosLoading
-              ? "DISPATCHING SOS ALERT..."
-              : sosActive
-              ? "SOS ALERT ACTIVE - FCT DISPATCH NOTIFIED"
-              : "TRIGGER 1-TAP EMERGENCY SOS"}
+            {sosLoading ? (
+              <>
+                <CorridorNode size={16} variant="loading" />
+                <span>Alerting dispatch...</span>
+              </>
+            ) : sosActive ? (
+              <span>SOS alert active · Dispatch notified</span>
+            ) : (
+              <span>Trigger emergency SOS</span>
+            )}
           </button>
+
           {sosFeedback && (
             <div
               style={{
-                marginTop: 10,
                 fontSize: 12,
                 fontWeight: 600,
-                color: sosActive ? "#DC2626" : "#374740",
+                color: "var(--danger-red)",
               }}
             >
               {sosFeedback}
             </div>
           )}
-        </div>
-      </div>
-    </main>
+        </section>
+      </main>
+
+      <BottomTabBar activeShareToken={shareToken} />
+    </div>
   );
 }

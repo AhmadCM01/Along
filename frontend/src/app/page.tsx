@@ -1,381 +1,306 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
-import { AlongLogo } from "@/components/brand/AlongLogo";
-import {
-  CarPodIcon,
-  CorridorNodeIcon,
-  ShieldCheckIcon,
-  VoiceWaveIcon,
-} from "@/components/icons/AlongIcons";
+import { Header } from "@/components/navigation/Header";
+import { BottomTabBar } from "@/components/navigation/BottomTabBar";
+import { WhatsAppSimulator } from "@/components/demo/WhatsAppSimulator";
+import { AbujaCorridorMap } from "@/components/demo/AbujaCorridorMap";
+import { BehindTheScenes } from "@/components/demo/BehindTheScenes";
+import { TransitStrip } from "@/components/demo/TransitStrip";
+import { HonestyTable } from "@/components/demo/HonestyTable";
+import { QuoteCard } from "@/components/booking/QuoteCard";
+import { RideCard } from "@/components/booking/RideCard";
+import { useAlongChat } from "@/hooks/useAlongChat";
 
-const CORRIDORS = [
-  {
-    id: "BWR-DUT-WUS",
-    name: "Bwari -> Dutse -> Gwarinpa -> Berger -> Wuse",
-    km: "35.5 km",
-    fare: "₦500 - ₦1,800",
-    anchor: "A.A. Rano Dutse / Oando Katampe",
-  },
-  {
-    id: "ZUB-KUB-WUS",
-    name: "Zuba -> Dei-Dei -> Kubwa -> Berger -> Wuse",
-    km: "34.2 km",
-    fare: "₦500 - ₦1,500",
-    anchor: "NNPC Kubwa Express / Total Dei-Dei",
-  },
-  {
-    id: "ZUB-DEI-DUT",
-    name: "Zuba -> Dei-Dei -> Kubwa -> Dutse -> Bwari",
-    km: "29.8 km",
-    fare: "₦500 - ₦1,400",
-    anchor: "Conoil Dei-Dei / A.A. Rano Dutse",
-  },
-  {
-    id: "ZUB-KRM-JAB",
-    name: "Zuba -> Gwagwa -> Karmo -> Life Camp -> Jabi",
-    km: "25.0 km",
-    fare: "₦500 - ₦1,300",
-    anchor: "Bovas Karmo / Total Life Camp",
-  },
-  {
-    id: "GWL-LUG-AR1",
-    name: "Gwagwalada -> Giri -> Lugbe -> City Gate -> Area 1",
-    km: "38.0 km",
-    fare: "₦600 - ₦1,800",
-    anchor: "Conoil Lugbe Signboard / NIPCO Giri",
-  },
-  {
-    id: "MRB-NYA-CEN",
-    name: "Mararaba -> Karu -> Nyanya -> Kugbo -> Central Area",
-    km: "21.5 km",
-    fare: "₦500 - ₦1,200",
-    anchor: "Matrix Orange Mkt / Oando Nyanya",
-  },
-];
+export default function RidePage() {
+  const chat = useAlongChat();
+  const [behindTheScenesOpen, setBehindTheScenesOpen] = useState(false);
+  const [bookedPod, setBookedPod] = useState(false);
 
-export default function LandingPage() {
+  const handlePlaySample = () => {
+    chat.setActiveLocale("pcm");
+    chat.sendSampleInput("Abeg I dey Dutse first gate, two seats go Berger");
+  };
+
+  const handleConfirmBooking = () => {
+    chat.confirmBooking();
+    setBookedPod(true);
+  };
+
+  const handleReset = () => {
+    setBookedPod(false);
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  };
+
+  // Convert resolver scores to expected array format
+  const formattedScores = chat.resolverScores
+    ? [
+        ...(chat.resolverScores.originScores
+          ? [
+              {
+                candidate: chat.resolverScores.originName,
+                score: chat.resolverScores.originScores.final_score,
+                corridor: chat.currentQuote?.corridorId || "BWR-DUT-WUS",
+              },
+            ]
+          : []),
+        ...(chat.resolverScores.destScores
+          ? [
+              {
+                candidate: chat.resolverScores.destName,
+                score: chat.resolverScores.destScores.final_score,
+                corridor: chat.currentQuote?.corridorId || "BWR-DUT-WUS",
+              },
+            ]
+          : []),
+      ]
+    : [
+        { candidate: "Dutse First Gate", score: 0.94, corridor: "BWR-DUT-WUS" },
+        { candidate: "Berger Roundabout", score: 0.91, corridor: "BWR-DUT-WUS" },
+        { candidate: "Sokale Roundabout", score: 0.88, corridor: "BWR-DUT-WUS" },
+      ];
+
+  const shareToken = chat.currentQuote?.shareToken || "tok_demo_family_123";
+
   return (
-    <main
+    <div
       style={{
-        minHeight: "100vh",
-        background: "#0A0F0D",
-        color: "#F3F6F4",
-        padding: "28px 32px 64px",
+        minHeight: "100dvh",
+        background: "var(--bg-paper)",
+        color: "var(--text-ink)",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      {/* Top Navigation */}
-      <header
+      {/* Universal Responsive Header */}
+      <Header
+        activeLocale={chat.activeLocale}
+        onChangeLocale={chat.setActiveLocale}
+        activeShareToken={shareToken}
+        behindTheScenesOpen={behindTheScenesOpen}
+        onToggleBehindTheScenes={() => setBehindTheScenesOpen(!behindTheScenesOpen)}
+      />
+
+      {/* Main Interactive Work Area */}
+      <main
         style={{
+          width: "100%",
           maxWidth: 1280,
-          margin: "0 auto 48px",
+          margin: "0 auto",
+          padding: "20px 20px 80px",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          paddingBottom: 20,
+          flexDirection: "column",
+          gap: 24,
         }}
       >
-        <AlongLogo variant="dark" size="lg" showTagline />
-        <nav style={{ display: "flex", gap: 14, alignItems: "center" }}>
-          <Link
-            href="/demo"
-            style={{
-              background: "#008751",
-              color: "#FFFFFF",
-              padding: "10px 18px",
-              borderRadius: 10,
-              fontWeight: 700,
-              fontSize: 14,
-              border: "1px solid #00A86B",
-            }}
-          >
-            Launch 3-Pane Judge Cockpit (/demo)
-          </Link>
-          <Link
-            href="/driver"
-            style={{
-              background: "#17221E",
-              color: "#F3F6F4",
-              padding: "10px 16px",
-              borderRadius: 10,
-              fontWeight: 600,
-              fontSize: 14,
-              border: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            Driver PWA (/driver)
-          </Link>
-          <Link
-            href="/ops"
-            style={{
-              background: "#17221E",
-              color: "#F3F6F4",
-              padding: "10px 16px",
-              borderRadius: 10,
-              fontWeight: 600,
-              fontSize: 14,
-              border: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            Ops Command (/ops)
-          </Link>
-          <Link
-            href="/t/tok_demo_family_123"
-            style={{
-              background: "#17221E",
-              color: "#F59E0B",
-              padding: "10px 16px",
-              borderRadius: 10,
-              fontWeight: 600,
-              fontSize: 14,
-              border: "1px solid rgba(245,158,11,0.3)",
-            }}
-          >
-            Live Family Tracker (/t/...)
-          </Link>
-        </nav>
-      </header>
-
-      {/* Hero Section */}
-      <section
-        style={{
-          maxWidth: 1280,
-          margin: "0 auto 56px",
-          display: "grid",
-          gridTemplateColumns: "1.2fr 0.8fr",
-          gap: 36,
-          alignItems: "center",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              background: "rgba(0,168,107,0.14)",
-              border: "1px solid rgba(0,168,107,0.35)",
-              color: "#00A86B",
-              padding: "6px 14px",
-              borderRadius: 999,
-              fontSize: 12,
-              fontWeight: 700,
-              marginBottom: 20,
-            }}
-          >
-            <CorridorNodeIcon size={14} color="#00A86B" />
-            <span>ABUJA SHARED URBAN CORRIDOR TRANSIT</span>
-          </div>
-
-          <h1
-            style={{
-              fontSize: 48,
-              fontWeight: 800,
-              letterSpacing: "-0.035em",
-              lineHeight: 1.08,
-              marginBottom: 20,
-            }}
-          >
-            Turn Chaotic Roadside{" "}
-            <span style={{ color: "#00A86B" }}>&ldquo;Along&rdquo;</span> Rides
-            Into Safe, AI-Orchestrated 4-Seat Pods.
-          </h1>
-
-          <p
-            style={{
-              fontSize: 17,
-              color: "#9FB0A7",
-              maxWidth: 640,
-              marginBottom: 28,
-            }}
-          >
-            Commuters message WhatsApp in English, Nigerian Pidgin, or Hausa (text
-            or voice note). Along resolves colloquial Abuja landmarks in under
-            15ms, snaps boarding to private filling station forecourts with zero
-            Agbero extortion, and locks fares in a double-entry kobo escrow.
-          </p>
-
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <Link
-              href="/demo"
-              style={{
-                background: "#008751",
-                color: "#FFFFFF",
-                padding: "14px 26px",
-                borderRadius: 12,
-                fontWeight: 800,
-                fontSize: 16,
-                border: "1px solid #00A86B",
-              }}
-            >
-              Open Interactive 3-Pane Judge Cockpit -&gt;
-            </Link>
-            <Link
-              href="/ops"
-              style={{
-                background: "#111916",
-                color: "#F3F6F4",
-                padding: "14px 22px",
-                borderRadius: 12,
-                fontWeight: 700,
-                fontSize: 15,
-                border: "1px solid rgba(255,255,255,0.12)",
-              }}
-            >
-              Inspect 6-Corridor Command Center
-            </Link>
-          </div>
-        </div>
-
-        {/* Meta AI Stack Card */}
-        <div
-          style={{
-            background: "#111916",
-            border: "1px solid rgba(0,168,107,0.3)",
-            borderRadius: 18,
-            padding: 26,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              color: "#F59E0B",
-              textTransform: "uppercase",
-              marginBottom: 14,
-            }}
-          >
-            Meta AI Tooling Integration
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div
-              style={{
-                background: "#17221E",
-                padding: 14,
-                borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#00A86B" }}>
-                1. Meta Open-Weight Model (Muse Glimmer / Llama)
-              </div>
-              <div style={{ fontSize: 13, color: "#9FB0A7", marginTop: 4 }}>
-                Fast multilingual slot extraction (English, Pidgin, Hausa) and
-                landmark disambiguation for relational Abuja locations (&ldquo;that
-                Oando after Katampe bridge&rdquo;).
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: "#17221E",
-                padding: 14,
-                borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#00A86B" }}>
-                2. Speech Recognition (Non-Meta ASR / Meta Model API)
-              </div>
-              <div style={{ fontSize: 13, color: "#9FB0A7", marginTop: 4 }}>
-                Speech-to-text for WhatsApp voice notes (Groq Whisper as Non-Meta ASR, or
-                Meta Model API when configured) across 140 Abuja landmarks and 1,208 street aliases.
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: "#17221E",
-                padding: 14,
-                borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#00A86B" }}>
-                3. Character N-Gram Hashing &amp; FAISS Hybrid Index
-              </div>
-              <div style={{ fontSize: 13, color: "#9FB0A7", marginTop: 4 }}>
-                Sub-15ms character n-gram hashing and Jaro-Winkler landmark resolution
-                snapping informal speech to 24 virtual filling station anchors.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6 Abuja Corridors Grid */}
-      <section style={{ maxWidth: 1280, margin: "0 auto" }}>
-        <div
+        {/* Hero Context & 60-Second Demo Bar */}
+        <section
           style={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "baseline",
-            marginBottom: 20,
-          }}
-        >
-          <h2 style={{ fontSize: 24, fontWeight: 800 }}>
-            6 Active Abuja Commuter Corridors (24 Private Filling Station Anchors)
-          </h2>
-          <span style={{ fontSize: 13, color: "#9FB0A7" }} className="tabular-nums">
-            140 Landmarks | 1,208 Multilingual Aliases | 90% Driver Take-Home
-          </span>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            alignItems: "flex-end",
+            flexWrap: "wrap",
             gap: 16,
           }}
         >
-          {CORRIDORS.map((c) => (
-            <div
-              key={c.id}
+          <div>
+            <h1
               style={{
-                background: "#111916",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 14,
-                padding: 20,
+                fontSize: "clamp(26px, 4vw, 36px)",
+                fontWeight: 800,
+                lineHeight: 1.15,
+                color: "var(--text-ink)",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 8,
+              Book a ride by voice
+            </h1>
+            <p
+              style={{
+                fontSize: 15,
+                color: "var(--text-muted)",
+                marginTop: 6,
+                maxWidth: 620,
+              }}
+            >
+              Shared 4-seat pods in Abuja with safe filling-station boarding and escrow fares.
+            </p>
+          </div>
+
+          {/* 60s Autoplay Demo Tour CTA */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button
+              onClick={handlePlaySample}
+              disabled={chat.isLoading}
+              style={{
+                background: "var(--brand-primary)",
+                color: "var(--brand-ink)",
+                padding: "10px 18px",
+                borderRadius: "var(--radius-button)",
+                fontSize: 14,
+                fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                boxShadow: "var(--shadow-soft)",
+              }}
+              aria-label="Play sample Pidgin voice note"
+            >
+              <span>▶</span>
+              <span>Play Pidgin voice note</span>
+            </button>
+
+            <button
+              onClick={handleReset}
+              style={{
+                background: "var(--bg-surface)",
+                color: "var(--text-muted)",
+                border: "1px solid var(--border-subtle)",
+                padding: "10px 14px",
+                borderRadius: "var(--radius-button)",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              Reset demo
+            </button>
+          </div>
+        </section>
+
+        {/* 2-Column Responsive Layout (5:7 ratio) */}
+        <section
+          className="along-layout-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(340px, 1fr) minmax(380px, 1.25fr)",
+            gap: 20,
+            alignItems: "start",
+          }}
+        >
+          {/* Column 1: Chat Stream & Booking Card */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ height: 480 }}>
+              <WhatsAppSimulator
+                messages={chat.messages}
+                onSendMessage={(text) => chat.sendMessage(text)}
+                onSendVoiceAudio={(blob, filename) => chat.sendVoiceAudio(blob, filename)}
+                onSendSampleInput={(text, loc) => {
+                  if (loc) chat.setActiveLocale(loc);
+                  chat.sendSampleInput(text);
                 }}
-              >
-                <span
-                  className="tabular-nums"
-                  style={{
-                    background: "rgba(0,168,107,0.16)",
-                    color: "#00A86B",
-                    padding: "3px 10px",
-                    borderRadius: 6,
-                    fontSize: 12,
-                    fontWeight: 700,
-                  }}
-                >
-                  {c.id}
-                </span>
-                <span
-                  className="tabular-nums"
-                  style={{ fontSize: 13, color: "#F59E0B", fontWeight: 700 }}
-                >
-                  {c.fare}
-                </span>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>
-                {c.name}
-              </div>
-              <div style={{ fontSize: 12, color: "#9FB0A7" }}>
-                Safe Anchors: <strong style={{ color: "#F3F6F4" }}>{c.anchor}</strong> ({c.km})
-              </div>
+                onConfirmBooking={handleConfirmBooking}
+                onTriggerSos={() => chat.triggerSos()}
+                activeLocale={chat.activeLocale}
+                isProcessing={chat.isLoading}
+                elapsedSeconds={chat.elapsedSeconds}
+                errorMessage={chat.errorMessage}
+              />
             </div>
-          ))}
-        </div>
-      </section>
-    </main>
+
+            {/* Display Active Quote or Confirmed Ride Card */}
+            {bookedPod ? (
+              <RideCard
+                step="BOARD"
+                fareNaira={chat.currentQuote ? parseInt(chat.currentQuote.totalFare.replace(/[^0-9]/g, "")) || 1800 : 1800}
+                boardingOtp={chat.currentQuote?.otp || "4817"}
+                shareToken={shareToken}
+                vehicleMakeModel={chat.driverInfo?.vehicleDesc || "Volkswagen Golf"}
+                plateNumber={chat.driverInfo?.plateNumber || "ABJ-402-AL"}
+                onConfirmBoarding={() => alert("Boarding verified with driver")}
+                onTriggerSos={() => chat.triggerSos()}
+              />
+            ) : chat.currentQuote ? (
+              <QuoteCard
+                originName={chat.currentQuote.originName}
+                destName={chat.currentQuote.destName}
+                anchorName={chat.currentQuote.anchorName}
+                fareNaira={parseInt(chat.currentQuote.unitFare.replace(/[^0-9]/g, "")) || 900}
+                seats={chat.currentQuote.seats}
+                onBookRide={handleConfirmBooking}
+                onReset={handleReset}
+                isLoading={chat.isLoading}
+              />
+            ) : null}
+          </div>
+
+          {/* Column 2: Sticky Corridor Map & Telemetry Inspector */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <AbujaCorridorMap
+              corridorId={chat.currentQuote?.corridorId || "BWR-DUT-WUS"}
+              originName={chat.currentQuote?.originName || "Dutse First Gate"}
+              destName={chat.currentQuote?.destName || "Berger Roundabout"}
+              anchorName={chat.currentQuote?.anchorName || "A.A. Rano Dutse"}
+              isLoading={chat.isLoading}
+              elapsedSeconds={chat.elapsedSeconds}
+            />
+
+            {/* Behind The Scenes Panel (Always visible or toggleable) */}
+            {(behindTheScenesOpen || true) && (
+              <BehindTheScenes
+                traces={chat.traces}
+                resolverScores={formattedScores}
+                fallback={chat.fallback}
+                fallbackBanner={chat.fallbackBanner}
+                replayMode={chat.replayMode}
+                replayDate={chat.replayDate}
+                onToggleReplay={chat.isReplayAvailable ? () => chat.toggleReplayMode() : undefined}
+                isLoading={chat.isLoading}
+                elapsedSeconds={chat.elapsedSeconds}
+                errorMessage={chat.errorMessage}
+              />
+            )}
+          </div>
+        </section>
+
+        {/* Below the Fold: Transit Strip & Honesty Table */}
+        <section style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 12 }}>
+          <TransitStrip
+            activeCorridorId={chat.currentQuote?.corridorId || "BWR-DUT-WUS"}
+          />
+          <HonestyTable />
+        </section>
+
+        {/* Footer */}
+        <footer
+          style={{
+            paddingTop: 24,
+            borderTop: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontSize: 12.5,
+            color: "var(--text-muted)",
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
+          <div>Along: Meta AI Developer Hackathon Submission</div>
+          <div style={{ display: "flex", gap: 16 }}>
+            <Link href="/driver" style={{ color: "var(--text-muted)" }}>
+              Driver view
+            </Link>
+            <Link href="/t/tok_demo_family_123" style={{ color: "var(--text-muted)" }}>
+              Family tracking
+            </Link>
+            <Link href="/ops" style={{ color: "var(--text-muted)" }}>
+              Operations (demo)
+            </Link>
+          </div>
+        </footer>
+      </main>
+
+      {/* Bottom Tab Bar for Mobile Devices */}
+      <BottomTabBar activeShareToken={shareToken} />
+
+      <style jsx global>{`
+        @media (max-width: 960px) {
+          .along-layout-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </div>
   );
 }

@@ -44,6 +44,7 @@ Your task is to analyze a commuter's WhatsApp text or transcribed voice message 
    - `clarifying_question`: A friendly 1-sentence question in the detected locale if origin or destination is ambiguous, else `null`.
    - `confidence`: Float `0.0` to `1.0`.
    - `has_relational_modifier`: Boolean (`true` if relative landmark like after/before/opposite used).
+2. Keep internal reasoning concise. Output the final JSON object immediately without unnecessary deliberation.
 
 ## 4. Few-Shot Examples
 

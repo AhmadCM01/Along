@@ -397,11 +397,12 @@ async def extract_intent_and_slots(
 
     if client.is_live_api_configured():
         try:
+            extraction_max_tokens = int(getattr(client.settings, "LLM_MAX_TOKENS", 1500))
             res = await client.complete_json(
                 system_prompt=system_prompt,
                 user_message=utterance,
                 temperature=0.0,
-                max_tokens=1024,
+                max_tokens=extraction_max_tokens,
                 validate=ExtractionOutput.model_validate,
             )
             attempts = list(res.attempts)

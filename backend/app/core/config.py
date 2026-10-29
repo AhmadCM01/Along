@@ -77,7 +77,8 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_MODEL: str = "meta/llama-3.2-11b-vision-instruct"
     LLM_PROVIDER_LABEL: str = "nvidia_free_endpoint"
-    LLM_TIMEOUT_SECONDS: int = 25
+    LLM_TIMEOUT_SECONDS: int = 8
+    LLM_MAX_TOKENS: int = 1500
 
     # Level 2: Fallback OpenAI-Compatible LLM Endpoint (disabled when key is empty)
     LLM_FALLBACK_BASE_URL: str = ""

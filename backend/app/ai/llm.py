@@ -342,6 +342,8 @@ class MetaLLMClient:
             "max_tokens": max_tokens,
             "messages": messages,
         }
+        if "muse" in endpoint.model.lower():
+            payload["reasoning_effort"] = "low"
         if extra_body:
             payload.update(extra_body)
 
@@ -445,17 +447,24 @@ class MetaLLMClient:
 
         for endpoint in self.endpoints(levels):
             bad_json = False
+            cur_max_tokens = max_tokens
             for attempt in range(1 + RETRIES_PER_LEVEL):
                 res = await self.call_endpoint(
                     endpoint,
                     messages=build_messages(bad_json),
                     temperature=temperature,
-                    max_tokens=max_tokens,
+                    max_tokens=cur_max_tokens,
                     timeout_sec=timeout_sec,
                 )
                 failure: str | None = res.error
                 if failure is None:
-                    if res.parsed_json is None:
+                    if res.finish_reason == "length":
+                        failure = (
+                            f"finish_reason is length (max_tokens={cur_max_tokens} exhausted by "
+                            f"{res.completion_tokens} tokens, reasoning_tokens={res.reasoning_tokens})"
+                        )
+                        cur_max_tokens = cur_max_tokens * 2
+                    elif res.parsed_json is None:
                         failure = (
                             "empty final answer (finish_reason="
                             f"{res.finish_reason}, reasoning_present={res.reasoning_present})"
@@ -567,7 +576,8 @@ class MetaLLMClient:
                 {"role": "system", "content": "Reply with the exact word PONG."},
                 {"role": "user", "content": "PING"},
             ],
-            max_tokens=64,
+            max_tokens=300,
+            timeout_sec=10.0,
         )
         return {
             "level": level,

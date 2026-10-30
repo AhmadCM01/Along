@@ -1,8 +1,25 @@
 /**
  * Audio playback utility for Along WhatsApp voice notes.
- * Uses Web Audio synthesizer + Web SpeechSynthesis with fallback to ensure
- * real, audible sound plays through laptop and phone speakers.
+ * Plays the real native Nigerian English (en-NG) MP3 fixture (/audio/pidgin_dutse_berger.mp3)
+ * so every laptop and mobile phone hears an authentic Nigerian accent instead of a European OS robot.
  */
+
+let activeAudioElement: HTMLAudioElement | null = null;
+
+export function stopAlongVoiceNote() {
+  if (activeAudioElement) {
+    try {
+      activeAudioElement.pause();
+      activeAudioElement.currentTime = 0;
+    } catch {}
+    activeAudioElement = null;
+  }
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {}
+  }
+}
 
 export function playAlongVoiceNote({
   text = "Abeg I dey Dutse first gate, two seats go Berger",
@@ -15,9 +32,10 @@ export function playAlongVoiceNote({
 }) {
   if (typeof window === "undefined") return;
 
+  stopAlongVoiceNote();
   onStart?.();
 
-  // 1. Play WhatsApp voice note start chirp via Web Audio API
+  // 1. Subtle WhatsApp voice-note start chime via Web Audio API
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (AudioContextClass) {
@@ -26,58 +44,75 @@ export function playAlongVoiceNote({
       const gain = ctx.createGain();
 
       osc.type = "sine";
-      osc.frequency.setValueAtTime(640, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
+      osc.frequency.setValueAtTime(580, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(780, ctx.currentTime + 0.06);
 
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.09);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
       osc.start();
-      osc.stop(ctx.currentTime + 0.12);
+      osc.stop(ctx.currentTime + 0.09);
     }
   } catch {}
 
-  // 2. Play spoken audio via SpeechSynthesis
-  let speechSucceeded = false;
-  if ("speechSynthesis" in window) {
+  // 2. Play the native Nigerian (en-NG) recorded MP3 file
+  try {
+    const audio = new Audio("/audio/pidgin_dutse_berger.mp3");
+    activeAudioElement = audio;
+    audio.playbackRate = 1.02;
+
+    audio.onended = () => {
+      activeAudioElement = null;
+      onEnd?.();
+    };
+
+    audio.onerror = () => {
+      activeAudioElement = null;
+      fallbackNigerianSpeech(text, onEnd);
+    };
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        activeAudioElement = null;
+        fallbackNigerianSpeech(text, onEnd);
+      });
+    }
+    return;
+  } catch {
+    fallbackNigerianSpeech(text, onEnd);
+  }
+}
+
+function fallbackNigerianSpeech(text: string, onEnd?: () => void) {
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.92;
-      utterance.pitch = 1.05;
+      utterance.lang = "en-NG";
+      utterance.rate = 0.94;
+      utterance.pitch = 0.92;
 
       const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(
+      const ngVoice = voices.find(
         (v) =>
-          v.lang.includes("en-NG") ||
-          v.lang.includes("en-GB") ||
-          v.lang.includes("en-US") ||
-          v.lang.includes("en")
+          v.lang.toLowerCase().includes("en-ng") ||
+          v.name.toLowerCase().includes("nigeria") ||
+          v.name.toLowerCase().includes("abeo") ||
+          v.name.toLowerCase().includes("ezinne")
       );
-      if (preferred) utterance.voice = preferred;
+      if (ngVoice) {
+        utterance.voice = ngVoice;
+      }
 
-      utterance.onend = () => {
-        onEnd?.();
-      };
-
-      utterance.onerror = () => {
-        onEnd?.();
-      };
-
+      utterance.onend = () => onEnd?.();
+      utterance.onerror = () => onEnd?.();
       window.speechSynthesis.speak(utterance);
-      speechSucceeded = true;
-    } catch {
-      speechSucceeded = false;
-    }
+      return;
+    } catch {}
   }
-
-  // 3. Fallback timer if speech synthesis not triggered
-  if (!speechSucceeded) {
-    setTimeout(() => {
-      onEnd?.();
-    }, 3500);
-  }
+  setTimeout(() => onEnd?.(), 3200);
 }

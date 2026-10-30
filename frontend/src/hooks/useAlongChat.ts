@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ASRResponse,
   DemoChatResponse,
-  LiveReplayDoc,
   ReplayRunItem,
   ResolverScores,
   StageTrace,
@@ -12,6 +11,7 @@ import {
   sendDemoChat,
   transcribeAudio,
 } from "@/lib/api";
+import { useAlongTrip } from "@/context/AlongTripContext";
 
 export interface ChatMessage {
   id: string;
@@ -21,6 +21,7 @@ export interface ChatMessage {
   voiceDuration?: string;
   voiceLabel?: string;
   timestamp: string;
+  isConfirmed?: boolean;
   quoteData?: {
     corridorId: string;
     anchorName: string;
@@ -68,8 +69,8 @@ export interface ActiveResolverScores {
 }
 
 export function useAlongChat(initialPhone = "+2348031234567") {
+  const trip = useAlongTrip();
   const [phone] = useState<string>(initialPhone);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeLocale, setActiveLocale] = useState<"en" | "pcm" | "ha">("pcm");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
@@ -107,7 +108,6 @@ export function useAlongChat(initialPhone = "+2348031234567") {
     }
   }, []);
 
-  // Check if real replay file exists on mount
   useEffect(() => {
     let mounted = true;
     getLiveReplayFile()
@@ -135,16 +135,9 @@ export function useAlongChat(initialPhone = "+2348031234567") {
     };
   }, [stopTimer]);
 
-  const applyTurnResponse = useCallback(
-    (
-      data: DemoChatResponse,
-      userUtterance: string,
-      isVoice = false,
-      voiceDuration?: string,
-      voiceLabel?: string
-    ) => {
+  const applyBotResponse = useCallback(
+    (data: DemoChatResponse, userUtterance: string) => {
       const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      const userMsgId = `u_${Date.now()}`;
       const botMsgId = `b_${Date.now() + 1}`;
 
       const whatsapp = data.pane1_whatsapp;
@@ -155,6 +148,7 @@ export function useAlongChat(initialPhone = "+2348031234567") {
 
       if (whatsapp.locale) {
         setActiveLocale(whatsapp.locale);
+        trip.setActiveLocale(whatsapp.locale);
       }
 
       setFallback(Boolean(data.fallback));
@@ -162,18 +156,22 @@ export function useAlongChat(initialPhone = "+2348031234567") {
 
       const realTraces = data.traces && data.traces.length > 0 ? data.traces : xray.traces || [];
       setTraces(realTraces);
+      trip.setTraces(realTraces);
+
+      const isConfirmTurn =
+        userUtterance.trim().toUpperCase() === "YES" || whatsapp.stage === "POOLING";
 
       const quote: QuoteDetails = {
         corridorId: ledger.corridor_id || "BWR-DUT-WUS",
-        originName: ledger.origin_name || "Origin Forecourt",
-        destName: ledger.destination_name || "Destination",
+        originName: ledger.origin_name || "Dutse First Gate",
+        destName: ledger.destination_name || "Berger Roundabout Underbridge",
         anchorId: ledger.anchor_id || "ANC-DUT-01",
-        anchorName: ledger.anchor_name || "Virtual Anchor Point",
+        anchorName: ledger.anchor_name || "A.A. Rano Filling Station (Dutse First Gate)",
         seats: 2,
         unitFare: ledger.unit_fare_naira,
         totalFare: ledger.total_fare_naira,
-        otp: whatsapp.boarding_otp || "",
-        shareToken: whatsapp.share_token,
+        otp: whatsapp.boarding_otp || "4817",
+        shareToken: whatsapp.share_token || "share-bwr-4817",
         podGross: ledger.pod_gross_naira,
         driverNet: ledger.driver_net_90pct_naira,
         platformFee: ledger.platform_10pct_naira,
@@ -193,32 +191,26 @@ export function useAlongChat(initialPhone = "+2348031234567") {
       }
 
       if (resolution) {
-        setResolverScores({
+        const scoreObj = {
           originName: resolution.origin_best || ledger.origin_name || "Origin",
           originScores: resolution.origin_scores || null,
           destName: resolution.destination_best || ledger.destination_name || "Destination",
           destScores: resolution.destination_scores || null,
-        });
+        };
+        setResolverScores(scoreObj);
+        trip.setResolverScores(scoreObj);
       }
 
       const isSos = whatsapp.stage === "SOS_ACTIVE" || userUtterance.toLowerCase().includes("sos");
 
-      setMessages((prev) => [
+      trip.setPersistedMessages((prev) => [
         ...prev,
-        {
-          id: userMsgId,
-          sender: "user",
-          text: userUtterance,
-          isVoice,
-          voiceDuration,
-          voiceLabel,
-          timestamp: nowStr,
-        },
         {
           id: botMsgId,
           sender: "bot",
           text: whatsapp.reply_text,
           timestamp: nowStr,
+          isConfirmed: isConfirmTurn,
           isSos,
           quoteData: isSos
             ? undefined
@@ -235,7 +227,7 @@ export function useAlongChat(initialPhone = "+2348031234567") {
         },
       ]);
     },
-    []
+    [trip]
   );
 
   const sendMessage = useCallback(
@@ -248,6 +240,23 @@ export function useAlongChat(initialPhone = "+2348031234567") {
       const trimmed = text.trim();
       if (!trimmed) return null;
 
+      const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const userMsgId = `u_${Date.now()}`;
+
+      // Immediately render outgoing user bubble in WhatsApp stream
+      trip.setPersistedMessages((prev) => [
+        ...prev,
+        {
+          id: userMsgId,
+          sender: "user",
+          text: trimmed,
+          isVoice,
+          voiceDuration,
+          voiceLabel,
+          timestamp: nowStr,
+        },
+      ]);
+
       setIsLoading(true);
       setErrorMessage(null);
       startTimer();
@@ -257,7 +266,7 @@ export function useAlongChat(initialPhone = "+2348031234567") {
           phone,
           message_text: trimmed,
         });
-        applyTurnResponse(data, trimmed, isVoice, voiceDuration, voiceLabel);
+        applyBotResponse(data, trimmed);
         return data;
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Failed to execute chat turn";
@@ -268,7 +277,7 @@ export function useAlongChat(initialPhone = "+2348031234567") {
         setIsLoading(false);
       }
     },
-    [phone, startTimer, stopTimer, applyTurnResponse]
+    [phone, startTimer, stopTimer, applyBotResponse, trip]
   );
 
   const sendVoiceAudio = useCallback(
@@ -280,14 +289,28 @@ export function useAlongChat(initialPhone = "+2348031234567") {
       try {
         const asrRes = await transcribeAudio(audioBlob, filename);
         const transcript = asrRes.transcript || "(No speech detected)";
-        const asrLabel = "Non-Meta ASR (Whisper)";
+        const asrLabel = "Whisper ASR";
+
+        const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        trip.setPersistedMessages((prev) => [
+          ...prev,
+          {
+            id: `u_${Date.now()}`,
+            sender: "user",
+            text: transcript,
+            isVoice: true,
+            voiceDuration: "0:04",
+            voiceLabel: asrLabel,
+            timestamp: nowStr,
+          },
+        ]);
 
         const chatRes = await sendDemoChat({
           phone,
           message_text: transcript,
         });
 
-        applyTurnResponse(chatRes, transcript, true, "0:04", asrLabel);
+        applyBotResponse(chatRes, transcript);
         return asrRes;
       } catch (err) {
         const msg = err instanceof Error ? err.message : "ASR speech recognition failed";
@@ -298,15 +321,15 @@ export function useAlongChat(initialPhone = "+2348031234567") {
         setIsLoading(false);
       }
     },
-    [phone, startTimer, stopTimer, applyTurnResponse]
+    [phone, startTimer, stopTimer, applyBotResponse, trip]
   );
 
   const sendSampleInput = useCallback(
-    (sampleText: string) => {
+    (sampleText: string, isVoice = false) => {
       if (replayMode) {
         setReplayMode(false);
       }
-      return sendMessage(sampleText);
+      return sendMessage(sampleText, isVoice, isVoice ? "0:04" : undefined, isVoice ? "en-NG Voice" : undefined);
     },
     [replayMode, sendMessage]
   );
@@ -329,18 +352,19 @@ export function useAlongChat(initialPhone = "+2348031234567") {
       setFallback(run.fallback);
       setFallbackBanner(run.fallback_banner || null);
       setTraces(run.traces);
+      trip.setTraces(run.traces);
 
       const q = run.quote;
       setCurrentQuote({
         corridorId: q.corridor_id,
-        originName: q.origin_name || "Origin Forecourt",
-        destName: q.dest_name || "Destination",
+        originName: q.origin_name || "Dutse First Gate",
+        destName: q.dest_name || "Berger Roundabout",
         anchorId: q.anchor_id || "ANC-DUT-01",
-        anchorName: q.anchor_name || "Virtual Anchor Point",
+        anchorName: q.anchor_name || "A.A. Rano Filling Station",
         seats: q.seats,
         unitFare: q.unit_fare,
         totalFare: q.total_fare,
-        otp: q.otp,
+        otp: q.otp || "4817",
         shareToken: run.share_token,
         podGross: q.pod_gross,
         driverNet: q.driver_net,
@@ -355,28 +379,11 @@ export function useAlongChat(initialPhone = "+2348031234567") {
           vehicleDesc: run.driver.vehicle_desc,
           phoneMode: "SMARTPHONE_AND_2G_USSD",
           ussdShortcode: "*384*247#",
-          boardingOtpExpected: q.otp,
+          boardingOtpExpected: q.otp || "4817",
         });
       }
 
-      const xray = run.xray as { resolution?: Record<string, unknown> } | undefined;
-      const res = xray?.resolution as {
-        origin_best?: string;
-        origin_scores?: ResolverScores;
-        destination_best?: string;
-        destination_scores?: ResolverScores;
-      } | undefined;
-
-      if (res) {
-        setResolverScores({
-          originName: res.origin_best || q.origin_name || "Origin",
-          originScores: res.origin_scores || null,
-          destName: res.destination_best || q.dest_name || "Destination",
-          destScores: res.destination_scores || null,
-        });
-      }
-
-      setMessages([
+      trip.setPersistedMessages([
         {
           id: `rep_u_${run.id}`,
           sender: "user",
@@ -390,18 +397,18 @@ export function useAlongChat(initialPhone = "+2348031234567") {
           timestamp: "12:44",
           quoteData: {
             corridorId: q.corridor_id,
-            anchorName: q.anchor_name || "Virtual Anchor Point",
-            destName: q.dest_name || "Destination",
+            anchorName: q.anchor_name || "A.A. Rano Filling Station",
+            destName: q.dest_name || "Berger Roundabout",
             seats: q.seats,
             unitFare: q.unit_fare,
             totalFare: q.total_fare,
-            otp: q.otp,
+            otp: q.otp || "4817",
             shareToken: run.share_token,
           },
         },
       ]);
     },
-    [replayRuns]
+    [replayRuns, trip]
   );
 
   const toggleReplayMode = useCallback(
@@ -419,7 +426,7 @@ export function useAlongChat(initialPhone = "+2348031234567") {
   );
 
   return {
-    messages,
+    messages: trip.persistedMessages,
     activeLocale,
     setActiveLocale,
     isLoading,

@@ -1,5 +1,5 @@
-/* Along Transit Map Design System Tokens
-   Restrained 60/30/10 Palette, Light Default, High Contrast WCAG AA/AAA
+/* Along Transit Design System Tokens
+   Bolt / Uber / WhatsApp Grade High-Contrast Palette, Crisp Light Default
 */
 
 :root,
@@ -7,49 +7,49 @@
   color-scheme: light;
 
   /* 60% Canvas & Surfaces */
-  --bg-paper: #F7F6F2;
+  --bg-paper: #F4F6F8;
   --bg-surface: #FFFFFF;
   --bg-surface-elevated: #FFFFFF;
 
   /* Text & Ink */
-  --text-ink: #111513;
-  --text-muted: #5C645F;
-  --text-faint: #88938C;
+  --text-ink: #0F172A;
+  --text-muted: #475569;
+  --text-faint: #94A3B8;
 
   /* Hairlines & Borders */
-  --border-subtle: #E3E1DA;
-  --border-strong: #C4C0B4;
+  --border-subtle: #E2E8F0;
+  --border-strong: #CBD5E1;
 
-  /* 30% Brand Accents (Only primary buttons, links, focus, active route) */
-  --brand-primary: #0B6E4F;
-  --brand-hover: #08553D;
-  --brand-soft: #E3F1EA;
+  /* 30% Brand Accents (Transit Emerald & WhatsApp Green) */
+  --brand-primary: #059669;
+  --brand-hover: #047857;
+  --brand-soft: #ECFDF5;
   --brand-ink: #FFFFFF;
 
-  /* 10% Signals: Amber (Escrow & Boarding only, max one per screen) */
-  --signal-amber: #FFB020;
-  --signal-ink: #111513;
-  --signal-soft: #FFF4DE;
+  /* 10% Signals: Amber (Escrow & Boarding only) */
+  --signal-amber: #F59E0B;
+  --signal-ink: #0F172A;
+  --signal-soft: #FEF3C7;
 
   /* 10% Signals: Red (SOS and real errors only) */
-  --danger-red: #C9302C;
-  --danger-hover: #AA2421;
+  --danger-red: #DC2626;
+  --danger-hover: #B91C1C;
   --danger-ink: #FFFFFF;
-  --danger-soft: #FDE8E7;
+  --danger-soft: #FEE2E2;
 
   /* Corridors: active is brand, all others neutral grey */
-  --corridor-inactive: #D0CCC2;
-  --corridor-active: #0B6E4F;
+  --corridor-inactive: #CBD5E1;
+  --corridor-active: #059669;
 
   /* Geometry & Radii */
-  --radius-card: 12px;
+  --radius-card: 16px;
   --radius-chip: 999px;
-  --radius-button: 10px;
-  --radius-input: 10px;
+  --radius-button: 12px;
+  --radius-input: 12px;
 
   /* Shadows */
-  --shadow-soft: 0 4px 20px -2px rgba(17, 21, 19, 0.06), 0 2px 6px -1px rgba(17, 21, 19, 0.04);
-  --shadow-drawer: 0 -8px 32px rgba(17, 21, 19, 0.12);
+  --shadow-soft: 0 4px 24px -4px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --shadow-drawer: -12px 0 40px rgba(15, 23, 42, 0.16);
 
   /* Typography Stacks */
   --font-heading: "Bricolage Grotesque", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -75,44 +75,44 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* 60% Canvas & Surfaces */
-  --bg-paper: #0C0F0D;
-  --bg-surface: #151A17;
-  --bg-surface-elevated: #1B221E;
+  /* 60% Canvas & Surfaces (Rich Slate Dark, never pitch black void) */
+  --bg-paper: #0B141A;
+  --bg-surface: #111B21;
+  --bg-surface-elevated: #202C33;
 
   /* Text & Ink */
-  --text-ink: #EEF1EE;
-  --text-muted: #9AA59E;
-  --text-faint: #6A756E;
+  --text-ink: #E9EDEF;
+  --text-muted: #8696A0;
+  --text-faint: #667781;
 
   /* Hairlines & Borders */
-  --border-subtle: #232B26;
-  --border-strong: #3A463F;
+  --border-subtle: #222E35;
+  --border-strong: #313D45;
 
-  /* 30% Brand Accents (Uses dark ink text for WCAG AA compliance on buttons) */
-  --brand-primary: #34C98A;
-  --brand-hover: #2BB37A;
-  --brand-soft: #12261D;
-  --brand-ink: #0C0F0D;
+  /* 30% Brand Accents */
+  --brand-primary: #00A884;
+  --brand-hover: #029072;
+  --brand-soft: #103529;
+  --brand-ink: #FFFFFF;
 
   /* 10% Signals: Amber (Escrow & Boarding only) */
-  --signal-amber: #FFC247;
-  --signal-ink: #0C0F0D;
+  --signal-amber: #FBBF24;
+  --signal-ink: #0B141A;
   --signal-soft: #2D2311;
 
   /* 10% Signals: Red (SOS and real errors only) */
-  --danger-red: #EF5B54;
-  --danger-hover: #D84740;
-  --danger-ink: #0C0F0D;
+  --danger-red: #EF4444;
+  --danger-hover: #DC2626;
+  --danger-ink: #FFFFFF;
   --danger-soft: #2E1514;
 
-  /* Corridors: active is brand, all others neutral grey */
-  --corridor-inactive: #2A342E;
-  --corridor-active: #34C98A;
+  /* Corridors */
+  --corridor-inactive: #2A3942;
+  --corridor-active: #00A884;
 
   /* Shadows */
-  --shadow-soft: 0 4px 24px -2px rgba(0, 0, 0, 0.45);
-  --shadow-drawer: 0 -8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-soft: 0 6px 28px -4px rgba(0, 0, 0, 0.45);
+  --shadow-drawer: -12px 0 40px rgba(0, 0, 0, 0.65);
 
   /* Backward Compatibility Aliases */
   --bg-canvas: var(--bg-paper);

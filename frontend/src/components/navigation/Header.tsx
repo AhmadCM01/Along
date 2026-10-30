@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useAlongTrip } from "@/context/AlongTripContext";
+import { AiTelemetryDrawer } from "@/components/demo/AiTelemetryDrawer";
+import { PodNavIcon, SteeringNavIcon, RadarNavIcon } from "@/components/icons/AlongIcons";
 
 export interface HeaderProps {
   activeLocale?: "en" | "pcm" | "ha";
@@ -14,22 +16,23 @@ export interface HeaderProps {
   behindTheScenesOpen?: boolean;
 }
 
-export function Header({
-  activeLocale = "pcm",
-  onChangeLocale,
-  activeShareToken,
-  onToggleBehindTheScenes,
-  behindTheScenesOpen = false,
-}: HeaderProps) {
+export function Header({ activeShareToken }: HeaderProps) {
   const pathname = usePathname();
   const trip = useAlongTrip();
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     try {
-      const current = document.documentElement.getAttribute("data-theme") as "light" | "dark";
-      if (current) setTheme(current);
-    } catch {}
+      localStorage.removeItem("along-theme");
+      localStorage.removeItem("along-theme-v2");
+      const stored = localStorage.getItem("along-theme-v3");
+      const activeTheme = stored === "dark" ? "dark" : "light";
+      setTheme(activeTheme);
+      document.documentElement.setAttribute("data-theme", activeTheme);
+    } catch {
+      setTheme("light");
+      document.documentElement.setAttribute("data-theme", "light");
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -37,195 +40,213 @@ export function Header({
     setTheme(next);
     document.documentElement.setAttribute("data-theme", next);
     try {
-      localStorage.setItem("along-theme", next);
+      localStorage.setItem("along-theme-v3", next);
     } catch {}
   };
 
   const shareToken = activeShareToken || trip.activeShareToken || "share-bwr-4817";
   const trackerHref = `/t/${shareToken}`;
 
+  const isConfirmed = trip.journeyStage === "CONFIRMED" || trip.journeyStage === "IN_TRANSIT";
+  const isInTransit = trip.journeyStage === "IN_TRANSIT";
+
   return (
-    <header
-      style={{
-        width: "100%",
-        maxWidth: 1280,
-        margin: "0 auto",
-        padding: "14px 20px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        borderBottom: "1px solid var(--border-subtle)",
-        background: "var(--bg-paper)",
-        position: "sticky",
-        top: 0,
-        zIndex: 40,
-      }}
-    >
-      {/* Brand Wordmark */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Link href="/" aria-label="Along Home" style={{ textDecoration: "none" }}>
-          <Wordmark size="md" />
-        </Link>
-      </div>
-
-      {/* Primary Segmented Navigation (Desktop & Tablet) */}
-      <nav
-        className="along-nav-segmented"
+    <>
+      <header
         style={{
-          display: "flex",
+          width: "100%",
           background: "var(--bg-surface)",
-          border: "1px solid var(--border-subtle)",
-          borderRadius: "var(--radius-chip)",
-          padding: 3,
-          gap: 2,
+          borderBottom: "1px solid var(--border-subtle)",
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
         }}
-        aria-label="Main Navigation"
       >
-        <Link
-          href="/"
+        <div
           style={{
-            padding: "6px 18px",
-            borderRadius: "var(--radius-chip)",
-            fontSize: 13.5,
-            fontWeight: pathname === "/" ? 700 : 500,
-            background: pathname === "/" ? "var(--brand-primary)" : "transparent",
-            color: pathname === "/" ? "var(--brand-ink)" : "var(--text-muted)",
-            transition: "all 150ms ease",
-            textDecoration: "none",
+            maxWidth: 1280,
+            margin: "0 auto",
+            padding: "10px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
           }}
         >
-          Ride
-        </Link>
-        <Link
-          href="/driver"
-          style={{
-            padding: "6px 18px",
-            borderRadius: "var(--radius-chip)",
-            fontSize: 13.5,
-            fontWeight: pathname === "/driver" ? 700 : 500,
-            background: pathname === "/driver" ? "var(--brand-primary)" : "transparent",
-            color: pathname === "/driver" ? "var(--brand-ink)" : "var(--text-muted)",
-            transition: "all 150ms ease",
-            textDecoration: "none",
-            position: "relative",
-          }}
-        >
-          Driver
-        </Link>
-        <Link
-          href={trackerHref}
-          style={{
-            padding: "6px 18px",
-            borderRadius: "var(--radius-chip)",
-            fontSize: 13.5,
-            fontWeight: pathname.startsWith("/t/") ? 700 : 500,
-            background: pathname.startsWith("/t/") ? "var(--brand-primary)" : "transparent",
-            color: pathname.startsWith("/t/") ? "var(--brand-ink)" : "var(--text-muted)",
-            transition: "all 150ms ease",
-            textDecoration: "none",
-          }}
-        >
-          Tracker
-        </Link>
-      </nav>
+          {/* Brand Wordmark */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Link href="/" aria-label="Along Home" style={{ textDecoration: "none" }}>
+              <Wordmark size="md" />
+            </Link>
+          </div>
 
-      {/* Utilities: Language, Theme Toggle, Behind The Scenes */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {/* Language Selector (Hidden on small mobile screens to prevent congestion; available in chat) */}
-        {onChangeLocale && (
-          <div
-            className="along-header-lang"
+          {/* 3-Step Progressive Journey Navigation (Desktop & Tablet) */}
+          <nav
+            className="along-nav-segmented"
             style={{
               display: "flex",
-              alignItems: "center",
-              background: "var(--bg-surface)",
+              background: "var(--bg-paper)",
               border: "1px solid var(--border-subtle)",
               borderRadius: "var(--radius-chip)",
-              padding: "2px 4px",
+              padding: 3,
+              gap: 4,
             }}
+            aria-label="Main Journey Navigation"
           >
-            {(["en", "pcm", "ha"] as const).map((loc) => (
-              <button
-                key={loc}
-                onClick={() => onChangeLocale(loc)}
+            <Link
+              href="/"
+              style={{
+                padding: "6px 16px",
+                borderRadius: "var(--radius-chip)",
+                fontSize: 13,
+                fontWeight: pathname === "/" ? 700 : 600,
+                background: pathname === "/" ? "var(--brand-primary)" : "transparent",
+                color: pathname === "/" ? "#FFFFFF" : "var(--text-muted)",
+                transition: "all 150ms ease",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <PodNavIcon size={15} color={pathname === "/" ? "#FFFFFF" : "currentColor"} />
+              <span>1. Ride</span>
+              {isConfirmed && pathname !== "/" && (
+                <span style={{ fontSize: 11, color: "var(--brand-primary)" }}>✓</span>
+              )}
+            </Link>
+
+            <Link
+              href="/driver"
+              style={{
+                padding: "6px 16px",
+                borderRadius: "var(--radius-chip)",
+                fontSize: 13,
+                fontWeight: pathname === "/driver" ? 700 : 600,
+                background: pathname === "/driver" ? "var(--brand-primary)" : "transparent",
+                color: pathname === "/driver" ? "#FFFFFF" : "var(--text-muted)",
+                transition: "all 150ms ease",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                position: "relative",
+              }}
+            >
+              <SteeringNavIcon size={15} color={pathname === "/driver" ? "#FFFFFF" : "currentColor"} />
+              <span>2. Driver OTP</span>
+              {trip.journeyStage === "CONFIRMED" && pathname !== "/driver" && (
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: "var(--signal-amber)",
+                  }}
+                />
+              )}
+              {isInTransit && pathname !== "/driver" && (
+                <span style={{ fontSize: 11, color: "var(--brand-primary)" }}>✓</span>
+              )}
+            </Link>
+
+            <Link
+              href={trackerHref}
+              style={{
+                padding: "6px 16px",
+                borderRadius: "var(--radius-chip)",
+                fontSize: 13,
+                fontWeight: pathname.startsWith("/t/") ? 700 : 600,
+                background: pathname.startsWith("/t/") ? "var(--brand-primary)" : "transparent",
+                color: pathname.startsWith("/t/") ? "#FFFFFF" : "var(--text-muted)",
+                transition: "all 150ms ease",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <RadarNavIcon size={15} color={pathname.startsWith("/t/") ? "#FFFFFF" : "currentColor"} />
+              <span>3. Live Corridor</span>
+              {isInTransit && !pathname.startsWith("/t/") && (
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: "var(--brand-primary)",
+                  }}
+                />
+              )}
+            </Link>
+          </nav>
+
+          {/* Right Utilities: AI X-Ray Drawer Trigger & Theme Toggle */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              onClick={() => trip.setAiDrawerOpen(!trip.aiDrawerOpen)}
+              style={{
+                padding: "6px 12px",
+                minHeight: 36,
+                borderRadius: "var(--radius-chip)",
+                background: trip.aiDrawerOpen ? "var(--brand-soft)" : "var(--bg-paper)",
+                color: trip.aiDrawerOpen ? "var(--brand-primary)" : "var(--text-ink)",
+                border: `1px solid ${trip.aiDrawerOpen ? "var(--brand-primary)" : "var(--border-subtle)"}`,
+                fontSize: 12.5,
+                fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
+              }}
+              aria-label="Open Meta AI X-Ray & Telemetry Drawer"
+            >
+              <span
                 style={{
-                  minHeight: 28,
-                  padding: "2px 8px",
-                  borderRadius: "var(--radius-chip)",
-                  fontSize: 12,
-                  fontWeight: activeLocale === loc ? 700 : 500,
-                  background: activeLocale === loc ? "var(--brand-soft)" : "transparent",
-                  color: activeLocale === loc ? "var(--brand-primary)" : "var(--text-muted)",
-                  border: "none",
-                  cursor: "pointer",
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: "var(--brand-primary)",
                 }}
-                aria-label={`Switch to ${loc === "en" ? "English" : loc === "pcm" ? "Pidgin" : "Hausa"}`}
-              >
-                {loc === "en" ? "EN" : loc === "pcm" ? "Pidgin" : "Hausa"}
-              </button>
-            ))}
+              />
+              <span>AI X-Ray</span>
+            </button>
+
+            <button
+              onClick={toggleTheme}
+              style={{
+                width: 36,
+                height: 36,
+                minHeight: 36,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "var(--bg-paper)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "50%",
+                color: "var(--text-ink)",
+                fontSize: 15,
+                cursor: "pointer",
+              }}
+              aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+              title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            >
+              {theme === "light" ? "☾" : "☼"}
+            </button>
           </div>
-        )}
+        </div>
 
-        {/* Theme Toggle (Light / Dark) */}
-        <button
-          onClick={toggleTheme}
-          style={{
-            width: 36,
-            height: 36,
-            minHeight: 36,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-subtle)",
-            borderRadius: "50%",
-            color: "var(--text-ink)",
-            fontSize: 16,
-            cursor: "pointer",
-          }}
-          aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-          title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-        >
-          {theme === "light" ? "☼" : "☾"}
-        </button>
-
-        {/* Telemetry Toggle */}
-        {onToggleBehindTheScenes && (
-          <button
-            onClick={onToggleBehindTheScenes}
-            style={{
-              padding: "6px 12px",
-              minHeight: 36,
-              borderRadius: "var(--radius-button)",
-              background: behindTheScenesOpen ? "var(--brand-soft)" : "var(--bg-surface)",
-              color: behindTheScenesOpen ? "var(--brand-primary)" : "var(--text-ink)",
-              border: `1px solid ${behindTheScenesOpen ? "var(--brand-primary)" : "var(--border-subtle)"}`,
-              fontSize: 12.5,
-              fontWeight: 600,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              cursor: "pointer",
-            }}
-            aria-label="Toggle live AI pipeline telemetry"
-          >
-            <span>Telemetry</span>
-            <span style={{ fontSize: 10 }}>{behindTheScenesOpen ? "▲" : "▼"}</span>
-          </button>
-        )}
-      </div>
-
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .along-nav-segmented {
-            display: none !important;
+        <style jsx>{`
+          @media (max-width: 768px) {
+            .along-nav-segmented {
+              display: none !important;
+            }
           }
-          .along-header-lang {
-            display: none !important;
-          }
-        }
-      `}</style>
-    </header>
+        `}</style>
+      </header>
+
+      {/* Slide-Over AI Telemetry & Honesty Drawer */}
+      <AiTelemetryDrawer />
+    </>
   );
 }

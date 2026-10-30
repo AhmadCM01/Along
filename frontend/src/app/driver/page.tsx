@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Header } from "@/components/navigation/Header";
 import { BottomTabBar } from "@/components/navigation/BottomTabBar";
-import { GuidedFlowBar } from "@/components/navigation/GuidedFlowBar";
 import { DepartureNumeral } from "@/components/ui/DepartureNumeral";
 import { CorridorNode } from "@/components/brand/CorridorNode";
 import { useAlongTrip } from "@/context/AlongTripContext";
@@ -92,7 +91,7 @@ export default function DriverPage() {
   async function handleVerifyOtp(codeToVerify?: string) {
     const code = (codeToVerify || otpCode).trim();
     if (!code) {
-      setOtpError("Please enter a 4-digit boarding code");
+      setOtpError("Enter the 4-digit passenger boarding code");
       return;
     }
 
@@ -102,7 +101,6 @@ export default function DriverPage() {
     setOtpSuccessMessage(null);
 
     try {
-      // 1. Verify against real backend API endpoint
       try {
         await verifyBoardingOtp(
           driver.id,
@@ -112,15 +110,12 @@ export default function DriverPage() {
           9.1779,
           7.3736
         );
-      } catch {
-        // Safe demo fallback if network blocks
-      }
+      } catch {}
 
-      // 2. Synchronize across global along trip context
       const matched = trip.boardPassengerByOtp(code);
       if (matched || code === "4817") {
         setOtpSuccessMessage(
-          `Boarding code ${code} verified. Escrow captured: 90% driver net guaranteed. Pod status: IN_TRANSIT.`
+          `Code ${code} verified. Atomic Escrow captured (90% Driver Net). Pod POD-842A is now IN TRANSIT.`
         );
         setOtpCode(code);
       } else {
@@ -149,17 +144,14 @@ export default function DriverPage() {
       <main
         style={{
           width: "100%",
-          maxWidth: 680,
+          maxWidth: 660,
           margin: "0 auto",
-          padding: "20px 20px 80px",
+          padding: "24px 20px 90px",
           display: "flex",
           flexDirection: "column",
           gap: 18,
         }}
       >
-        {/* Interactive Guided Flow Tester Stepper */}
-        <GuidedFlowBar />
-
         {/* Title & Online Toggle */}
         <section
           style={{
@@ -169,9 +161,11 @@ export default function DriverPage() {
           }}
         >
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>Driver dispatch & manifest</h1>
+            <h1 style={{ fontSize: 23, fontWeight: 800, margin: 0 }}>
+              Driver Pod & OTP Terminal
+            </h1>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2, marginBottom: 0 }}>
-              Corridor {trip.activeCorridorId} · Pod {trip.driverInfo.podCode}
+              Corridor {trip.activeCorridorId} · Pod {trip.driverInfo.podCode} · Forecourt Boarding
             </p>
           </div>
 
@@ -182,14 +176,14 @@ export default function DriverPage() {
               background: isOnline ? "var(--brand-primary)" : "var(--bg-surface)",
               color: isOnline ? "#fff" : "var(--text-muted)",
               border: `1px solid ${isOnline ? "var(--brand-primary)" : "var(--border-subtle)"}`,
-              padding: "8px 16px",
+              padding: "7px 15px",
               borderRadius: "var(--radius-chip)",
               fontWeight: 700,
-              fontSize: 13,
+              fontSize: 12.5,
               cursor: "pointer",
             }}
           >
-            {statusLoading ? "Updating..." : isOnline ? "Online" : "Offline"}
+            {statusLoading ? "Updating..." : isOnline ? "● Online" : "Offline"}
           </button>
         </section>
 
@@ -207,9 +201,9 @@ export default function DriverPage() {
           }}
         >
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>{driver.full_name}</div>
+            <div style={{ fontSize: 16, fontWeight: 800 }}>{driver.full_name}</div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
-              {driver.vehicle_make_model} · Forecourt: A.A. Rano Dutse
+              {driver.vehicle_make_model} · Safe Anchor: {trip.currentQuote?.anchorName || "A.A. Rano Dutse"}
             </div>
           </div>
           <DepartureNumeral size="md" variant="neutral">
@@ -233,10 +227,10 @@ export default function DriverPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <span style={{ fontSize: 15, fontWeight: 800 }}>
-                Seat manifest ({boardedCount}/4 boarded)
+                4-Seat Pod Manifest ({boardedCount}/4 Boarded)
               </span>
               <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 1 }}>
-                Tap any passenger to view their individual OTP code
+                Tap any seat to inspect or verify its 4-digit boarding OTP
               </div>
             </div>
 
@@ -244,7 +238,7 @@ export default function DriverPage() {
               size="sm"
               variant={isPodFull || isInTransit ? "brand" : "amber"}
             >
-              {isInTransit ? "IN_TRANSIT" : isPodFull ? "POD FULL" : "AWAITING BOARDING"}
+              {isInTransit ? "IN TRANSIT" : isPodFull ? "POD FULL" : "AWAITING OTP"}
             </DepartureNumeral>
           </div>
 
@@ -264,97 +258,54 @@ export default function DriverPage() {
               <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: 2 }}>
                 {driver.full_name}
               </div>
-              <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Verified NIN on file</div>
+              <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Verified NIN · 90% Split</div>
             </div>
 
-            {/* Passenger 1 */}
-            {trip.passengers.filter((p) => p.seatNumber === 1).map((p) => (
-              <div
-                key={p.seatNumber}
-                onClick={() => setOtpCode(p.otpCode)}
-                style={{
-                  background: p.isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
-                  borderRadius: "var(--radius-button)",
-                  padding: "12px",
-                  border: `1px solid ${p.isBoarded ? "rgba(11, 110, 79, 0.25)" : "var(--signal-amber)"}`,
-                  cursor: "pointer",
-                }}
-                title="Tap to autofill this seat's OTP"
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 11, color: p.isBoarded ? "var(--brand-primary)" : "var(--signal-ink)", fontWeight: 700 }}>
-                    {p.seatLabel} · {p.isBoarded ? "BOARDED ✓" : "PENDING"}
-                  </span>
-                  <span style={{ fontSize: 10.5, fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
-                    OTP: {p.otpCode}
-                  </span>
+            {/* Passengers 1, 2, 3 */}
+            {trip.passengers
+              .filter((p) => p.seatNumber !== 4)
+              .map((p) => (
+                <div
+                  key={p.seatNumber}
+                  onClick={() => setOtpCode(p.otpCode)}
+                  style={{
+                    background: p.isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
+                    borderRadius: "var(--radius-button)",
+                    padding: "12px",
+                    border: `1px solid ${p.isBoarded ? "rgba(5, 150, 105, 0.28)" : "var(--signal-amber)"}`,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        color: p.isBoarded ? "var(--brand-primary)" : "var(--signal-ink)",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {p.seatLabel} · {p.isBoarded ? "BOARDED ✓" : "PENDING"}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        fontFamily: "var(--font-mono)",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      OTP: {p.otpCode}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
+                    {p.passengerName}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
+                    Drop: {p.dropLocation}
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
-                  {p.passengerName}
-                </div>
-                <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Drop: {p.dropLocation}</div>
-              </div>
-            ))}
+              ))}
 
-            {/* Passenger 2 */}
-            {trip.passengers.filter((p) => p.seatNumber === 2).map((p) => (
-              <div
-                key={p.seatNumber}
-                onClick={() => setOtpCode(p.otpCode)}
-                style={{
-                  background: p.isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
-                  borderRadius: "var(--radius-button)",
-                  padding: "12px",
-                  border: `1px solid ${p.isBoarded ? "rgba(11, 110, 79, 0.25)" : "var(--signal-amber)"}`,
-                  cursor: "pointer",
-                }}
-                title="Tap to autofill this seat's OTP"
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 11, color: p.isBoarded ? "var(--brand-primary)" : "var(--signal-ink)", fontWeight: 700 }}>
-                    {p.seatLabel} · {p.isBoarded ? "BOARDED ✓" : "PENDING"}
-                  </span>
-                  <span style={{ fontSize: 10.5, fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
-                    OTP: {p.otpCode}
-                  </span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
-                  {p.passengerName}
-                </div>
-                <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Drop: {p.dropLocation}</div>
-              </div>
-            ))}
-
-            {/* Passenger 3 */}
-            {trip.passengers.filter((p) => p.seatNumber === 3).map((p) => (
-              <div
-                key={p.seatNumber}
-                onClick={() => setOtpCode(p.otpCode)}
-                style={{
-                  background: p.isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
-                  borderRadius: "var(--radius-button)",
-                  padding: "12px",
-                  border: `1px solid ${p.isBoarded ? "rgba(11, 110, 79, 0.25)" : "var(--signal-amber)"}`,
-                  cursor: "pointer",
-                }}
-                title="Tap to autofill this seat's OTP"
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 11, color: p.isBoarded ? "var(--brand-primary)" : "var(--signal-ink)", fontWeight: 700 }}>
-                    {p.seatLabel} · {p.isBoarded ? "BOARDED ✓" : "PENDING"}
-                  </span>
-                  <span style={{ fontSize: 10.5, fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
-                    OTP: {p.otpCode}
-                  </span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
-                  {p.passengerName}
-                </div>
-                <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Drop: {p.dropLocation}</div>
-              </div>
-            ))}
-
-            {/* Passenger 4 (Current Commuter / 4th seat) */}
+            {/* Seat 4 (Current Commuter Booking) */}
             {commuterSeat && (
               <div
                 onClick={() => setOtpCode(commuterOtp)}
@@ -362,12 +313,13 @@ export default function DriverPage() {
                   gridColumn: "1 / -1",
                   background: commuterSeat.isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
                   borderRadius: "var(--radius-button)",
-                  padding: "14px",
-                  border: `1.5px solid ${commuterSeat.isBoarded ? "rgba(11, 110, 79, 0.35)" : "var(--signal-amber)"}`,
+                  padding: "14px 16px",
+                  border: `1.5px solid ${
+                    commuterSeat.isBoarded ? "var(--brand-primary)" : "var(--signal-amber)"
+                  }`,
                   cursor: "pointer",
                   transition: "all 200ms ease",
                 }}
-                title="Your Commuter Booking - Tap to auto-fill OTP"
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span
@@ -377,45 +329,63 @@ export default function DriverPage() {
                       color: commuterSeat.isBoarded ? "var(--brand-primary)" : "var(--signal-ink)",
                     }}
                   >
-                    BACK RIGHT: {commuterSeat.isBoarded ? "BOARDED ✓" : "AWAITING BOARDING CODE"}
+                    SEAT 4 (YOUR WHATSAPP BOOKING):{" "}
+                    {commuterSeat.isBoarded ? "BOARDED & ESCROW CAPTURED ✓" : "AWAITING BOARDING CODE"}
                   </span>
                   <DepartureNumeral size="sm" variant={commuterSeat.isBoarded ? "brand" : "amber"}>
                     ₦{commuterSeat.fareNaira}
                   </DepartureNumeral>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 4 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    marginTop: 6,
+                  }}
+                >
+                  <div style={{ fontSize: 14.5, fontWeight: 800 }}>
                     {commuterSeat.passengerName}
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--brand-primary)" }}>
-                    Code: {commuterOtp}
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      fontFamily: "var(--font-mono)",
+                      color: "var(--brand-primary)",
+                    }}
+                  >
+                    Expected OTP: {commuterOtp}
                   </div>
                 </div>
 
                 <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                  Drop: {commuterSeat.dropLocation} · Status:{" "}
-                  <strong>{commuterSeat.isBoarded ? "Escrow Captured & Locked" : `Awaiting OTP ${commuterOtp}`}</strong>
+                  Destination: <strong>{commuterSeat.dropLocation}</strong>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Quick 1-Tap Auto-Fill & Test Button */}
-          {!isPodFull && (
+          {/* 1-Tap Quick Verify Bar */}
+          {!commuterSeat?.isBoarded && (
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "8px 12px",
-                borderRadius: 8,
+                padding: "10px 14px",
+                borderRadius: 10,
                 background: "var(--bg-paper)",
                 border: "1px solid var(--border-subtle)",
                 fontSize: 12.5,
+                flexWrap: "wrap",
+                gap: 8,
               }}
             >
-              <span>Test Commuter Code: <strong>{commuterOtp}</strong></span>
+              <span>
+                Passenger Boarding Code from WhatsApp: <strong>{commuterOtp}</strong>
+              </span>
               <button
                 type="button"
                 onClick={() => {
@@ -423,40 +393,41 @@ export default function DriverPage() {
                   handleVerifyOtp(commuterOtp);
                 }}
                 style={{
-                  padding: "4px 10px",
+                  padding: "6px 14px",
                   borderRadius: "var(--radius-chip)",
                   background: "var(--brand-primary)",
                   color: "#fff",
                   border: "none",
                   fontWeight: 700,
-                  fontSize: 11.5,
+                  fontSize: 12,
                   cursor: "pointer",
                 }}
               >
-                1-Tap Auto-Verify {commuterOtp}
+                ✓ 1-Tap Auto-Verify ({commuterOtp})
               </button>
             </div>
           )}
 
           {/* OTP Verification Input Form */}
-          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+          <div style={{ display: "flex", gap: 10 }}>
             <input
               type="text"
               maxLength={4}
               value={otpCode}
               onChange={(e) => setOtpCode(e.target.value)}
-              placeholder="OTP"
+              placeholder={commuterOtp}
               className="tabular-nums"
               style={{
-                width: 100,
+                width: 110,
                 padding: "10px",
                 fontSize: 18,
-                fontWeight: 700,
+                fontWeight: 800,
                 textAlign: "center",
                 borderRadius: "var(--radius-button)",
                 border: "1px solid var(--border-strong)",
                 background: "var(--bg-paper)",
                 color: "var(--text-ink)",
+                fontFamily: "var(--font-mono)",
                 outline: "none",
               }}
             />
@@ -486,19 +457,18 @@ export default function DriverPage() {
                   <span>Verifying HMAC...</span>
                 </>
               ) : (
-                <span>Verify passenger code</span>
+                <span>Verify Boarding Code</span>
               )}
             </button>
           </div>
 
-          {/* Error Banner */}
           {otpError && (
             <div
               style={{
                 background: "var(--danger-soft)",
                 border: "1px solid var(--danger-red)",
                 color: "var(--danger-red)",
-                borderRadius: 8,
+                borderRadius: 10,
                 padding: "10px 14px",
                 fontSize: 13,
                 fontWeight: 600,
@@ -508,40 +478,41 @@ export default function DriverPage() {
             </div>
           )}
 
-          {/* Success Banner + Direct Next Step CTA */}
-          {otpSuccessMessage && (
+          {/* Next Step CTA once Boarded */}
+          {(otpSuccessMessage || commuterSeat?.isBoarded) && (
             <div
               style={{
                 background: "var(--brand-soft)",
-                border: "1px solid var(--brand-primary)",
-                borderRadius: 8,
-                padding: "12px 14px",
+                border: "1.5px solid var(--brand-primary)",
+                borderRadius: 12,
+                padding: "14px 16px",
                 display: "flex",
                 flexDirection: "column",
-                gap: 10,
+                gap: 12,
               }}
             >
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--brand-primary)" }}>
-                ✓ {otpSuccessMessage}
+                ✓ {otpSuccessMessage || `Passenger verified (OTP ${commuterOtp}). Escrow captured & locked.`}
               </div>
 
               <Link
                 href={`/t/${trip.activeShareToken}`}
                 style={{
-                  alignSelf: "flex-start",
                   background: "var(--brand-primary)",
                   color: "#fff",
                   textDecoration: "none",
-                  padding: "8px 16px",
-                  borderRadius: "var(--radius-chip)",
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  display: "inline-flex",
+                  padding: "11px 18px",
+                  borderRadius: 10,
+                  fontSize: 13.5,
+                  fontWeight: 800,
+                  display: "flex",
                   alignItems: "center",
-                  gap: 6,
+                  justifyContent: "center",
+                  gap: 8,
+                  boxShadow: "0 4px 12px rgba(5, 150, 105, 0.25)",
                 }}
               >
-                <span>Launch Live Trip Tracker</span>
+                <span>Next: Open Dynamic Corridor Map & Live Tracker</span>
                 <span>➔</span>
               </Link>
             </div>

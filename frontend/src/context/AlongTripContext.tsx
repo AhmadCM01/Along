@@ -39,6 +39,28 @@ export interface DriverInfo {
   ussdShortcode: string;
 }
 
+export interface PersistedChatMessage {
+  id: string;
+  sender: "user" | "bot";
+  text: string;
+  isVoice?: boolean;
+  voiceDuration?: string;
+  voiceLabel?: string;
+  timestamp: string;
+  isConfirmed?: boolean;
+  quoteData?: {
+    corridorId: string;
+    anchorName: string;
+    destName: string;
+    seats: number;
+    unitFare: string;
+    totalFare: string;
+    otp: string;
+    shareToken?: string | null;
+  };
+  isSos?: boolean;
+}
+
 export type PodJourneyStage = "IDLE" | "PROPOSAL" | "CONFIRMED" | "IN_TRANSIT" | "COMPLETED";
 
 interface AlongTripContextType {
@@ -68,6 +90,10 @@ interface AlongTripContextType {
   setResolverScores: (scores: any) => void;
   audioPlaying: boolean;
   setAudioPlaying: (playing: boolean) => void;
+  aiDrawerOpen: boolean;
+  setAiDrawerOpen: (open: boolean) => void;
+  persistedMessages: PersistedChatMessage[];
+  setPersistedMessages: React.Dispatch<React.SetStateAction<PersistedChatMessage[]>>;
 }
 
 const DEFAULT_PASSENGERS: PodPassenger[] = [
@@ -121,7 +147,7 @@ const DEFAULT_DRIVER: DriverInfo = {
 
 const AlongTripContext = createContext<AlongTripContextType | undefined>(undefined);
 
-const STORAGE_KEY = "along_trip_session_v3";
+const STORAGE_KEY = "along_trip_session_v4";
 
 export function AlongTripProvider({ children }: { children: React.ReactNode }) {
   const [activeCorridorId, setActiveCorridorId] = useState<string>("BWR-DUT-WUS");
@@ -134,6 +160,8 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
   const [traces, setTraces] = useState<StageTrace[]>([]);
   const [resolverScores, setResolverScores] = useState<any>(null);
   const [audioPlaying, setAudioPlaying] = useState<boolean>(false);
+  const [aiDrawerOpen, setAiDrawerOpen] = useState<boolean>(false);
+  const [persistedMessages, setPersistedMessages] = useState<PersistedChatMessage[]>([]);
 
   // Restore from sessionStorage on client mount
   useEffect(() => {
@@ -147,6 +175,9 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
         if (parsed.journeyStage) setJourneyStage(parsed.journeyStage);
         if (parsed.passengers) setPassengers(parsed.passengers);
         if (parsed.activeShareToken) setActiveShareToken(parsed.activeShareToken);
+        if (Array.isArray(parsed.persistedMessages)) setPersistedMessages(parsed.persistedMessages);
+        if (Array.isArray(parsed.traces)) setTraces(parsed.traces);
+        if (parsed.resolverScores) setResolverScores(parsed.resolverScores);
       }
     } catch {}
   }, []);
@@ -161,20 +192,36 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
         journeyStage,
         passengers,
         activeShareToken,
+        persistedMessages,
+        traces,
+        resolverScores,
       };
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {}
-  }, [activeCorridorId, activeLocale, currentQuote, journeyStage, passengers, activeShareToken]);
+  }, [
+    activeCorridorId,
+    activeLocale,
+    currentQuote,
+    journeyStage,
+    passengers,
+    activeShareToken,
+    persistedMessages,
+    traces,
+    resolverScores,
+  ]);
 
-  // Synchronize seat 4 with currentQuote if available
+  // Synchronize seat 4 and activeCorridorId with currentQuote if available
   useEffect(() => {
     if (currentQuote) {
+      if (currentQuote.corridorId) {
+        setActiveCorridorId(currentQuote.corridorId);
+      }
       setPassengers((prev) =>
         prev.map((p) => {
           if (p.isCurrentUser) {
             return {
               ...p,
-              passengerName: `Commuter (${currentQuote.seats} seats)`,
+              passengerName: `Commuter (${currentQuote.seats} ${currentQuote.seats === 1 ? "seat" : "seats"})`,
               dropLocation: currentQuote.destName,
               fareNaira: parseInt(currentQuote.totalFare.replace(/[^0-9]/g, "")) || 1800,
               otpCode: currentQuote.otp || "4817",
@@ -205,9 +252,8 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
         return p;
       });
 
-      // If all passengers are boarded, transition pod to IN_TRANSIT
       const allBoarded = updated.every((p) => p.isBoarded);
-      if (allBoarded) {
+      if (allBoarded || matched) {
         setJourneyStage("IN_TRANSIT");
       }
       return updated;
@@ -215,18 +261,21 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
     return matched;
   }, []);
 
-  const boardPassengerBySeat = useCallback((seatNumber: 1 | 2 | 3 | 4, boarded: boolean) => {
-    setPassengers((prev) => {
-      const updated = prev.map((p) => (p.seatNumber === seatNumber ? { ...p, isBoarded: boarded } : p));
-      const allBoarded = updated.every((p) => p.isBoarded);
-      if (allBoarded) {
-        setJourneyStage("IN_TRANSIT");
-      } else if (journeyStage === "IN_TRANSIT") {
-        setJourneyStage("CONFIRMED");
-      }
-      return updated;
-    });
-  }, [journeyStage]);
+  const boardPassengerBySeat = useCallback(
+    (seatNumber: 1 | 2 | 3 | 4, boarded: boolean) => {
+      setPassengers((prev) => {
+        const updated = prev.map((p) => (p.seatNumber === seatNumber ? { ...p, isBoarded: boarded } : p));
+        const allBoarded = updated.every((p) => p.isBoarded);
+        if (allBoarded) {
+          setJourneyStage("IN_TRANSIT");
+        } else if (journeyStage === "IN_TRANSIT") {
+          setJourneyStage("CONFIRMED");
+        }
+        return updated;
+      });
+    },
+    [journeyStage]
+  );
 
   const resetAll = useCallback(() => {
     setCurrentQuote(null);
@@ -235,6 +284,7 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
     setActiveShareToken("share-bwr-4817");
     setTraces([]);
     setResolverScores(null);
+    setPersistedMessages([]);
     try {
       sessionStorage.removeItem(STORAGE_KEY);
     } catch {}
@@ -264,6 +314,10 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
         setResolverScores,
         audioPlaying,
         setAudioPlaying,
+        aiDrawerOpen,
+        setAiDrawerOpen,
+        persistedMessages,
+        setPersistedMessages,
       }}
     >
       {children}

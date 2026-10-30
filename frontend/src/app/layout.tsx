@@ -33,10 +33,14 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var stored = localStorage.getItem('along-theme');
-                  var theme = stored || 'light';
+                  localStorage.removeItem('along-theme');
+                  localStorage.removeItem('along-theme-v2');
+                  var stored = localStorage.getItem('along-theme-v3');
+                  var theme = stored === 'dark' ? 'dark' : 'light';
                   document.documentElement.setAttribute('data-theme', theme);
-                } catch (e) {}
+                } catch (e) {
+                  document.documentElement.setAttribute('data-theme', 'light');
+                }
               })();
             `,
           }}

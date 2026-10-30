@@ -46,6 +46,7 @@ export interface PersistedChatMessage {
   isVoice?: boolean;
   voiceDuration?: string;
   voiceLabel?: string;
+  audioUrl?: string;
   timestamp: string;
   isConfirmed?: boolean;
   quoteData?: {
@@ -77,6 +78,7 @@ interface AlongTripContextType {
   boardPassengerByOtp: (otp: string) => boolean;
   boardPassengerBySeat: (seatNumber: 1 | 2 | 3 | 4, boarded: boolean) => void;
   confirmBooking: () => void;
+  startCorridorTrip: () => void;
   resetAll: () => void;
   activeShareToken: string;
   traces: StageTrace[];
@@ -147,7 +149,7 @@ const DEFAULT_DRIVER: DriverInfo = {
 
 const AlongTripContext = createContext<AlongTripContextType | undefined>(undefined);
 
-const STORAGE_KEY = "along_trip_session_v4";
+const STORAGE_KEY = "along_trip_session_v5";
 
 export function AlongTripProvider({ children }: { children: React.ReactNode }) {
   const [activeCorridorId, setActiveCorridorId] = useState<string>("BWR-DUT-WUS");
@@ -240,6 +242,10 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
     setJourneyStage("CONFIRMED");
   }, []);
 
+  const startCorridorTrip = useCallback(() => {
+    setJourneyStage("IN_TRANSIT");
+  }, []);
+
   const boardPassengerByOtp = useCallback((otp: string): boolean => {
     const cleanOtp = otp.trim();
     let matched = false;
@@ -306,6 +312,7 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
         boardPassengerByOtp,
         boardPassengerBySeat,
         confirmBooking,
+        startCorridorTrip,
         resetAll,
         activeShareToken,
         traces,

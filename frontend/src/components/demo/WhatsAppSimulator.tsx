@@ -4,7 +4,17 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CorridorNode } from "@/components/brand/CorridorNode";
 import { DepartureNumeral } from "@/components/ui/DepartureNumeral";
-import { VoiceWaveformPlayer } from "@/components/icons/AlongIcons";
+import {
+  VoiceWaveformPlayer,
+  StudioMicIcon,
+  ForecourtPinIcon,
+  DialogueWaveIcon,
+  PodNavIcon,
+  SearchLensIcon,
+  LockShieldIcon,
+  TrashBinIcon,
+  SendArrowIcon,
+} from "@/components/icons/AlongIcons";
 import { playAlongVoiceNote, stopAlongVoiceNote } from "@/lib/audio";
 import { useAlongTrip } from "@/context/AlongTripContext";
 
@@ -15,6 +25,7 @@ export interface ChatMessage {
   isVoice?: boolean;
   voiceDuration?: string;
   voiceLabel?: string;
+  audioUrl?: string;
   timestamp: string;
   isConfirmed?: boolean;
   quoteData?: {
@@ -33,7 +44,13 @@ export interface ChatMessage {
 interface WhatsAppSimulatorProps {
   messages: ChatMessage[];
   onSendMessage: (text: string) => void;
-  onSendVoiceAudio?: (blob: Blob | File, filename?: string) => void;
+  onSendVoiceAudio?: (
+    blob: Blob | File,
+    filename?: string,
+    clientTranscript?: string,
+    durationStr?: string,
+    audioUrl?: string
+  ) => void;
   onSendSampleInput?: (text: string, locale?: "en" | "pcm" | "ha", isVoiceSample?: boolean) => void;
   onConfirmBooking: () => void;
   onTriggerSos: () => void;
@@ -50,7 +67,8 @@ const QUICK_SCENARIOS = [
     id: "pcm_dutse",
     title: "Pidgin Voice: Dutse to Berger",
     subtitle: "Abeg I dey Dutse first gate, two seats go Berger",
-    shortLabel: "🎙️ Pidgin Voice Note",
+    shortLabel: "Pidgin Voice Note",
+    iconType: "mic" as const,
     text: "Abeg I dey Dutse first gate, two seats go Berger",
     locale: "pcm" as const,
     isVoice: true,
@@ -60,7 +78,8 @@ const QUICK_SCENARIOS = [
     id: "rel_sokale",
     title: "Landmark: Sokale to Katampe",
     subtitle: "Drop me for that Oando after Katampe bridge",
-    shortLabel: "📍 Sokale to Katampe",
+    shortLabel: "Sokale to Katampe",
+    iconType: "pin" as const,
     text: "From Sokale roundabout, drop me for that Oando after Katampe bridge",
     locale: "en" as const,
     isVoice: false,
@@ -70,7 +89,8 @@ const QUICK_SCENARIOS = [
     id: "ha_bwari",
     title: "Hausa: Bwari to Wuse Market",
     subtitle: "Ina Bwari zan je Kasuwar Wuse kujera biyu",
-    shortLabel: "🗣️ Hausa: Bwari to Wuse",
+    shortLabel: "Hausa: Bwari to Wuse",
+    iconType: "wave" as const,
     text: "Ina Bwari zan je Kasuwar Wuse kujera biyu",
     locale: "ha" as const,
     isVoice: false,
@@ -80,13 +100,21 @@ const QUICK_SCENARIOS = [
     id: "lugbe_area1",
     title: "Airport Rd: Lugbe to Area 1",
     subtitle: "I dey Police signboard Lugbe, 1 seat go Area 1",
-    shortLabel: "🚗 Lugbe to Area 1",
+    shortLabel: "Lugbe to Area 1",
+    iconType: "pod" as const,
     text: "I dey Police signboard Lugbe, 1 seat go Area 1",
     locale: "pcm" as const,
     isVoice: false,
     corridor: "GWL-LUG-AR1",
   },
 ];
+
+function ScenarioIcon({ type }: { type: "mic" | "pin" | "wave" | "pod" }) {
+  if (type === "mic") return <StudioMicIcon size={15} color="var(--brand-primary)" />;
+  if (type === "pin") return <ForecourtPinIcon size={15} color="var(--brand-primary)" />;
+  if (type === "wave") return <DialogueWaveIcon size={15} color="var(--brand-primary)" />;
+  return <PodNavIcon size={15} color="var(--brand-primary)" />;
+}
 
 /**
  * Format WhatsApp markdown text into clean React typography without raw asterisks.
@@ -103,7 +131,7 @@ function FormattedWhatsAppText({ text }: { text: string }) {
 
         const parts = trimmed.split(/(\*[^*]+\*)/g);
         return (
-          <p key={lIdx} style={{ margin: 0, lineHeight: 1.45 }}>
+          <p key={lIdx} style={{ margin: 0, lineHeight: 1.48 }}>
             {parts.map((part, pIdx) => {
               if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
                 return (
@@ -174,11 +202,16 @@ export function WhatsAppSimulator({
   const [inputText, setInputText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
+  const [liveSpeechTranscript, setLiveSpeechTranscript] = useState("");
   const [activeVoicePlayingId, setActiveVoicePlayingId] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const capturedTranscriptRef = useRef<string>("");
+  const cancelledRecordingRef = useRef<boolean>(false);
+  const recordSecondsRef = useRef<number>(0);
   const chunksRef = useRef<BlobPart[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
@@ -187,7 +220,7 @@ export function WhatsAppSimulator({
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
-  }, [messages, isRecording, isProcessing]);
+  }, [messages, isRecording, isProcessing, liveSpeechTranscript]);
 
   const handleSend = () => {
     const trimmed = inputText.trim();
@@ -203,63 +236,142 @@ export function WhatsAppSimulator({
     }
   };
 
+  /**
+   * Start real microphone recording + real-time Web Speech API transcription
+   */
   const startRecording = async () => {
     chunksRef.current = [];
+    capturedTranscriptRef.current = "";
+    cancelledRecordingRef.current = false;
+    recordSecondsRef.current = 0;
+    setLiveSpeechTranscript("");
+    setRecordSeconds(0);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
+      const mimeType =
+        typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : "audio/webm";
 
       const mr = new MediaRecorder(stream, { mimeType });
       mr.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      mr.onstop = () => {
-        const audioBlob = new Blob(chunksRef.current, { type: mimeType });
-        if (onSendVoiceAudio) {
-          onSendVoiceAudio(audioBlob, "mic_recording.webm");
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
         }
       };
 
-      mr.start();
+      mr.onstop = () => {
+        if (cancelledRecordingRef.current) {
+          return;
+        }
+        const audioBlob = new Blob(chunksRef.current, { type: mimeType });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const secs = Math.max(1, recordSecondsRef.current);
+        const mins = Math.floor(secs / 60);
+        const remSecs = String(secs % 60).padStart(2, "0");
+        const durationStr = `${mins}:${remSecs}`;
+        const finalSpokenText = capturedTranscriptRef.current.trim();
+
+        if (onSendVoiceAudio) {
+          onSendVoiceAudio(audioBlob, "voice_note.webm", finalSpokenText, durationStr, audioUrl);
+        }
+      };
+
+      // Start parallel Web Speech API recognition so exact user speech is captured in real time
+      if (typeof window !== "undefined") {
+        const SpeechRec =
+          (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRec) {
+          try {
+            const rec = new SpeechRec();
+            rec.lang = "en-NG";
+            rec.continuous = true;
+            rec.interimResults = true;
+
+            rec.onresult = (event: any) => {
+              let fullText = "";
+              for (let i = 0; i < event.results.length; i++) {
+                fullText += event.results[i][0].transcript + " ";
+              }
+              const cleaned = fullText.trim();
+              if (cleaned) {
+                capturedTranscriptRef.current = cleaned;
+                setLiveSpeechTranscript(cleaned);
+              }
+            };
+            rec.onerror = () => {};
+            rec.start();
+            recognitionRef.current = rec;
+          } catch {}
+        }
+      }
+
+      mr.start(200);
       mediaRecorderRef.current = mr;
       setIsRecording(true);
-      setRecordSeconds(0);
 
       timerRef.current = setInterval(() => {
-        setRecordSeconds((s) => s + 1);
+        recordSecondsRef.current += 1;
+        setRecordSeconds(recordSecondsRef.current);
       }, 1000);
     } catch {
-      alert("Microphone permission not granted. Tap the Pidgin Voice Note button to test voice input.");
+      alert(
+        "Microphone access could not be started (check browser mic permissions or HTTPS/localhost). You can also click 'Play Pidgin Voice' at the top right."
+      );
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-      }
+  const cleanupRecordingHandles = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
     }
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
     setIsRecording(false);
+    setLiveSpeechTranscript("");
+  };
+
+  const finishAndSendRecording = () => {
+    cancelledRecordingRef.current = false;
+    if (mediaRecorderRef.current && isRecording) {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
+    }
+    cleanupRecordingHandles();
+  };
+
+  const cancelRecording = () => {
+    cancelledRecordingRef.current = true;
+    if (mediaRecorderRef.current && isRecording) {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
+    }
+    cleanupRecordingHandles();
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && onSendVoiceAudio) {
-      onSendVoiceAudio(file, file.name);
+      const audioUrl = URL.createObjectURL(file);
+      onSendVoiceAudio(file, file.name, undefined, "0:05", audioUrl);
     }
   };
 
-  const handlePlayVoice = (msgId: string, text: string) => {
+  const handlePlayVoice = (msgId: string, text: string, customAudioUrl?: string) => {
     if (activeVoicePlayingId === msgId) {
       stopAlongVoiceNote();
       setActiveVoicePlayingId(null);
@@ -268,6 +380,7 @@ export function WhatsAppSimulator({
     setActiveVoicePlayingId(msgId);
     playAlongVoiceNote({
       text,
+      customAudioUrl,
       onStart: () => setActiveVoicePlayingId(msgId),
       onEnd: () => setActiveVoicePlayingId(null),
     });
@@ -292,6 +405,12 @@ export function WhatsAppSimulator({
   const lastMsg = messages[messages.length - 1];
   const commuterSeat = trip.passengers.find((p) => p.isCurrentUser);
   const unifiedOtp = commuterSeat?.otpCode || trip.currentQuote?.otp || "4817";
+
+  const formatTimer = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = String(s % 60).padStart(2, "0");
+    return `${mins}:${secs}`;
+  };
 
   return (
     <div
@@ -369,7 +488,7 @@ export function WhatsAppSimulator({
           )}
         </div>
 
-        {/* Search Bar Mock */}
+        {/* Search Bar */}
         <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border-subtle)" }}>
           <div
             style={{
@@ -383,7 +502,7 @@ export function WhatsAppSimulator({
               gap: 8,
             }}
           >
-            <span>🔍</span>
+            <SearchLensIcon size={14} color="var(--text-muted)" />
             <span>Search or start a corridor ride</span>
           </div>
         </div>
@@ -445,7 +564,7 @@ export function WhatsAppSimulator({
                 ? "typing..."
                 : lastMsg
                 ? lastMsg.text.replace(/\*/g, "")
-                : "Tap a voice note or type your Abuja destination"}
+                : "Record a live voice note or type your Abuja destination"}
             </div>
           </div>
         </div>
@@ -489,13 +608,23 @@ export function WhatsAppSimulator({
                 cursor: isProcessing ? "not-allowed" : "pointer",
                 display: "flex",
                 flexDirection: "column",
-                gap: 3,
+                gap: 4,
                 transition: "all 150ms ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text-ink)" }}>
-                  {scn.shortLabel}
+                <span
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: "var(--text-ink)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <ScenarioIcon type={scn.iconType} />
+                  <span>{scn.shortLabel}</span>
                 </span>
                 <span
                   style={{
@@ -594,14 +723,14 @@ export function WhatsAppSimulator({
               >
                 {isProcessing
                   ? "typing..."
-                  : `Online · Abuja Corridor AI (${
+                  : `Online · Abuja Corridor Coordinator (${
                       activeLocale === "pcm" ? "Pidgin" : activeLocale === "ha" ? "Hausa" : "English"
                     })`}
               </div>
             </div>
           </div>
 
-          {/* Right Header Action: 1-Tap Native Nigerian Pidgin Voice Note */}
+          {/* Right Header Action: 1-Tap Native Male Nigerian Pidgin Voice Note */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <button
               type="button"
@@ -649,15 +778,21 @@ export function WhatsAppSimulator({
               color: "var(--text-muted)",
               fontSize: 11,
               fontWeight: 500,
-              padding: "5px 12px",
+              padding: "6px 13px",
               borderRadius: 10,
               border: "1px solid var(--border-subtle)",
               textAlign: "center",
-              maxWidth: 420,
+              maxWidth: 450,
               boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
             }}
           >
-            🔒 Messages and voice notes are end-to-end encrypted. Fares are protected in atomic escrow until boarding OTP verification.
+            <LockShieldIcon size={13} color="var(--brand-primary)" />
+            <span>
+              Messages and voice notes are end-to-end encrypted. Fares are held in atomic escrow until boarding OTP verification.
+            </span>
           </div>
 
           {/* Empty State Onboarding Card inside Chat */}
@@ -666,7 +801,7 @@ export function WhatsAppSimulator({
               className="along-bubble-bot"
               style={{
                 alignSelf: "flex-start",
-                maxWidth: 420,
+                maxWidth: 430,
                 padding: "12px 16px",
                 borderRadius: "2px 14px 14px 14px",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
@@ -674,12 +809,22 @@ export function WhatsAppSimulator({
                 lineHeight: 1.5,
               }}
             >
-              <div style={{ fontWeight: 700, color: "var(--brand-primary)", marginBottom: 4 }}>
-                Along Transit Concierge 👋🏾
+              <div
+                style={{
+                  fontWeight: 700,
+                  color: "var(--brand-primary)",
+                  marginBottom: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <CorridorNode size={14} variant="pickup" />
+                <span>Along Abuja Corridor Coordinator</span>
               </div>
               <div>
-                Welcome! Send a <strong>voice note</strong> or type where you are heading in{" "}
-                <strong>Pidgin, Hausa, or English</strong>. We match you to a safe filling-station forecourt pod in seconds.
+                How far! Tap the <strong>microphone button</strong> below to record a live voice note, or type where you are standing and where you are heading in{" "}
+                <strong>Pidgin, Hausa, or English</strong>. I will match you into a safe filling-station pod right away.
               </div>
               <div
                 style={{
@@ -698,17 +843,15 @@ export function WhatsAppSimulator({
           {messages.map((m) => {
             const isUser = m.sender === "user";
             const isVoicePlaying = activeVoicePlayingId === m.id;
-            const isConfirmationMsg =
-              m.isConfirmed ||
-              m.text.toLowerCase().includes("pooling") ||
-              m.text.toLowerCase().includes("lock") && isConfirmedRide;
+            const isConfirmationMsg = Boolean(m.isConfirmed);
+            const msgOtp = m.quoteData?.otp || unifiedOtp;
 
             return (
               <div
                 key={m.id}
                 style={{
                   alignSelf: isUser ? "flex-end" : "flex-start",
-                  maxWidth: "min(86%, 460px)",
+                  maxWidth: "min(86%, 470px)",
                   display: "flex",
                   flexDirection: "column",
                   gap: 2,
@@ -719,18 +862,18 @@ export function WhatsAppSimulator({
                   style={{
                     padding: "10px 14px 8px",
                     fontSize: 14,
-                    lineHeight: 1.45,
+                    lineHeight: 1.48,
                     borderRadius: isUser ? "14px 2px 14px 14px" : "2px 14px 14px 14px",
                     boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
                     position: "relative",
                   }}
                 >
-                  {/* Native Nigerian Voice Note Waveform Player */}
+                  {/* Native Nigerian or User-Recorded Voice Note Waveform Player */}
                   {m.isVoice && (
                     <div style={{ marginBottom: 8 }}>
                       <VoiceWaveformPlayer
                         isPlaying={isVoicePlaying}
-                        onTogglePlay={() => handlePlayVoice(m.id, m.text)}
+                        onTogglePlay={() => handlePlayVoice(m.id, m.text, m.audioUrl)}
                         duration={m.voiceDuration || "0:04"}
                       />
                     </div>
@@ -740,7 +883,7 @@ export function WhatsAppSimulator({
                   <FormattedWhatsAppText text={m.text} />
 
                   {/* TURN 1: Embedded WhatsApp Business Quote Card */}
-                  {m.quoteData && !isConfirmedRide && (
+                  {m.quoteData && !isConfirmationMsg && (
                     <div
                       style={{
                         marginTop: 10,
@@ -771,9 +914,9 @@ export function WhatsAppSimulator({
                         </DepartureNumeral>
                       </div>
 
-                      <div style={{ fontSize: 12.5, lineHeight: 1.4 }}>
+                      <div style={{ fontSize: 12.5, lineHeight: 1.45 }}>
                         <div>
-                          <span style={{ color: "var(--text-muted)" }}>Pickup: </span>
+                          <span style={{ color: "var(--text-muted)" }}>Safe Pickup Anchor: </span>
                           <strong>{m.quoteData.anchorName}</strong>
                         </div>
                         <div style={{ marginTop: 2 }}>
@@ -803,13 +946,16 @@ export function WhatsAppSimulator({
                           boxShadow: "0 2px 6px rgba(37, 211, 102, 0.25)",
                         }}
                       >
-                        <span>✓ Confirm & Lock {m.quoteData.seats} Seats ({m.quoteData.totalFare})</span>
+                        <span>
+                          ✓ Confirm & Lock {m.quoteData.seats}{" "}
+                          {m.quoteData.seats === 1 ? "Seat" : "Seats"} ({m.quoteData.totalFare})
+                        </span>
                       </button>
                     </div>
                   )}
 
                   {/* TURN 2: Confirmed Boarding Pass Card inside WhatsApp */}
-                  {m.quoteData && (isConfirmedRide || isConfirmationMsg) && (
+                  {m.quoteData && isConfirmationMsg && (
                     <div
                       style={{
                         marginTop: 10,
@@ -830,6 +976,9 @@ export function WhatsAppSimulator({
                           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-ink)" }}>
                             Musa Bello · {trip.driverInfo.plateNumber}
                           </div>
+                          <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
+                            {m.quoteData.anchorName} ➔ {m.quoteData.destName}
+                          </div>
                         </div>
 
                         <div
@@ -839,6 +988,7 @@ export function WhatsAppSimulator({
                             borderRadius: 8,
                             padding: "4px 10px",
                             textAlign: "center",
+                            flexShrink: 0,
                           }}
                         >
                           <div style={{ fontSize: 9.5, fontWeight: 700, color: "var(--signal-ink)" }}>
@@ -853,7 +1003,7 @@ export function WhatsAppSimulator({
                               color: "var(--signal-ink)",
                             }}
                           >
-                            {unifiedOtp}
+                            {msgOtp}
                           </div>
                         </div>
                       </div>
@@ -874,7 +1024,7 @@ export function WhatsAppSimulator({
                           gap: 8,
                         }}
                       >
-                        <span>Next: Verify OTP ({unifiedOtp}) on Driver Screen</span>
+                        <span>Step 2: Open Driver Terminal & Verify OTP ({msgOtp})</span>
                         <span>➔</span>
                       </Link>
                     </div>
@@ -900,7 +1050,7 @@ export function WhatsAppSimulator({
             );
           })}
 
-          {/* Authentic WhatsApp 3-Dot Typing Bubble (No Debug Timer) */}
+          {/* Authentic WhatsApp 3-Dot Typing Bubble */}
           {isProcessing && (
             <div
               className="along-bubble-bot"
@@ -940,7 +1090,7 @@ export function WhatsAppSimulator({
           )}
         </div>
 
-        {/* Mobile Quick Prompt Pills (Wrapped cleanly, zero scrollbar) */}
+        {/* Mobile Quick Prompt Pills */}
         <div
           className="whatsapp-mobile-prompts"
           style={{
@@ -967,14 +1117,18 @@ export function WhatsAppSimulator({
                 fontSize: 11.5,
                 fontWeight: 600,
                 cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
               }}
             >
-              {scn.shortLabel}
+              <ScenarioIcon type={scn.iconType} />
+              <span>{scn.shortLabel}</span>
             </button>
           ))}
         </div>
 
-        {/* WhatsApp Bottom Composer Bar */}
+        {/* WhatsApp Bottom Composer Bar (Normal Mode vs Live Voice Recording Mode) */}
         <footer
           style={{
             padding: "10px 14px",
@@ -993,99 +1147,200 @@ export function WhatsAppSimulator({
             onChange={handleFileUpload}
           />
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              border: "1px solid var(--border-subtle)",
-              background: "var(--bg-paper)",
-              color: "var(--text-muted)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18,
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-            title="Attach voice note file"
-            aria-label="Attach voice note file"
-          >
-            +
-          </button>
-
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              isRecording
-                ? `Recording voice note (${recordSeconds}s)...`
-                : "Type a message in Pidgin, Hausa, or English"
-            }
-            disabled={isRecording || isProcessing}
-            style={{
-              flex: 1,
-              padding: "10px 16px",
-              borderRadius: 999,
-              border: "1px solid var(--border-subtle)",
-              background: "var(--bg-paper)",
-              color: "var(--text-ink)",
-              fontSize: 14,
-              outline: "none",
-            }}
-          />
-
-          {inputText.trim() ? (
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={isProcessing}
+          {isRecording ? (
+            /* LIVE WHATSAPP VOICE RECORDING BAR */
+            <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                border: "none",
-                background: "#25D366",
-                color: "#0B141A",
-                display: "inline-flex",
+                flex: 1,
+                display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                fontSize: 16,
-                fontWeight: 800,
-                cursor: "pointer",
-                flexShrink: 0,
+                gap: 10,
+                background: "var(--bg-paper)",
+                border: "1.5px solid #25D366",
+                borderRadius: 999,
+                padding: "6px 10px 6px 12px",
               }}
-              aria-label="Send message"
             >
-              ➔
-            </button>
+              <button
+                type="button"
+                onClick={cancelRecording}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  border: "none",
+                  background: "var(--danger-soft)",
+                  color: "var(--danger-red)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+                title="Cancel voice note"
+                aria-label="Cancel voice note"
+              >
+                <TrashBinIcon size={15} color="var(--danger-red)" />
+              </button>
+
+              {/* Pulsing Red Mic Dot & Timer */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <span
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: "50%",
+                    background: "var(--danger-red)",
+                    animation: "recBlink 1s infinite",
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 800,
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--text-ink)",
+                  }}
+                >
+                  {formatTimer(recordSeconds)}
+                </span>
+              </div>
+
+              {/* Live Speech Transcript Preview */}
+              <div
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                  color: liveSpeechTranscript ? "var(--text-ink)" : "var(--text-muted)",
+                  fontWeight: liveSpeechTranscript ? 600 : 500,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {liveSpeechTranscript
+                  ? `“${liveSpeechTranscript}”`
+                  : "Listening... speak your pickup & destination"}
+              </div>
+
+              {/* Send Recorded Voice Note Button */}
+              <button
+                type="button"
+                onClick={finishAndSendRecording}
+                style={{
+                  height: 34,
+                  padding: "0 14px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#25D366",
+                  color: "#0B141A",
+                  fontWeight: 800,
+                  fontSize: 12.5,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+                title="Send recorded voice note"
+                aria-label="Send recorded voice note"
+              >
+                <SendArrowIcon size={14} color="#0B141A" />
+                <span>Send Voice</span>
+              </button>
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={isRecording ? stopRecording : startRecording}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                border: "none",
-                background: isRecording ? "var(--danger-red)" : "#25D366",
-                color: isRecording ? "#FFFFFF" : "#0B141A",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 16,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-              title={isRecording ? "Stop recording" : "Record voice note"}
-              aria-label={isRecording ? "Stop recording" : "Record voice note"}
-            >
-              {isRecording ? "■" : "🎙️"}
-            </button>
+            /* STANDARD WHATSAPP COMPOSER */
+            <>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: "50%",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-paper)",
+                  color: "var(--text-muted)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+                title="Upload audio file"
+                aria-label="Upload audio file"
+              >
+                +
+              </button>
+
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type a message in Pidgin, Hausa, or English (or tap mic to speak)"
+                disabled={isProcessing}
+                style={{
+                  flex: 1,
+                  padding: "10px 16px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-paper)",
+                  color: "var(--text-ink)",
+                  fontSize: 14,
+                  outline: "none",
+                }}
+              />
+
+              {inputText.trim() ? (
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={isProcessing}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "#25D366",
+                    color: "#0B141A",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                  aria-label="Send message"
+                >
+                  <SendArrowIcon size={17} color="#0B141A" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startRecording}
+                  disabled={isProcessing}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "#25D366",
+                    color: "#0B141A",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: isProcessing ? "not-allowed" : "pointer",
+                    flexShrink: 0,
+                  }}
+                  title="Tap to record live voice note"
+                  aria-label="Tap to record live voice note"
+                >
+                  <StudioMicIcon size={18} color="#0B141A" />
+                </button>
+              )}
+            </>
           )}
         </footer>
       </div>
@@ -1141,6 +1396,15 @@ export function WhatsAppSimulator({
           40% {
             transform: translateY(-5px);
             opacity: 1;
+          }
+        }
+
+        @keyframes recBlink {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.25;
           }
         }
 

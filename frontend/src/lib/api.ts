@@ -34,6 +34,7 @@ export interface DemoChatResponse {
     stage: string;
     reply_text: string;
     buttons: string[];
+    seats?: number;
     request_code?: string | null;
     boarding_otp?: string | null;
     share_token?: string | null;
@@ -72,6 +73,7 @@ export interface DemoChatResponse {
     destination_name?: string | null;
     anchor_id?: string | null;
     anchor_name?: string | null;
+    seats?: number;
     unit_fare_naira: string;
     total_fare_naira: string;
     pod_gross_naira: string;
@@ -226,11 +228,15 @@ export async function sendDemoChat(input: {
 
 export async function transcribeAudio(
   audioBlob: Blob | File,
-  filename = "voice_note.ogg"
+  filename = "voice_note.webm",
+  clientTranscript?: string
 ): Promise<ASRResponse> {
   const url = `${getApiBaseUrl()}/api/v1/demo/asr`;
   const formData = new FormData();
   formData.append("file", audioBlob, filename);
+  if (clientTranscript && clientTranscript.trim()) {
+    formData.append("client_transcript", clientTranscript.trim());
+  }
 
   const res = await fetch(url, {
     method: "POST",

@@ -1,47 +1,35 @@
 welcome_help: |
-  Welcome to *Along* (Abuja Shared Corridor Transit).
-  Abeg tell us where you dey and where you dey go for English, Pidgin, or Hausa (text or voice note).
-  Example: *"Abeg I dey Dutse First Gate, two seats go Berger"*
+  How far boss! Na your *Along Abuja Corridor Coordinator* be this.
+  Just yarn me where you dey stand and where you dey go for Pidgin, Hausa, or English (text or voice note), make I put you inside safe filling-station pod sharp-sharp.
 
 ask_origin: |
-  Abeg where you dey make our Along pod pick you? (like *Dutse First Gate*, *Sokale Roundabout*, *Police Signboard Lugbe*, or *Orange Market Mararaba*)
+  I hear where you wan drop! Abeg which junction you dey stand right now make our pod pick you inside safe filling station? (like *Dutse First Gate*, *Sokale Roundabout*, *Police Signboard Lugbe*, or *Orange Market Mararaba*)
 
 ask_destination: |
-  We don see say you dey *{origin_name}*. Abeg where you dey drop along the road? (like *Berger*, *Wuse Market*, *Area 1*, or *Federal Secretariat*)
+  Correct, I see say you dey *{origin_name}*! Abeg which junction you dey drop down the road? (like *Berger Underbridge*, *Oando Katampe*, *Wuse Market*, *Area 1*, or *Federal Secretariat*)
 
 ask_both_slots: |
-  Abeg tell us where you dey stand and where you dey go along the road.
-  Example: *"I dey Sokale Roundabout, carry me reach Berger"*
+  No wahala! Just tell me the junction wey you dey now and where you dey go for Abuja, make I check clean 4-seat pod for you. Like: *"Abeg I dey Dutse First Gate, two seats go Berger"*
 
 disambiguate_origin: |
-  Which pickup junction you mean so?
+  Abeg which of these junctions you dey close to pass right now?
   {options_text}
-  Reply with `1`, `2`, or `3` or type the junction name.
+  Reply `1`, `2`, or `3` (or type the name).
 
 disambiguate_destination: |
-  Which drop-off junction you mean so?
+  Which of these drop-off spots down the corridor you mean so?
   {options_text}
-  Reply with `1`, `2`, or `3` or type the junction name.
+  Reply `1`, `2`, or `3` (or type the name).
 
 short_trip_rejected: |
-  *{origin_name}* and *{dest_name}* too close (under 800m). Along pod na for corridor movement pass 800m. Abeg pick another drop-off down the road.
+  Oga mi, *{origin_name}* and *{dest_name}* too near each other (under 800m). Along pod na for proper corridor movement pass 800m. Which further junction down the road you wan reach?
 
 quote_ready: |
+  No wahala! Clean 4-seat pod dey load right now inside *{anchor_name}* (just by *{origin_name}*, safe station forecourt, zero agbero wahala). Movement reach *{dest_name}* na *{unit_fare_naira}* per seat (*{total_fare_naira}* total for *{seats}* seat(s), you save {savings_pct}% pass solo drop). Make I lock your seat inside escrow sharp-sharp?
   *Along Corridor Quote ({corridor_id})*
-  Safe Pickup Anchor: *{anchor_name}* ({origin_name})
-  Drop-off: *{dest_name}*
-  Seats: *{seats}* ({unit_fare_naira}/seat, you save {savings_pct}% pass solo drop)
-  Total Money: *{total_fare_naira}* (Safe inside Escrow)
-  Reply *YES* make we lock your seat sharp-sharp, or *CANCEL* if you no go again.
 
 pooling_started: |
-  *Your Seat Don Lock Inside Pod Pool!*
-  Request Code: `{request_code}`
-  Pickup Anchor: *{anchor_name}*
-  Drop-off: *{dest_name}*
-  Your Boarding Code (OTP): *{boarding_otp}*
-  Escrow Hold: *{total_fare_naira}* ({seats} seat(s))
-  We dey pair you inside 4-person Along pod ({current_seats}/4 seats full).
+  Twale! Your seat don lock inside pod (`{request_code}`). Just waka enter *{anchor_name}* forecourt now and show driver your Boarding Code *{boarding_otp}* before moto move. Your *{total_fare_naira}* dey safe inside escrow until driver punch your code ({current_seats}/4 seats don full).
 
 pod_matched: |
   *Pod `{pod_code}` Don Set!*

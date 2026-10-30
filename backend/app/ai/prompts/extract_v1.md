@@ -90,16 +90,14 @@ Output:
 ```json
 {
   "intent": "BOOK_RIDE",
-  "language": "ha",
-  "origin_raw": "Bwari",
-  "destination_raw": "Kasuwar Wuse",
-  "relational_ref": null,
-  "seats": 2,
-  "luggage": false,
-  "women_only_preference": false,
-  "rating": null,
-  "confidence": 0.96,
-  "needs_clarification": false,
-  "clarification_slot": null
+  "detected_locale": "ha",
+  "origin_mention": "Bwari",
+  "destination_mention": "Kasuwar Wuse",
+  "seat_count_requested": 2,
+  "safety_passed": true,
+  "safety_reason": "benign Hausa ride booking request",
+  "clarifying_question": null,
+  "has_relational_modifier": false,
+  "confidence": 0.96
 }
 ```

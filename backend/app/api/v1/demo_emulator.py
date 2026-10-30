@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from app.ai.asr import transcribe_voice_note
 from app.ai.graph.workflow import AlongConversationWorkflow
 from app.api.v1.drivers import ACTIVE_PODS_STORE
+from app.api.v1.trips_public import PUBLIC_TRIPS_BY_TOKEN
 from app.api.v1.webhooks_whatsapp import get_webhook_redis_store
 from app.core.ids import generate_boarding_otp, generate_share_token
 from app.core.money import format_naira
@@ -219,6 +220,7 @@ async def get_live_replay() -> dict[str, Any]:
 async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
     """Transcribe inbound audio via real ASR pipeline with honest labeling."""
     content_type = request.headers.get("content-type", "")
+    client_transcript = request.headers.get("x-client-transcript") or None
     raw_body = await request.body()
     audio_bytes = raw_body
     filename = "voice_note.ogg"
@@ -231,17 +233,23 @@ async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
             policy=email.policy.default,
         )
         for part in msg.iter_parts():
+            cd = part.get("Content-Disposition", "")
+            if 'name="client_transcript"' in cd:
+                payload = part.get_payload(decode=True)
+                if payload:
+                    client_transcript = payload.decode("utf-8", errors="ignore").strip()
+                continue
             payload = part.get_payload(decode=True)
             if payload:
                 audio_bytes = payload
                 fname = part.get_filename()
                 if fname:
                     filename = fname
-                break
 
     res = await transcribe_voice_note(
         audio_bytes,
         filename=filename,
+        client_transcript=client_transcript,
     )
     return {
         "status": "ok",
@@ -249,7 +257,7 @@ async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
         "detected_language": res.detected_language,
         "model_used": res.model_used,
         "provider": res.provider,
-        "label": "Non-Meta ASR (Whisper)",
+        "label": res.label if res.label != "none" else "Non-Meta ASR (Whisper)",
         "latency_ms": res.latency_ms,
         "fallback": res.fallback,
     }
@@ -296,6 +304,38 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
     pod_entry.setdefault("otp_created_at", {})["rr-demo-01"] = time.time()
     pod_entry.setdefault("otp_attempts", {})["rr-demo-01"] = 0
 
+    # Sync public trip share store with the commuter's exact booked origin/destination
+    if state.share_token and (state.anchor_name or state.origin_name) and state.destination_name:
+        PUBLIC_TRIPS_BY_TOKEN[state.share_token] = {
+            "share_token": state.share_token,
+            "pod_code": state.pod_code or "POD-842A",
+            "corridor_id": state.corridor_id or "BWR-DUT-WUS",
+            "corridor_name": f"{state.origin_name or 'Origin'} -> {state.destination_name}",
+            "status": "AWAITING_BOARDING",
+            "origin_anchor": state.anchor_name or state.origin_name or "Safe Forecourt Anchor",
+            "destination_landmark": state.destination_name,
+            "driver": {
+                "full_name": "Musa Bello",
+                "profile_note": "Verified commercial driver · NIN verified",
+                "vehicle_desc": "Volkswagen Golf 4 (Silver)",
+                "plate_number": "ABJ-402-AL",
+                "id_on_file": True,
+                "rating": 4.94,
+            },
+            "telemetry": {
+                "lat": state.origin_lat or 9.1779,
+                "lng": state.origin_lng or 7.3736,
+                "current_landmark": state.anchor_name or state.origin_name or "Forecourt Bay",
+                "progress_pct": 0,
+                "eta_minutes": 11,
+                "route_deviation_m": 4,
+                "is_on_corridor": True,
+            },
+            "escrow_status": "Locked in Atomic Escrow",
+            "sos_active": state.stage == "SOS_ACTIVE",
+            "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+
     gross_pod_kobo = max(state.total_fare_kobo, state.unit_fare_kobo * 4)
     driver_net_kobo = int(round(gross_pod_kobo * 0.90))
     platform_fee_kobo = gross_pod_kobo - driver_net_kobo
@@ -315,6 +355,7 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
             "stage": state.stage,
             "reply_text": state.last_reply_text,
             "buttons": state.last_buttons,
+            "seats": state.seats,
             "request_code": state.request_code,
             "boarding_otp": state.boarding_otp,
             "share_token": state.share_token,
@@ -328,6 +369,7 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
             "destination_name": state.destination_name,
             "anchor_id": state.anchor_id,
             "anchor_name": state.anchor_name,
+            "seats": state.seats,
             "unit_fare_naira": format_naira(state.unit_fare_kobo),
             "total_fare_naira": format_naira(state.total_fare_kobo),
             "pod_gross_naira": format_naira(gross_pod_kobo),

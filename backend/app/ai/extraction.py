@@ -408,6 +408,19 @@ async def extract_intent_and_slots(
             attempts = list(res.attempts)
             if res.parsed_json is not None and res.level != "rule_based":
                 parsed = ExtractionOutput.model_validate({**res.parsed_json, "model_used": res.model_used})
+                # Hybrid enrichment: if LLM missed a relational ref or known gazetteer landmark, merge deterministic hit
+                det = extract_deterministic(utterance, missing_slot_context=missing_slot_context)
+                if not parsed.origin_mention and det.origin_mention:
+                    parsed.origin_mention = det.origin_mention
+                if not parsed.destination_mention and det.destination_mention:
+                    parsed.destination_mention = det.destination_mention
+                if not parsed.origin_relational and det.origin_relational:
+                    parsed.origin_relational = det.origin_relational
+                if not parsed.destination_relational and det.destination_relational:
+                    parsed.destination_relational = det.destination_relational
+                    parsed.has_relational_modifier = True
+                if parsed.seat_count_requested == 1 and det.seat_count_requested > 1:
+                    parsed.seat_count_requested = det.seat_count_requested
                 return parsed, {
                     "tier": "live_llm",
                     "llm_level": res.level,

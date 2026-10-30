@@ -78,7 +78,9 @@ export default function RidePage() {
         <WhatsAppSimulator
           messages={chat.messages}
           onSendMessage={(text) => chat.sendMessage(text)}
-          onSendVoiceAudio={(blob, filename) => chat.sendVoiceAudio(blob, filename)}
+          onSendVoiceAudio={(blob, filename, clientTranscript, durationStr, audioUrl) =>
+            chat.sendVoiceAudio(blob, filename, clientTranscript, durationStr, audioUrl)
+          }
           onSendSampleInput={(text, loc, isVoice) => {
             if (loc) {
               chat.setActiveLocale(loc);

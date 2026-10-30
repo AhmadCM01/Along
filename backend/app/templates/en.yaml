@@ -1,47 +1,35 @@
 welcome_help: |
-  Welcome to *Along* (Abuja Shared Corridor Transit).
-  Send your pickup and destination in English, Pidgin, or Hausa (text or voice note).
-  Example: *"From Dutse First Gate to Wuse Market, 2 seats"*
+  Good day! I am your *Along Abuja Corridor Coordinator*.
+  Just tell me where you are standing and where you are heading in English, Pidgin, or Hausa (text or voice note), and I will match you to a safe filling-station pod right away.
 
 ask_origin: |
-  Where should your Along pod pick you up? (e.g., *Dutse First Gate*, *Sokale Roundabout*, *Lugbe Police Signboard*, or *Orange Market Mararaba*)
+  I see where you are heading! Which Abuja junction or landmark are you standing at right now so I can direct you to the nearest safe filling-station bay? (e.g., *Dutse First Gate*, *Sokale Roundabout*, *Lugbe Police Signboard*, or *Orange Market Mararaba*)
 
 ask_destination: |
-  Got your pickup at *{origin_name}*. Where are you heading along the corridor? (e.g., *Berger*, *Wuse Market*, *Area 1*, or *Federal Secretariat*)
+  Got you at *{origin_name}*! Where along the corridor are you dropping off today? (e.g., *Berger Underbridge*, *Oando Katampe*, *Wuse Market*, *Area 1*, or *Federal Secretariat*)
 
 ask_both_slots: |
-  Please share your pickup landmark and destination landmark along an Abuja corridor.
-  Example: *"From Sokale Roundabout to Berger"*
+  Tell me your current junction and where you are heading in Abuja, and I will check the next 4-seat pod for you. For example: *"From Sokale Roundabout, drop me at that Oando after Katampe bridge"*
 
 disambiguate_origin: |
-  Did you mean one of these pickup points?
+  I found a few spots matching your pickup. Which one are you closest to right now?
   {options_text}
-  Reply with the number (`1`, `2`, or `3`) or type the landmark name.
+  Reply with `1`, `2`, or `3` (or type the name).
 
 disambiguate_destination: |
-  Did you mean one of these drop-off points?
+  Which of these drop-off points along the corridor did you mean?
   {options_text}
-  Reply with the number (`1`, `2`, or `3`) or type the landmark name.
+  Reply with `1`, `2`, or `3` (or type the name).
 
 short_trip_rejected: |
-  *{origin_name}* and *{dest_name}* are less than 800m apart. Along pods serve shared corridor trips of 800m or more. Please choose a further destination along the corridor.
+  *{origin_name}* and *{dest_name}* are right next to each other (under 800m). Our Along pods run corridor trips of 800m and above. Which further junction down the road are you heading to?
 
 quote_ready: |
+  I have a 4-seat pod loading right now inside *{anchor_name}* (just a short walk from *{origin_name}*, safe forecourt with zero roadside touts). Dropping you at *{dest_name}* is *{unit_fare_naira}* per seat (*{total_fare_naira}* total for *{seats}* seat(s), saving you {savings_pct}% vs a solo ride). Shall I lock your seat in escrow?
   *Along Corridor Quote ({corridor_id})*
-  Pickup Anchor: *{anchor_name}* ({origin_name})
-  Drop-off: *{dest_name}*
-  Seats: *{seats}* ({unit_fare_naira}/seat, saves {savings_pct}% vs solo ride)
-  Total Fare: *{total_fare_naira}* (Escrow-Protected)
-  Reply *YES* to lock your seat(s) or *CANCEL* to stop.
 
 pooling_started: |
-  *Seat Locked in Pod Pool!*
-  Request Code: `{request_code}`
-  Pickup Anchor: *{anchor_name}*
-  Drop-off: *{dest_name}*
-  Boarding Code (OTP): *{boarding_otp}*
-  Escrow Held: *{total_fare_naira}* ({seats} seat(s))
-  We are matching you into a 4-seat pod ({current_seats}/4 seats filled).
+  Awesome, your seat is locked in! Walk into the safe forecourt at *{anchor_name}* and show Boarding Code *{boarding_otp}* to your driver before takeoff. Your *{total_fare_naira}* fare is held safely in escrow until your code is verified ({current_seats}/4 seats filled, Request `{request_code}`).
 
 pod_matched: |
   *Pod `{pod_code}` Matched!*

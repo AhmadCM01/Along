@@ -497,6 +497,7 @@ export default function DriverPage() {
 
               <Link
                 href={`/t/${trip.activeShareToken}`}
+                onClick={() => trip.startCorridorTrip()}
                 style={{
                   background: "var(--brand-primary)",
                   color: "#fff",
@@ -512,7 +513,7 @@ export default function DriverPage() {
                   boxShadow: "0 4px 12px rgba(5, 150, 105, 0.25)",
                 }}
               >
-                <span>Next: Open Dynamic Corridor Map & Live Tracker</span>
+                <span>Initiate Corridor Trip & Launch Live Abuja Map</span>
                 <span>➔</span>
               </Link>
             </div>

@@ -109,6 +109,7 @@ async def transcribe_voice_note(
     *,
     filename: str = "voice_note.ogg",
     fixture_id: str | None = None,
+    client_transcript: str | None = None,
 ) -> ASRResult:
     """Transcribe a WhatsApp voice note with API-first routing and honest fallback."""
     start = time.perf_counter()
@@ -118,7 +119,7 @@ async def transcribe_voice_note(
     groq_key = settings.get_effective_groq_key()
 
     # 1. Direct Meta Model API (when enabled)
-    if meta_key:
+    if meta_key and audio_bytes and not fixture_id:
         try:
             wav_bytes = _convert_to_pcm16_wav(audio_bytes)
             url = f"{settings.META_MODEL_API_BASE_URL.rstrip('/')}/asr/transcribe"
@@ -140,22 +141,25 @@ async def transcribe_voice_note(
                 payload = resp.json()
                 returned_model = str(payload.get("model") or "muse-voice-transcribe-1.0")
                 latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
-                return ASRResult(
-                    transcript=payload.get("text", "").strip(),
-                    detected_language=payload.get("language", "pcm"),
-                    model_used=returned_model,
-                    provider="meta_model_api",
-                    label="Meta Model API (Muse Voice)",
-                    latency_ms=latency_ms,
-                    fallback=False,
-                )
+                text_out = payload.get("text", "").strip()
+                if text_out:
+                    return ASRResult(
+                        transcript=text_out,
+                        detected_language=payload.get("language", "pcm"),
+                        model_used=returned_model,
+                        provider="meta_model_api",
+                        label="Meta Model API (Muse Voice)",
+                        latency_ms=latency_ms,
+                        fallback=False,
+                    )
         except Exception as exc:
             logger.warning("meta_asr_transcribe_fallback", error=str(exc))
 
     # 2. Groq Whisper (labeled Non-Meta ASR)
-    if groq_key:
+    if groq_key and audio_bytes and not fixture_id:
         try:
             url = "https://api.groq.com/openai/v1/audio/transcriptions"
+            mime_type = "audio/webm" if filename.lower().endswith(".webm") else "audio/ogg"
             async with httpx.AsyncClient(timeout=12.0) as client:
                 resp = await client.post(
                     url,
@@ -165,23 +169,41 @@ async def transcribe_voice_note(
                         "prompt": ABUJA_ASR_VOCABULARY_PROMPT,
                         "response_format": "json",
                     },
-                    files={"file": (filename, audio_bytes, "audio/ogg")},
+                    files={"file": (filename, audio_bytes, mime_type)},
                 )
                 resp.raise_for_status()
                 payload = resp.json()
                 returned_model = str(payload.get("model") or settings.WHISPER_MODEL)
                 latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
-                return ASRResult(
-                    transcript=payload.get("text", "").strip(),
-                    detected_language=payload.get("language", "pcm"),
-                    model_used=returned_model,
-                    provider="groq_whisper",
-                    label="Non-Meta ASR",
-                    latency_ms=latency_ms,
-                    fallback=False,
-                )
+                text_out = payload.get("text", "").strip()
+                if text_out:
+                    return ASRResult(
+                        transcript=text_out,
+                        detected_language=payload.get("language", "pcm"),
+                        model_used=returned_model,
+                        provider="groq_whisper",
+                        label="Non-Meta ASR",
+                        latency_ms=latency_ms,
+                        fallback=False,
+                    )
         except Exception as exc:
             logger.warning("groq_whisper_error", error=str(exc))
+
+    # 2b. Live Browser Web Speech API Transcript (when user spoke into microphone without cloud ASR key)
+    if client_transcript and client_transcript.strip():
+        clean_live = client_transcript.strip()
+        from app.ai.extraction import detect_language
+        detected_lang = detect_language(clean_live)
+        latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
+        return ASRResult(
+            transcript=clean_live,
+            detected_language=detected_lang,
+            model_used="web-speech-en-NG",
+            provider="browser_live_asr",
+            label="Live Microphone ASR (en-NG)",
+            latency_ms=latency_ms,
+            fallback=False,
+        )
 
     # 3. Offline / Demo Voice Fixtures (Honest Fallback)
     stem = filename.rsplit(".", 1)[0].lower()

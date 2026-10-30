@@ -28,7 +28,7 @@
 
   /* 10% Signals: Amber (Escrow & Boarding only) */
   --signal-amber: #F59E0B;
-  --signal-ink: #0F172A;
+  --signal-ink: #92400E;
   --signal-soft: #FEF3C7;
 
   /* 10% Signals: Red (SOS and real errors only) */
@@ -97,7 +97,7 @@
 
   /* 10% Signals: Amber (Escrow & Boarding only) */
   --signal-amber: #FBBF24;
-  --signal-ink: #0B141A;
+  --signal-ink: #FBBF24;
   --signal-soft: #2D2311;
 
   /* 10% Signals: Red (SOS and real errors only) */

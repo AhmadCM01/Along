@@ -6,6 +6,7 @@ import { BottomTabBar } from "@/components/navigation/BottomTabBar";
 import { DepartureNumeral } from "@/components/ui/DepartureNumeral";
 import { AbujaCorridorMap } from "@/components/demo/AbujaCorridorMap";
 import { TransitStrip } from "@/components/demo/TransitStrip";
+import { LinkChainIcon, SosBeaconIcon } from "@/components/icons/AlongIcons";
 import { useAlongTrip } from "@/context/AlongTripContext";
 import {
   getPublicTripShare,
@@ -161,13 +162,36 @@ export default function TripTrackerPage({
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
-              {copiedLink ? "✓ Link Copied" : "🔗 Copy Share Link"}
+              <LinkChainIcon size={13} color="var(--brand-primary)" />
+              <span>{copiedLink ? "Link Copied ✓" : "Copy Share Link"}</span>
             </button>
 
-            <DepartureNumeral size="sm" variant={sosActive ? "danger" : "brand"}>
-              {sosActive ? "SOS ACTIVE" : "IN TRANSIT"}
+            <DepartureNumeral
+              size="sm"
+              variant={
+                sosActive
+                  ? "danger"
+                  : trip.journeyStage === "IN_TRANSIT" || trip.journeyStage === "COMPLETED"
+                  ? "brand"
+                  : trip.journeyStage === "CONFIRMED" || trip.journeyStage === "PROPOSAL"
+                  ? "amber"
+                  : "neutral"
+              }
+            >
+              {sosActive
+                ? "SOS ACTIVE"
+                : trip.journeyStage === "IN_TRANSIT"
+                ? "IN TRANSIT"
+                : trip.journeyStage === "COMPLETED"
+                ? "ARRIVED"
+                : trip.journeyStage === "CONFIRMED" || trip.journeyStage === "PROPOSAL"
+                ? "AWAITING OTP"
+                : "STANDBY"}
             </DepartureNumeral>
           </div>
         </section>
@@ -175,10 +199,10 @@ export default function TripTrackerPage({
         {/* Smart Curved Corridor Map */}
         <section>
           <AbujaCorridorMap
-            corridorId={trip.activeCorridorId || "BWR-DUT-WUS"}
-            originName={trip.currentQuote?.originName || "Dutse First Gate"}
-            destName={trip.currentQuote?.destName || "Berger Roundabout"}
-            anchorName={trip.currentQuote?.anchorName || "A.A. Rano Dutse"}
+            corridorId={trip.currentQuote?.corridorId || trip.activeCorridorId || "BWR-DUT-WUS"}
+            originName={trip.currentQuote?.originName || tripData?.origin_anchor}
+            destName={trip.currentQuote?.destName || tripData?.destination_landmark}
+            anchorName={trip.currentQuote?.anchorName || tripData?.origin_anchor}
           />
         </section>
 
@@ -239,14 +263,27 @@ export default function TripTrackerPage({
               <div>
                 <div style={{ color: "var(--text-muted)" }}>Safe Forecourt Anchor</div>
                 <strong style={{ color: "var(--text-ink)" }}>
-                  {trip.currentQuote?.anchorName || "A.A. Rano Dutse"}
+                  {trip.currentQuote?.anchorName ||
+                    tripData?.origin_anchor ||
+                    "Select a route on WhatsApp"}
                 </strong>
               </div>
 
               <div>
                 <div style={{ color: "var(--text-muted)" }}>Escrow Protection</div>
-                <strong style={{ color: "var(--brand-primary)" }}>
-                  {trip.currentQuote?.totalFare || "₦1,800"} Captured
+                <strong
+                  style={{
+                    color:
+                      trip.journeyStage === "IN_TRANSIT" || trip.journeyStage === "CONFIRMED"
+                        ? "var(--brand-primary)"
+                        : "var(--text-muted)",
+                  }}
+                >
+                  {trip.currentQuote
+                    ? `${trip.currentQuote.totalFare} (${
+                        trip.journeyStage === "IN_TRANSIT" ? "Captured" : "Held in Escrow"
+                      })`
+                    : "Awaiting Booking"}
                 </strong>
               </div>
             </div>
@@ -272,9 +309,15 @@ export default function TripTrackerPage({
                   fontSize: 15,
                   fontWeight: 800,
                   color: sosActive ? "var(--danger-red)" : "var(--text-ink)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
                 }}
               >
-                {sosActive ? "🚨 EMERGENCY SOS BROADCAST ACTIVE" : "Anti-'One-Chance' Safety Beacon"}
+                <SosBeaconIcon size={16} color="var(--danger-red)" />
+                <span>
+                  {sosActive ? "EMERGENCY SOS BROADCAST ACTIVE" : "Anti-'One-Chance' Safety Beacon"}
+                </span>
               </div>
               <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 3 }}>
                 1-tap panic alert broadcasts live GPS coordinates & vehicle plate to FCT Rapid Response
@@ -299,7 +342,7 @@ export default function TripTrackerPage({
                 gap: 8,
               }}
             >
-              <span>🚨</span>
+              <SosBeaconIcon size={16} color={sosActive ? "#fff" : "var(--danger-red)"} />
               <span>{sosActive ? "SOS Broadcasted to Command Center" : "Trigger Emergency SOS"}</span>
             </button>
 

@@ -299,7 +299,21 @@ async def execute_conversation_turn(
         return state
 
     # 7. Merge newly extracted slots into session state
-    if extracted.seat_count_requested and (extracted.seat_count_requested > 1 or state.seats == 1):
+    # If starting a new booking after a previous quote/pooling/completed turn, reset stale slots
+    if extracted.intent == "BOOK_RIDE" and (
+        state.stage in ("POOLING", "COMPLETED", "CANCELLED", "SOS_ACTIVE")
+        or (extracted.origin_mention and extracted.destination_mention)
+        or (extracted.origin_mention and extracted.destination_relational)
+    ):
+        state.origin_mention = None
+        state.destination_mention = None
+        state.origin_name = None
+        state.destination_name = None
+        state.boarding_otp = None
+        state.share_token = None
+        state.request_code = None
+        state.seats = extracted.seat_count_requested or 1
+    elif extracted.seat_count_requested and (extracted.seat_count_requested > 1 or state.seats == 1):
         state.seats = extracted.seat_count_requested
 
     if extracted.origin_mention:

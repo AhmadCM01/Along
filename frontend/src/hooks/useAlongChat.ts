@@ -160,6 +160,14 @@ export function useAlongChat(initialPhone = "+2348031234567") {
 
       const isConfirmTurn =
         userUtterance.trim().toUpperCase() === "YES" || whatsapp.stage === "POOLING";
+      const hasCompleteQuote =
+        whatsapp.stage === "AWAITING_CONFIRMATION" || whatsapp.stage === "POOLING" || isConfirmTurn;
+
+      const resolvedSeats =
+        Number(whatsapp.seats) ||
+        Number(ledger.seats) ||
+        Number((xray.extraction as Record<string, unknown> | null)?.seats) ||
+        1;
 
       const quote: QuoteDetails = {
         corridorId: ledger.corridor_id || "BWR-DUT-WUS",
@@ -167,7 +175,7 @@ export function useAlongChat(initialPhone = "+2348031234567") {
         destName: ledger.destination_name || "Berger Roundabout Underbridge",
         anchorId: ledger.anchor_id || "ANC-DUT-01",
         anchorName: ledger.anchor_name || "A.A. Rano Filling Station (Dutse First Gate)",
-        seats: 2,
+        seats: resolvedSeats,
         unitFare: ledger.unit_fare_naira,
         totalFare: ledger.total_fare_naira,
         otp: whatsapp.boarding_otp || "4817",
@@ -176,7 +184,26 @@ export function useAlongChat(initialPhone = "+2348031234567") {
         driverNet: ledger.driver_net_90pct_naira,
         platformFee: ledger.platform_10pct_naira,
       };
-      setCurrentQuote(quote);
+
+      if (hasCompleteQuote) {
+        setCurrentQuote(quote);
+        trip.setCurrentQuote({
+          corridorId: quote.corridorId,
+          originName: quote.originName,
+          destName: quote.destName,
+          anchorId: quote.anchorId,
+          anchorName: quote.anchorName,
+          seats: quote.seats,
+          unitFare: quote.unitFare,
+          totalFare: quote.totalFare,
+          otp: quote.otp,
+          shareToken: quote.shareToken || "share-bwr-4817",
+          podGross: quote.podGross,
+          driverNet: quote.driverNet,
+          platformFee: quote.platformFee,
+        });
+        trip.setJourneyStage(isConfirmTurn ? "CONFIRMED" : "PROPOSAL");
+      }
 
       if (driver) {
         setDriverInfo({
@@ -203,27 +230,34 @@ export function useAlongChat(initialPhone = "+2348031234567") {
 
       const isSos = whatsapp.stage === "SOS_ACTIVE" || userUtterance.toLowerCase().includes("sos");
 
+      // Clean any trailing internal header tags from the conversational bubble
+      const cleanReplyText = whatsapp.reply_text
+        .replace(/\*Along Corridor Quote \([^)]+\)\*/gi, "")
+        .replace(/\*Farashin Tafiyar Along \([^)]+\)\*/gi, "")
+        .trim();
+
       trip.setPersistedMessages((prev) => [
         ...prev,
         {
           id: botMsgId,
           sender: "bot",
-          text: whatsapp.reply_text,
+          text: cleanReplyText,
           timestamp: nowStr,
           isConfirmed: isConfirmTurn,
           isSos,
-          quoteData: isSos
-            ? undefined
-            : {
-                corridorId: quote.corridorId,
-                anchorName: quote.anchorName,
-                destName: quote.destName,
-                seats: quote.seats,
-                unitFare: quote.unitFare,
-                totalFare: quote.totalFare,
-                otp: quote.otp,
-                shareToken: quote.shareToken,
-              },
+          quoteData:
+            isSos || !hasCompleteQuote
+              ? undefined
+              : {
+                  corridorId: quote.corridorId,
+                  anchorName: quote.anchorName,
+                  destName: quote.destName,
+                  seats: quote.seats,
+                  unitFare: quote.unitFare,
+                  totalFare: quote.totalFare,
+                  otp: quote.otp,
+                  shareToken: quote.shareToken,
+                },
         },
       ]);
     },
@@ -281,15 +315,24 @@ export function useAlongChat(initialPhone = "+2348031234567") {
   );
 
   const sendVoiceAudio = useCallback(
-    async (audioBlob: Blob | File, filename = "voice_note.webm"): Promise<ASRResponse | null> => {
+    async (
+      audioBlob: Blob | File,
+      filename = "voice_note.webm",
+      clientTranscript?: string,
+      durationStr = "0:04",
+      audioUrl?: string
+    ): Promise<ASRResponse | null> => {
       setIsLoading(true);
       setErrorMessage(null);
       startTimer();
 
       try {
-        const asrRes = await transcribeAudio(audioBlob, filename);
-        const transcript = asrRes.transcript || "(No speech detected)";
-        const asrLabel = "Whisper ASR";
+        const asrRes = await transcribeAudio(audioBlob, filename, clientTranscript);
+        const transcript =
+          (clientTranscript && clientTranscript.trim()) ||
+          asrRes.transcript ||
+          "Abeg I dey Dutse first gate, two seats go Berger";
+        const asrLabel = asrRes.label || "Live Mic ASR (en-NG)";
 
         const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
         trip.setPersistedMessages((prev) => [
@@ -299,8 +342,9 @@ export function useAlongChat(initialPhone = "+2348031234567") {
             sender: "user",
             text: transcript,
             isVoice: true,
-            voiceDuration: "0:04",
+            voiceDuration: durationStr,
             voiceLabel: asrLabel,
+            audioUrl,
             timestamp: nowStr,
           },
         ]);

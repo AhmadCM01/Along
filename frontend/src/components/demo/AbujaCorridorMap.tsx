@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
+import Link from "next/link";
 import { CorridorNode } from "@/components/brand/CorridorNode";
 import { useAlongTrip } from "@/context/AlongTripContext";
 
@@ -13,6 +14,7 @@ export interface Waypoint {
   isAnchor: boolean;
   partner: string;
   labelPos: "top" | "bottom";
+  keywords: string[];
 }
 
 export interface CorridorDefinition {
@@ -27,16 +29,86 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
   "BWR-DUT-WUS": {
     id: "BWR-DUT-WUS",
     name: "Bwari to Wuse",
-    highway: "Bwari-Dutse-Murtala Mohammed Expwy",
+    highway: "Bwari-Dutse-Murtala Mohammed Expwy (ONEX)",
     unitFare: "₦900",
     waypoints: [
-      { id: "BWR", name: "Bwari", km: 0.0, x: 65, y: 78, isAnchor: true, partner: "NIPCO", labelPos: "top" },
-      { id: "DUT", name: "Dutse 1st Gate", km: 15.1, x: 165, y: 145, isAnchor: true, partner: "A.A. Rano", labelPos: "bottom" },
-      { id: "SOK", name: "Sokale", km: 18.2, x: 265, y: 120, isAnchor: true, partner: "Bovas", labelPos: "top" },
-      { id: "KAT", name: "Katampe", km: 26.1, x: 375, y: 168, isAnchor: true, partner: "Oando", labelPos: "bottom" },
-      { id: "MAB", name: "Mabushi", km: 29.4, x: 475, y: 142, isAnchor: false, partner: "Bridge", labelPos: "top" },
-      { id: "BER", name: "Berger", km: 32.5, x: 565, y: 205, isAnchor: false, partner: "Flyover", labelPos: "bottom" },
-      { id: "WUS", name: "Wuse Mkt", km: 36.5, x: 655, y: 185, isAnchor: true, partner: "Total", labelPos: "top" },
+      {
+        id: "BWR",
+        name: "Bwari",
+        km: 0.0,
+        x: 115,
+        y: 56,
+        isAnchor: true,
+        partner: "NIPCO Bwari",
+        labelPos: "top",
+        keywords: ["bwari", "ushafa", "nipco"],
+      },
+      {
+        id: "DUT",
+        name: "Dutse 1st Gate",
+        km: 15.1,
+        x: 205,
+        y: 118,
+        isAnchor: true,
+        partner: "A.A. Rano Dutse",
+        labelPos: "bottom",
+        keywords: ["dutse", "first gate", "1st gate", "alhaji", "a.a. rano"],
+      },
+      {
+        id: "SOK",
+        name: "Sokale",
+        km: 18.2,
+        x: 295,
+        y: 96,
+        isAnchor: true,
+        partner: "Matrix / Bovas Sokale",
+        labelPos: "top",
+        keywords: ["sokale", "matrix", "bovas", "mopol", "tipper"],
+      },
+      {
+        id: "KAT",
+        name: "Katampe",
+        km: 26.1,
+        x: 398,
+        y: 146,
+        isAnchor: true,
+        partner: "Oando Katampe Bridge",
+        labelPos: "bottom",
+        keywords: ["katampe", "oando", "extension"],
+      },
+      {
+        id: "MAB",
+        name: "Mabushi",
+        km: 29.4,
+        x: 488,
+        y: 124,
+        isAnchor: false,
+        partner: "Mabushi Bridge",
+        labelPos: "top",
+        keywords: ["mabushi", "minister"],
+      },
+      {
+        id: "BER",
+        name: "Berger",
+        km: 32.5,
+        x: 572,
+        y: 184,
+        isAnchor: false,
+        partner: "Berger Underbridge",
+        labelPos: "bottom",
+        keywords: ["berger", "gadar", "underbridge"],
+      },
+      {
+        id: "WUS",
+        name: "Wuse Market",
+        km: 36.5,
+        x: 662,
+        y: 158,
+        isAnchor: true,
+        partner: "Total Wuse Mkt",
+        labelPos: "top",
+        keywords: ["wuse", "kasuwar"],
+      },
     ],
   },
   "ZUB-KUB-WUS": {
@@ -45,51 +117,261 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
     highway: "Kubwa Expressway (Murtala Mohammed Way)",
     unitFare: "₦900",
     waypoints: [
-      { id: "ZUB", name: "Zuba", km: 0.0, x: 65, y: 110, isAnchor: true, partner: "Conoil", labelPos: "top" },
-      { id: "DEI", name: "Dei-Dei", km: 8.5, x: 175, y: 165, isAnchor: true, partner: "NNPC", labelPos: "bottom" },
-      { id: "KUB", name: "Kubwa FO1", km: 18.0, x: 295, y: 125, isAnchor: true, partner: "TotalEnergies", labelPos: "top" },
-      { id: "GWA", name: "Gwarinpa", km: 26.4, x: 415, y: 178, isAnchor: true, partner: "A.A. Rano", labelPos: "bottom" },
-      { id: "MAB", name: "Mabushi", km: 33.1, x: 535, y: 145, isAnchor: false, partner: "Junction", labelPos: "top" },
-      { id: "WUS", name: "Wuse Zone 4", km: 38.2, x: 650, y: 200, isAnchor: true, partner: "Total", labelPos: "bottom" },
+      {
+        id: "ZUB",
+        name: "Zuba",
+        km: 0.0,
+        x: 72,
+        y: 94,
+        isAnchor: true,
+        partner: "Conoil Zuba",
+        labelPos: "top",
+        keywords: ["zuba"],
+      },
+      {
+        id: "DEI",
+        name: "Dei-Dei",
+        km: 8.5,
+        x: 178,
+        y: 148,
+        isAnchor: true,
+        partner: "NNPC Dei-Dei",
+        labelPos: "bottom",
+        keywords: ["dei-dei", "deidei"],
+      },
+      {
+        id: "KUB",
+        name: "Kubwa Arab Rd",
+        km: 18.0,
+        x: 292,
+        y: 112,
+        isAnchor: true,
+        partner: "TotalEnergies Kubwa",
+        labelPos: "top",
+        keywords: ["kubwa", "arab", "nnpc"],
+      },
+      {
+        id: "GWA",
+        name: "Gwarinpa",
+        km: 26.4,
+        x: 412,
+        y: 164,
+        isAnchor: true,
+        partner: "A.A. Rano Gwarinpa",
+        labelPos: "bottom",
+        keywords: ["gwarinpa", "galadima"],
+      },
+      {
+        id: "MAB",
+        name: "Utako / Berger",
+        km: 33.1,
+        x: 536,
+        y: 182,
+        isAnchor: false,
+        partner: "Berger Roundabout",
+        labelPos: "bottom",
+        keywords: ["utako", "berger", "mabushi"],
+      },
+      {
+        id: "WUS",
+        name: "Wuse Market",
+        km: 38.2,
+        x: 662,
+        y: 158,
+        isAnchor: true,
+        partner: "Total Wuse",
+        labelPos: "top",
+        keywords: ["wuse", "kasuwar"],
+      },
     ],
   },
   "ZUB-DEI-DUT": {
     id: "ZUB-DEI-DUT",
     name: "Zuba to Dutse",
-    highway: "Outer Northern Expressway",
+    highway: "Outer Northern Expressway -> Dutse Arterial",
     unitFare: "₦700",
     waypoints: [
-      { id: "ZUB", name: "Zuba", km: 0.0, x: 70, y: 160, isAnchor: true, partner: "Conoil", labelPos: "bottom" },
-      { id: "DEI", name: "Dei-Dei Mkt", km: 8.2, x: 215, y: 115, isAnchor: true, partner: "NNPC", labelPos: "top" },
-      { id: "DAW", name: "Dawaki", km: 15.0, x: 360, y: 175, isAnchor: false, partner: "Flyover", labelPos: "bottom" },
-      { id: "ALH", name: "Dutse Alhaji", km: 20.3, x: 505, y: 125, isAnchor: true, partner: "Bovas", labelPos: "top" },
-      { id: "DUT", name: "Dutse 1st Gate", km: 24.0, x: 645, y: 180, isAnchor: true, partner: "A.A. Rano", labelPos: "bottom" },
+      {
+        id: "ZUB",
+        name: "Zuba",
+        km: 0.0,
+        x: 72,
+        y: 94,
+        isAnchor: true,
+        partner: "Conoil Zuba",
+        labelPos: "top",
+        keywords: ["zuba"],
+      },
+      {
+        id: "DEI",
+        name: "Dei-Dei Mkt",
+        km: 8.2,
+        x: 192,
+        y: 146,
+        isAnchor: true,
+        partner: "NNPC Dei-Dei",
+        labelPos: "bottom",
+        keywords: ["dei-dei", "deidei"],
+      },
+      {
+        id: "KUB",
+        name: "Kubwa Express",
+        km: 15.0,
+        x: 330,
+        y: 114,
+        isAnchor: false,
+        partner: "Kubwa Flyover",
+        labelPos: "top",
+        keywords: ["kubwa", "dawaki"],
+      },
+      {
+        id: "DUT",
+        name: "Dutse Junction",
+        km: 20.3,
+        x: 472,
+        y: 98,
+        isAnchor: true,
+        partner: "A.A. Rano Dutse",
+        labelPos: "bottom",
+        keywords: ["dutse", "alhaji", "first gate"],
+      },
+      {
+        id: "BWR",
+        name: "Bwari Terminal",
+        km: 28.0,
+        x: 615,
+        y: 62,
+        isAnchor: true,
+        partner: "NIPCO Bwari",
+        labelPos: "top",
+        keywords: ["bwari"],
+      },
     ],
   },
   "ZUB-KRM-JAB": {
     id: "ZUB-KRM-JAB",
     name: "Zuba to Jabi",
-    highway: "Karmo-Life Camp Arterial",
+    highway: "Karimo-Life Camp Arterial",
     unitFare: "₦700",
     waypoints: [
-      { id: "ZUB", name: "Zuba", km: 0.0, x: 70, y: 100, isAnchor: true, partner: "Conoil", labelPos: "top" },
-      { id: "KRM", name: "Karmo Mkt", km: 14.5, x: 215, y: 165, isAnchor: true, partner: "A.A. Rano", labelPos: "bottom" },
-      { id: "LIF", name: "Life Camp", km: 22.0, x: 365, y: 125, isAnchor: true, partner: "Oando", labelPos: "top" },
-      { id: "LAK", name: "Jabi Lake", km: 28.5, x: 510, y: 185, isAnchor: false, partner: "Mall", labelPos: "bottom" },
-      { id: "JAB", name: "Jabi Park", km: 32.0, x: 645, y: 145, isAnchor: true, partner: "Mobil", labelPos: "top" },
+      {
+        id: "ZUB",
+        name: "Zuba",
+        km: 0.0,
+        x: 72,
+        y: 94,
+        isAnchor: true,
+        partner: "Conoil Zuba",
+        labelPos: "top",
+        keywords: ["zuba"],
+      },
+      {
+        id: "GWG",
+        name: "Gwagwa",
+        km: 8.5,
+        x: 185,
+        y: 172,
+        isAnchor: false,
+        partner: "Gwagwa Jct",
+        labelPos: "bottom",
+        keywords: ["gwagwa"],
+      },
+      {
+        id: "KRM",
+        name: "Karimo Mkt",
+        km: 14.5,
+        x: 300,
+        y: 196,
+        isAnchor: true,
+        partner: "A.A. Rano Karimo",
+        labelPos: "bottom",
+        keywords: ["karimo", "karmo"],
+      },
+      {
+        id: "LIF",
+        name: "Life Camp",
+        km: 22.0,
+        x: 416,
+        y: 168,
+        isAnchor: true,
+        partner: "Oando Life Camp",
+        labelPos: "top",
+        keywords: ["life camp", "lifecamp"],
+      },
+      {
+        id: "JAB",
+        name: "Jabi / Utako",
+        km: 28.5,
+        x: 538,
+        y: 198,
+        isAnchor: true,
+        partner: "Mobil Jabi Park",
+        labelPos: "bottom",
+        keywords: ["jabi", "utako", "lake"],
+      },
     ],
   },
   "GWL-LUG-AR1": {
     id: "GWL-LUG-AR1",
     name: "Gwagwalada to Area 1",
-    highway: "Umaru Musa Yar'Adua Airport Expwy",
+    highway: "Umaru Musa Yar'Adua Airport Expressway",
     unitFare: "₦1,000",
     waypoints: [
-      { id: "GWL", name: "Gwagwalada", km: 0.0, x: 70, y: 205, isAnchor: true, partner: "NNPC Mega", labelPos: "bottom" },
-      { id: "GIR", name: "Giri Jct", km: 12.0, x: 215, y: 150, isAnchor: false, partner: "Interchange", labelPos: "top" },
-      { id: "LUG", name: "Lugbe", km: 27.5, x: 365, y: 185, isAnchor: true, partner: "Total", labelPos: "bottom" },
-      { id: "CIT", name: "City Gate", km: 38.0, x: 510, y: 130, isAnchor: false, partner: "Monument", labelPos: "top" },
-      { id: "AR1", name: "Area 1", km: 45.0, x: 645, y: 165, isAnchor: true, partner: "Roundabout", labelPos: "bottom" },
+      {
+        id: "GWL",
+        name: "Gwagwalada",
+        km: 0.0,
+        x: 78,
+        y: 274,
+        isAnchor: true,
+        partner: "NNPC Mega Gwagwalada",
+        labelPos: "top",
+        keywords: ["gwagwalada"],
+      },
+      {
+        id: "GIR",
+        name: "Giri / Airport Jct",
+        km: 12.0,
+        x: 205,
+        y: 254,
+        isAnchor: false,
+        partner: "Airport Interchange",
+        labelPos: "top",
+        keywords: ["giri", "airport"],
+      },
+      {
+        id: "LUG",
+        name: "Lugbe Police Signboard",
+        km: 27.5,
+        x: 356,
+        y: 238,
+        isAnchor: true,
+        partner: "Conoil / Total Lugbe",
+        labelPos: "bottom",
+        keywords: ["lugbe", "police", "signboard", "conoil"],
+      },
+      {
+        id: "CIT",
+        name: "City Gate",
+        km: 38.0,
+        x: 494,
+        y: 218,
+        isAnchor: false,
+        partner: "City Gate Monument",
+        labelPos: "top",
+        keywords: ["city gate", "stadium"],
+      },
+      {
+        id: "AR1",
+        name: "Area 1 / Central",
+        km: 45.0,
+        x: 618,
+        y: 212,
+        isAnchor: true,
+        partner: "Total Area 1 Roundabout",
+        labelPos: "bottom",
+        keywords: ["area 1", "area1", "central", "garki"],
+      },
     ],
   },
   "MRB-NYA-CEN": {
@@ -98,17 +380,67 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
     highway: "Abuja-Keffi Expressway",
     unitFare: "₦600",
     waypoints: [
-      { id: "MRB", name: "Mararaba", km: 0.0, x: 645, y: 195, isAnchor: true, partner: "A.A. Rano", labelPos: "bottom" },
-      { id: "NYA", name: "Nyanya", km: 6.2, x: 505, y: 140, isAnchor: false, partner: "Bridge", labelPos: "top" },
-      { id: "KAR", name: "Karu", km: 11.5, x: 365, y: 185, isAnchor: true, partner: "Bovas", labelPos: "bottom" },
-      { id: "AYA", name: "AYA Asokoro", km: 18.0, x: 215, y: 125, isAnchor: true, partner: "Total", labelPos: "top" },
-      { id: "CEN", name: "Area 10 Central", km: 23.5, x: 75, y: 165, isAnchor: true, partner: "NNPC", labelPos: "bottom" },
+      {
+        id: "MRB",
+        name: "Mararaba Orange Mkt",
+        km: 0.0,
+        x: 702,
+        y: 268,
+        isAnchor: true,
+        partner: "A.A. Rano Mararaba",
+        labelPos: "bottom",
+        keywords: ["mararaba", "orange", "one man"],
+      },
+      {
+        id: "NYA",
+        name: "Nyanya / Karu",
+        km: 6.2,
+        x: 632,
+        y: 244,
+        isAnchor: true,
+        partner: "Bovas Nyanya Bridge",
+        labelPos: "top",
+        keywords: ["nyanya", "karu"],
+      },
+      {
+        id: "KUG",
+        name: "Kugbo",
+        km: 11.5,
+        x: 572,
+        y: 228,
+        isAnchor: false,
+        partner: "Kugbo Furniture Mkt",
+        labelPos: "bottom",
+        keywords: ["kugbo"],
+      },
+      {
+        id: "AYA",
+        name: "AYA Asokoro",
+        km: 18.0,
+        x: 668,
+        y: 198,
+        isAnchor: true,
+        partner: "Total AYA Asokoro",
+        labelPos: "top",
+        keywords: ["aya", "asokoro"],
+      },
+      {
+        id: "CEN",
+        name: "Federal Secretariat",
+        km: 23.5,
+        x: 604,
+        y: 186,
+        isAnchor: true,
+        partner: "NNPC Central Area",
+        labelPos: "top",
+        keywords: ["secretariat", "central", "area 10"],
+      },
     ],
   },
 };
 
 /**
- * Build a smooth Catmull-Rom / Cubic Bezier SVG path through a list of waypoints.
+ * Build a smooth Cubic Bezier SVG path through a list of waypoints.
  */
 function buildSmoothCurvePath(pts: Array<{ x: number; y: number }>): string {
   if (pts.length === 0) return "";
@@ -150,67 +482,121 @@ interface AbujaCorridorMapProps {
   originName?: string;
   destName?: string;
   anchorName?: string;
-  isLoading?: boolean;
-  elapsedSeconds?: number;
 }
 
 export function AbujaCorridorMap({
   corridorId = "BWR-DUT-WUS",
-  originName = "Dutse First Gate",
-  destName = "Berger Roundabout",
-  anchorName = "A.A. Rano Dutse",
+  originName,
+  destName,
+  anchorName,
 }: AbujaCorridorMapProps) {
   const trip = useAlongTrip();
-  const currentCorridorId = trip.activeCorridorId || corridorId;
+  const currentCorridorId = trip.currentQuote?.corridorId || trip.activeCorridorId || corridorId;
   const corridor = CORRIDOR_DATA[currentCorridorId] || CORRIDOR_DATA["BWR-DUT-WUS"];
 
-  // Trip progress along the booked segment [0..1]
-  const [segmentProgress, setSegmentProgress] = useState(0.42);
-  const [isPaused, setIsPaused] = useState(false);
+  // Strict Lifecycle: Corridor only moves when driver has initiated the trip (IN_TRANSIT)
+  const isTripInitiated = trip.journeyStage === "IN_TRANSIT";
+  const isTripCompleted = trip.journeyStage === "COMPLETED";
+  const hasBookingOrQuote =
+    Boolean(trip.currentQuote) ||
+    trip.journeyStage === "PROPOSAL" ||
+    trip.journeyStage === "CONFIRMED" ||
+    isTripInitiated ||
+    isTripCompleted;
 
-  // Identify pickup and drop-off waypoint indices
-  const { pickupIdx, dropIdx } = useMemo(() => {
+  // Progress along booked segment [0..1]
+  // Starts at 0.0 (at Pickup Forecourt) before trip initiation; progresses to 1.0 when IN_TRANSIT
+  const [segmentProgress, setSegmentProgress] = useState<number>(isTripInitiated ? 0.06 : 0.0);
+  const [hasArrived, setHasArrived] = useState<boolean>(isTripCompleted);
+
+  // Reset or start progress when journeyStage or route changes
+  useEffect(() => {
+    if (isTripInitiated) {
+      setHasArrived(false);
+      setSegmentProgress((prev) => (prev <= 0.02 || prev >= 0.99 ? 0.04 : prev));
+    } else if (isTripCompleted) {
+      setHasArrived(true);
+      setSegmentProgress(1.0);
+    } else {
+      setHasArrived(false);
+      setSegmentProgress(0.0);
+    }
+  }, [isTripInitiated, isTripCompleted, currentCorridorId, trip.currentQuote?.originName, trip.currentQuote?.destName]);
+
+  // Identify pickup and drop-off waypoint indices dynamically from the booked route
+  const { pickupIdx, dropIdx, displayAnchorName, displayDestName } = useMemo(() => {
     const wps = corridor.waypoints;
-    const pickupTerm = (trip.currentQuote?.anchorName || anchorName || originName).toLowerCase();
-    const dropTerm = (trip.currentQuote?.destName || destName).toLowerCase();
+    const rawOrigin = trip.currentQuote?.originName || originName || "";
+    const rawAnchor = trip.currentQuote?.anchorName || anchorName || "";
+    const rawDest = trip.currentQuote?.destName || destName || "";
+
+    const pickupSearch = `${rawOrigin} ${rawAnchor}`.toLowerCase();
+    const dropSearch = rawDest.toLowerCase();
 
     let pIdx = wps.findIndex(
       (w) =>
-        pickupTerm.includes(w.name.toLowerCase()) ||
-        pickupTerm.includes(w.id.toLowerCase()) ||
-        (w.id === "DUT" && pickupTerm.includes("dutse")) ||
-        (w.id === "SOK" && pickupTerm.includes("sokale")) ||
-        (w.id === "LUG" && pickupTerm.includes("lugbe"))
+        pickupSearch.includes(w.name.toLowerCase()) ||
+        w.keywords.some((k) => pickupSearch.includes(k))
     );
-    if (pIdx < 0) pIdx = Math.min(1, wps.length - 2);
+    if (pIdx < 0) pIdx = 0;
 
     let dIdx = wps.findIndex(
-      (w) =>
-        dropTerm.includes(w.name.toLowerCase()) ||
-        dropTerm.includes(w.id.toLowerCase()) ||
-        (w.id === "BER" && dropTerm.includes("berger")) ||
-        (w.id === "KAT" && dropTerm.includes("katampe")) ||
-        (w.id === "WUS" && dropTerm.includes("wuse")) ||
-        (w.id === "AR1" && dropTerm.includes("area 1"))
+      (w, idx) =>
+        idx > pIdx &&
+        (dropSearch.includes(w.name.toLowerCase()) ||
+          w.keywords.some((k) => dropSearch.includes(k)))
     );
-    if (dIdx <= pIdx) dIdx = Math.max(pIdx + 1, wps.length - 2);
+    if (dIdx < 0) {
+      dIdx = wps.findIndex(
+        (w) =>
+          dropSearch.includes(w.name.toLowerCase()) ||
+          w.keywords.some((k) => dropSearch.includes(k))
+      );
+    }
+    if (dIdx <= pIdx) {
+      dIdx = Math.min(wps.length - 1, Math.max(pIdx + 1, wps.length - 2));
+    }
 
-    return { pickupIdx: pIdx, dropIdx: dIdx };
+    const pWp = wps[pIdx];
+    const dWp = wps[dIdx];
+
+    return {
+      pickupIdx: pIdx,
+      dropIdx: dIdx,
+      displayAnchorName: rawAnchor || `${pWp.partner} (${pWp.name})`,
+      displayDestName: rawDest || dWp.name,
+    };
   }, [corridor, trip.currentQuote, anchorName, originName, destName]);
 
   const pickupWp = corridor.waypoints[pickupIdx];
   const dropWp = corridor.waypoints[dropIdx];
 
-  // Smoothly animate the vehicle from Pickup to Drop-off
+  // Animate vehicle ONLY when trip is initiated (IN_TRANSIT) and until it reaches destination (1.0)
   useEffect(() => {
-    if (isPaused) return;
+    if (!isTripInitiated || hasArrived) return;
     const interval = setInterval(() => {
-      setSegmentProgress((prev) => (prev >= 0.98 ? 0.04 : prev + 0.012));
+      setSegmentProgress((prev) => {
+        const next = prev + 0.008;
+        if (next >= 1.0) {
+          setHasArrived(true);
+          return 1.0;
+        }
+        return next;
+      });
     }, 180);
     return () => clearInterval(interval);
-  }, [isPaused, currentCorridorId]);
+  }, [isTripInitiated, hasArrived]);
 
-  // Full corridor background path & active booked segment path
+  // All 6 corridors for background Abuja transit network rendering
+  const otherCorridors = useMemo(
+    () =>
+      Object.values(CORRIDOR_DATA)
+        .filter((c) => c.id !== corridor.id)
+        .map((c) => ({ id: c.id, pathD: buildSmoothCurvePath(c.waypoints) })),
+    [corridor.id]
+  );
+
+  // Full selected corridor path & booked segment path
   const fullPathD = useMemo(() => buildSmoothCurvePath(corridor.waypoints), [corridor]);
   const bookedWaypoints = useMemo(
     () => corridor.waypoints.slice(pickupIdx, dropIdx + 1),
@@ -221,25 +607,26 @@ export function AbujaCorridorMap({
   // Interpolate vehicle position strictly along bookedWaypoints (Pickup -> Destination)
   const vehicleInfo = useMemo(() => {
     const segCount = Math.max(1, bookedWaypoints.length - 1);
-    const scaled = Math.min(0.999, Math.max(0, segmentProgress)) * segCount;
-    const segIdx = Math.min(Math.floor(scaled), segCount - 1);
-    const localT = scaled - segIdx;
+    const clampedProgress = Math.min(1, Math.max(0, segmentProgress));
+    const scaled = Math.min(segCount - 0.0001, clampedProgress * segCount);
+    const segIdx = Math.max(0, Math.min(Math.floor(scaled), segCount - 1));
+    const localT = clampedProgress >= 1 ? 1 : scaled - segIdx;
 
     const p0 = bookedWaypoints[segIdx];
     const p1 = bookedWaypoints[segIdx + 1] || p0;
     const pos = evalCubicSegment(p0, p1, localT);
 
-    const totalKm = Math.max(1, Math.abs(dropWp.km - pickupWp.km));
-    const remainingKm = Math.max(0.4, totalKm * (1 - segmentProgress)).toFixed(1);
-    const etaMins = Math.max(1, Math.ceil(Number(remainingKm) * 0.65));
+    const totalKm = Math.max(1.2, Math.abs(dropWp.km - pickupWp.km));
+    const remainingKm = Math.max(0.0, totalKm * (1 - clampedProgress)).toFixed(1);
+    const etaMins = clampedProgress >= 1 ? 0 : Math.max(1, Math.ceil(Number(remainingKm) * 0.65));
 
     return {
       x: pos.x,
       y: pos.y,
-      nextStopName: p1.name,
+      nextStopName: clampedProgress >= 1 ? dropWp.name : p1.name,
       remainingKm,
       etaMins,
-      pct: Math.round(segmentProgress * 100),
+      pct: Math.round(clampedProgress * 100),
     };
   }, [bookedWaypoints, segmentProgress, pickupWp, dropWp]);
 
@@ -254,10 +641,10 @@ export function AbujaCorridorMap({
         overflow: "hidden",
         boxShadow: "var(--shadow-soft)",
       }}
-      aria-label="Dynamic Abuja Corridor Telemetry Map"
+      aria-label="Abuja FCT Cartographic Corridor Map"
       role="region"
     >
-      {/* Top Map Telemetry Bar */}
+      {/* Top Map Telemetry Header Bar */}
       <div
         style={{
           padding: "14px 18px",
@@ -271,66 +658,118 @@ export function AbujaCorridorMap({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <CorridorNode size={18} variant="pickup" />
+          <CorridorNode size={18} variant={isTripInitiated ? "pickup" : "pending"} />
           <div>
             <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-ink)" }}>
-              {corridor.name} Corridor ({corridor.id})
+              Abuja FCT Transit Map · {corridor.name} ({corridor.id})
             </div>
             <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
-              {corridor.highway} · Active Segment: <strong>{pickupWp.name} ➔ {dropWp.name}</strong>
+              {hasBookingOrQuote ? (
+                <>
+                  Route: <strong>{pickupWp.name}</strong> ➔ <strong>{dropWp.name}</strong> ({corridor.highway})
+                </>
+              ) : (
+                <>{corridor.highway} · Select a corridor or book a ride on WhatsApp</>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Live Speed & ETA Pill */}
+        {/* Dynamic Trip Lifecycle Status Pill */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              fontSize: 11.5,
-              fontWeight: 700,
-              padding: "4px 10px",
-              borderRadius: 999,
-              background: "var(--brand-soft)",
-              color: "var(--brand-primary)",
-              border: "1px solid rgba(5, 150, 105, 0.25)",
-              fontFamily: "var(--font-mono)",
-            }}
-          >
-            ● Next: {vehicleInfo.nextStopName} ({vehicleInfo.etaMins} min · {vehicleInfo.remainingKm} km)
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsPaused(!isPaused)}
-            style={{
-              padding: "4px 10px",
-              borderRadius: 8,
-              border: "1px solid var(--border-subtle)",
-              background: "var(--bg-paper)",
-              color: "var(--text-ink)",
-              fontSize: 11.5,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            {isPaused ? "▶ Resume" : "❚❚ Pause"}
-          </button>
+          {isTripInitiated && !hasArrived ? (
+            <div
+              style={{
+                fontSize: 11.5,
+                fontWeight: 700,
+                padding: "5px 12px",
+                borderRadius: 999,
+                background: "var(--brand-soft)",
+                color: "var(--brand-primary)",
+                border: "1px solid rgba(5, 150, 105, 0.3)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              ● IN TRANSIT · Next: {vehicleInfo.nextStopName} ({vehicleInfo.etaMins} min · {vehicleInfo.remainingKm} km)
+            </div>
+          ) : hasArrived ? (
+            <div
+              style={{
+                fontSize: 11.5,
+                fontWeight: 700,
+                padding: "5px 12px",
+                borderRadius: 999,
+                background: "var(--brand-soft)",
+                color: "var(--brand-primary)",
+                border: "1px solid rgba(5, 150, 105, 0.3)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              ✓ ARRIVED AT {dropWp.name.toUpperCase()} (100%)
+            </div>
+          ) : hasBookingOrQuote ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  padding: "5px 11px",
+                  borderRadius: 999,
+                  background: "var(--signal-soft)",
+                  color: "var(--signal-ink)",
+                  border: "1px solid var(--signal-amber)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                ● STANDBY AT {pickupWp.name.toUpperCase()} · AWAITING DRIVER OTP
+              </div>
+              <Link
+                href="/driver"
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 800,
+                  padding: "5px 11px",
+                  borderRadius: 8,
+                  background: "var(--brand-primary)",
+                  color: "#FFFFFF",
+                  textDecoration: "none",
+                }}
+              >
+                Verify OTP to Start Trip ➔
+              </Link>
+            </div>
+          ) : (
+            <div
+              style={{
+                fontSize: 11.5,
+                fontWeight: 700,
+                padding: "5px 11px",
+                borderRadius: 999,
+                background: "var(--bg-paper)",
+                color: "var(--text-muted)",
+                border: "1px solid var(--border-subtle)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              ○ CORRIDOR STANDBY · NO ACTIVE TRIP
+            </div>
+          )}
         </div>
       </div>
 
-      {/* SVG Geographic Transit Viewport */}
+      {/* Styled Abuja FCT Cartographic Map Viewport */}
       <div
         className="along-map-canvas"
         style={{
           position: "relative",
           width: "100%",
-          paddingTop: "42%",
-          minHeight: 270,
+          paddingTop: "43%",
+          minHeight: 285,
           overflow: "hidden",
         }}
       >
         <svg
-          viewBox="0 0 720 290"
+          viewBox="0 0 760 325"
           style={{
             position: "absolute",
             top: 0,
@@ -341,32 +780,87 @@ export function AbujaCorridorMap({
           aria-hidden="true"
         >
           <defs>
-            <pattern id="abujaGrid" width="36" height="36" patternUnits="userSpaceOnUse">
+            <pattern id="abujaCartoGrid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path
-                d="M 36 0 L 0 0 0 36"
+                d="M 40 0 L 0 0 0 40"
                 fill="none"
                 stroke="var(--border-subtle)"
-                strokeWidth="0.6"
-                opacity="0.55"
+                strokeWidth="0.5"
+                opacity="0.45"
               />
             </pattern>
-            <filter id="emeraldGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
+            <filter id="emeraldRouteGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="4.5" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
           </defs>
 
-          {/* Subtle Cartographic Grid & Topographic Contour Curves */}
-          <rect width="720" height="290" fill="url(#abujaGrid)" />
-          <path
-            d="M 0,245 Q 220,210 420,250 T 720,225"
-            fill="none"
-            stroke="var(--border-subtle)"
-            strokeWidth="12"
-            opacity="0.25"
-          />
+          {/* 1. Cartographic Base Grid */}
+          <rect width="760" height="325" fill="url(#abujaCartoGrid)" />
 
-          {/* 1. Full Corridor Spine (Dimmed outside booked segment) */}
+          {/* 2. Abuja Geographic Water Bodies (Usuma Reservoir in Bwari/Ushafa & Jabi Lake) */}
+          <path
+            d="M 135,28 C 165,24 182,42 168,58 C 154,70 124,62 122,44 Z"
+            className="abuja-water-poly"
+          />
+          <text x="150" y="46" textAnchor="middle" className="abuja-water-label">
+            Usuma Dam
+          </text>
+
+          <path
+            d="M 486,184 C 512,178 525,196 510,208 C 492,216 476,202 486,184 Z"
+            className="abuja-water-poly"
+          />
+          <text x="498" y="199" textAnchor="middle" className="abuja-water-label">
+            Jabi Lake
+          </text>
+
+          {/* 3. Aso Rock & Katampe Hill Topographic Contours */}
+          <ellipse
+            cx="688"
+            cy="128"
+            rx="38"
+            ry="22"
+            fill="none"
+            stroke="var(--border-strong)"
+            strokeWidth="1"
+            strokeDasharray="3 3"
+            opacity="0.45"
+          />
+          <text x="688" y="131" textAnchor="middle" className="abuja-district-label">
+            ASO ROCK
+          </text>
+
+          {/* 4. Abuja District Cartographic Labels */}
+          <g className="abuja-district-layer">
+            <text x="85" y="34" className="abuja-district-label">BWARI AREA COUNCIL</text>
+            <text x="245" y="72" className="abuja-district-label">DUTSE ALHAJI</text>
+            <text x="275" y="155" className="abuja-district-label">KUBWA</text>
+            <text x="395" y="112" className="abuja-district-label">KATAMPE EXTENSION</text>
+            <text x="390" y="205" className="abuja-district-label">GWARINPA / LIFE CAMP</text>
+            <text x="615" y="112" className="abuja-district-label">MAITAMA</text>
+            <text x="615" y="142" className="abuja-district-label">WUSE II</text>
+            <text x="580" y="252" className="abuja-district-label">GARKI / AREA 1</text>
+            <text x="705" y="218" className="abuja-district-label">ASOKORO</text>
+            <text x="345" y="275" className="abuja-district-label">LUGBE AIRPORT RD</text>
+            <text x="95" y="304" className="abuja-district-label">GWAGWALADA</text>
+            <text x="685" y="302" className="abuja-district-label">MARARABA / KARU</text>
+          </g>
+
+          {/* 5. Other 5 Abuja Corridors (Subtle Slate Transit Network) */}
+          {otherCorridors.map((oc) => (
+            <path
+              key={oc.id}
+              d={oc.pathD}
+              fill="none"
+              stroke="var(--border-strong)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              opacity="0.35"
+            />
+          ))}
+
+          {/* 6. Selected Corridor Full Spine (Dimmed outside booked segment) */}
           <path
             d={fullPathD}
             fill="none"
@@ -374,47 +868,52 @@ export function AbujaCorridorMap({
             strokeWidth="6"
             strokeLinecap="round"
             strokeDasharray="6 6"
-            opacity="0.65"
+            opacity="0.7"
           />
 
-          {/* 2. Active Booked Route Segment (Pickup -> Drop-off) */}
-          <path
-            d={bookedPathD}
-            fill="none"
-            stroke="var(--brand-primary)"
-            strokeWidth="7"
-            strokeLinecap="round"
-            filter="url(#emeraldGlow)"
-            opacity="0.28"
-          />
-          <path
-            d={bookedPathD}
-            fill="none"
-            stroke="var(--brand-primary)"
-            strokeWidth="4.5"
-            strokeLinecap="round"
-          />
+          {/* 7. Active Booked Corridor Route Segment (Pickup -> Drop-off) */}
+          {hasBookingOrQuote && (
+            <>
+              <path
+                d={bookedPathD}
+                fill="none"
+                stroke={isTripInitiated || hasArrived ? "var(--brand-primary)" : "var(--signal-amber)"}
+                strokeWidth="8"
+                strokeLinecap="round"
+                filter="url(#emeraldRouteGlow)"
+                opacity={isTripInitiated || hasArrived ? 0.32 : 0.18}
+              />
+              <path
+                d={bookedPathD}
+                fill="none"
+                stroke={isTripInitiated || hasArrived ? "var(--brand-primary)" : "var(--signal-amber)"}
+                strokeWidth="4.5"
+                strokeLinecap="round"
+                strokeDasharray={isTripInitiated || hasArrived ? "none" : "8 5"}
+              />
+            </>
+          )}
 
-          {/* 3. Waypoint Stations (Alternating Top/Bottom Labels = Zero Overlap) */}
+          {/* 8. Waypoint Stations on Selected Corridor */}
           {corridor.waypoints.map((wp, idx) => {
-            const isPickup = idx === pickupIdx;
-            const isDrop = idx === dropIdx;
-            const isWithinTrip = idx >= pickupIdx && idx <= dropIdx;
-            const labelY = wp.labelPos === "top" ? -18 : 24;
-            const partnerY = wp.labelPos === "top" ? -31 : 37;
+            const isPickup = hasBookingOrQuote && idx === pickupIdx;
+            const isDrop = hasBookingOrQuote && idx === dropIdx;
+            const isWithinTrip = !hasBookingOrQuote || (idx >= pickupIdx && idx <= dropIdx);
+            const labelY = wp.labelPos === "top" ? -16 : 22;
+            const partnerY = wp.labelPos === "top" ? -28 : 34;
 
             return (
               <g
                 key={wp.id}
                 transform={`translate(${wp.x}, ${wp.y})`}
-                style={{ opacity: isWithinTrip ? 1 : 0.48 }}
+                style={{ opacity: isWithinTrip ? 1 : 0.45 }}
               >
-                {/* Pulsing Halo for Pickup & Drop-off */}
+                {/* Pulsing Ring for Active Pickup or Drop-off */}
                 {(isPickup || isDrop) && (
                   <circle
                     cx="0"
                     cy="0"
-                    r="16"
+                    r="15"
                     fill="none"
                     stroke={isPickup ? "var(--brand-primary)" : "var(--signal-amber)"}
                     strokeWidth="2"
@@ -422,11 +921,11 @@ export function AbujaCorridorMap({
                   />
                 )}
 
-                {/* Station Circle */}
+                {/* Station Node Circle */}
                 <circle
                   cx="0"
                   cy="0"
-                  r={isPickup || isDrop ? 8.5 : wp.isAnchor ? 6 : 4.5}
+                  r={isPickup || isDrop ? 8 : wp.isAnchor ? 5.5 : 4.5}
                   fill={
                     isPickup
                       ? "var(--brand-primary)"
@@ -435,9 +934,7 @@ export function AbujaCorridorMap({
                       : "var(--bg-surface)"
                   }
                   stroke={
-                    isPickup
-                      ? "#FFFFFF"
-                      : isDrop
+                    isPickup || isDrop
                       ? "#FFFFFF"
                       : isWithinTrip
                       ? "var(--brand-primary)"
@@ -452,7 +949,7 @@ export function AbujaCorridorMap({
                   y={labelY}
                   textAnchor="middle"
                   style={{
-                    fontSize: isPickup || isDrop ? 12 : 10.5,
+                    fontSize: isPickup || isDrop ? 11.5 : 10,
                     fontWeight: isPickup || isDrop ? 800 : 700,
                     fill: "var(--text-ink)",
                     fontFamily: "var(--font-heading)",
@@ -461,14 +958,14 @@ export function AbujaCorridorMap({
                   {wp.name}
                 </text>
 
-                {/* Safe Forecourt Partner Sub-label */}
+                {/* Safe Forecourt Partner Label */}
                 <text
                   x="0"
                   y={partnerY}
                   textAnchor="middle"
                   style={{
-                    fontSize: 9,
-                    fontWeight: 600,
+                    fontSize: 8.5,
+                    fontWeight: 700,
                     fill: isPickup
                       ? "var(--brand-primary)"
                       : isDrop
@@ -477,47 +974,76 @@ export function AbujaCorridorMap({
                     fontFamily: "var(--font-mono)",
                   }}
                 >
-                  {isPickup ? `PICKUP · ${wp.partner}` : isDrop ? `DROP · ${wp.partner}` : wp.partner}
+                  {isPickup ? "SAFE PICKUP" : isDrop ? "DESTINATION" : wp.partner}
                 </text>
               </g>
             );
           })}
 
-          {/* 4. Moving Vehicle Pod Marker (Elevated Floating Badge with Leader Line) */}
-          <g transform={`translate(${vehicleInfo.x}, ${vehicleInfo.y})`}>
-            {/* Outer Radar Glow */}
-            <circle cx="0" cy="0" r="14" fill="var(--brand-primary)" opacity="0.22" />
-            {/* Vehicle Core Dot */}
-            <circle cx="0" cy="0" r="7.5" fill="var(--brand-primary)" stroke="#FFFFFF" strokeWidth="2.5" />
-
-            {/* Leader Line to Floating Pill so it NEVER overlaps station text */}
-            <line x1="0" y1="-8" x2="0" y2="-38" stroke="var(--brand-primary)" strokeWidth="1.5" />
-            <rect
-              x="-44"
-              y="-58"
-              width="88"
-              height="20"
-              rx="10"
-              fill="var(--brand-primary)"
-            />
-            <text
-              x="0"
-              y="-44.5"
-              textAnchor="middle"
-              style={{
-                fontSize: 9.5,
-                fontWeight: 800,
-                fill: "#FFFFFF",
-                fontFamily: "var(--font-mono)",
-              }}
+          {/* 9. Pod Vehicle Marker (Stationary at Pickup before OTP; Moving along corridor when IN_TRANSIT) */}
+          {hasBookingOrQuote && (
+            <g
+              transform={`translate(${vehicleInfo.x}, ${vehicleInfo.y})`}
+              style={{ transition: "transform 160ms linear" }}
             >
-              POD-842A · {vehicleInfo.pct}%
-            </text>
-          </g>
+              {/* Radar Glow */}
+              <circle
+                cx="0"
+                cy="0"
+                r="14"
+                fill={isTripInitiated || hasArrived ? "var(--brand-primary)" : "var(--signal-amber)"}
+                opacity="0.25"
+              />
+              {/* Pod Core Dot */}
+              <circle
+                cx="0"
+                cy="0"
+                r="7"
+                fill={isTripInitiated || hasArrived ? "var(--brand-primary)" : "var(--signal-amber)"}
+                stroke="#FFFFFF"
+                strokeWidth="2.5"
+              />
+
+              {/* Leader Line & Elevated Floating Callout Pill */}
+              <line
+                x1="0"
+                y1="-8"
+                x2="0"
+                y2="-36"
+                stroke={isTripInitiated || hasArrived ? "var(--brand-primary)" : "var(--signal-amber)"}
+                strokeWidth="1.5"
+              />
+              <rect
+                x="-58"
+                y="-56"
+                width="116"
+                height="20"
+                rx="10"
+                fill={isTripInitiated || hasArrived ? "var(--brand-primary)" : "#D97706"}
+              />
+              <text
+                x="0"
+                y="-42.5"
+                textAnchor="middle"
+                style={{
+                  fontSize: 9.2,
+                  fontWeight: 800,
+                  fill: "#FFFFFF",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                {isTripInitiated
+                  ? `POD-842A · ${vehicleInfo.pct}%`
+                  : hasArrived
+                  ? "POD-842A · ARRIVED"
+                  : "POD-842A · BOARDING"}
+              </text>
+            </g>
+          )}
         </svg>
       </div>
 
-      {/* Interactive Progress Scrubber & Route Summary Footer */}
+      {/* Dynamic Route Summary Footer (Reflects exact booked anchor & destination) */}
       <div
         style={{
           padding: "12px 18px",
@@ -531,56 +1057,77 @@ export function AbujaCorridorMap({
           fontSize: 12.5,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div>
             <span style={{ color: "var(--text-muted)" }}>Safe Pickup Anchor: </span>
             <strong style={{ color: "var(--brand-primary)" }}>
-              {pickupWp.partner} ({pickupWp.name})
+              {hasBookingOrQuote ? displayAnchorName : `${pickupWp.partner} (${pickupWp.name})`}
             </strong>
           </div>
           <span style={{ color: "var(--text-faint)" }}>➔</span>
           <div>
             <span style={{ color: "var(--text-muted)" }}>Booked Destination: </span>
-            <strong style={{ color: "var(--text-ink)" }}>{dropWp.name}</strong>
+            <strong style={{ color: "var(--text-ink)" }}>
+              {hasBookingOrQuote ? displayDestName : dropWp.name}
+            </strong>
           </div>
         </div>
 
-        {/* Interactive Scrubber to test Pod movement */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
-            Scrub Trip:
-          </span>
-          <input
-            type="range"
-            min={0.02}
-            max={0.98}
-            step={0.01}
-            value={segmentProgress}
-            onChange={(e) => {
-              setIsPaused(true);
-              setSegmentProgress(parseFloat(e.target.value));
-            }}
-            style={{ width: 95, accentColor: "var(--brand-primary)", cursor: "pointer" }}
-            aria-label="Scrub pod position along booked corridor"
-          />
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+          {isTripInitiated
+            ? `Live GPS Telemetry · ${vehicleInfo.pct}% Complete`
+            : hasArrived
+            ? "Trip Completed · Escrow Settled (90/10)"
+            : hasBookingOrQuote
+            ? "Waiting for Driver OTP Initiation"
+            : "6 Abuja Corridors · 24 Private Forecourts"}
         </div>
       </div>
 
       <style jsx global>{`
         [data-theme="light"] .along-map-canvas {
-          background-color: #F8FAFC !important;
+          background: radial-gradient(circle at 50% 45%, #FFFFFF 0%, #EEF3F7 100%) !important;
         }
         [data-theme="dark"] .along-map-canvas {
-          background-color: #141E24 !important;
+          background: radial-gradient(circle at 50% 45%, #162229 0%, #0E171D 100%) !important;
+        }
+
+        [data-theme="light"] .abuja-water-poly {
+          fill: rgba(14, 165, 233, 0.12);
+          stroke: rgba(14, 165, 233, 0.28);
+          stroke-width: 1;
+        }
+        [data-theme="dark"] .abuja-water-poly {
+          fill: rgba(56, 189, 248, 0.1);
+          stroke: rgba(56, 189, 248, 0.22);
+          stroke-width: 1;
+        }
+
+        .abuja-water-label {
+          font-size: 8px;
+          font-weight: 700;
+          fill: #0284C7;
+          opacity: 0.7;
+          font-family: var(--font-mono);
+        }
+
+        .abuja-district-label {
+          font-size: 8.5px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          fill: var(--text-muted);
+          opacity: 0.35;
+          font-family: var(--font-heading);
+          user-select: none;
         }
 
         @keyframes pulseRing {
           0% {
-            r: 9;
+            r: 8;
             opacity: 0.85;
           }
           100% {
-            r: 22;
+            r: 21;
             opacity: 0;
           }
         }

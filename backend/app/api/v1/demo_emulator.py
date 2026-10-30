@@ -221,6 +221,7 @@ async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
     """Transcribe inbound audio via real ASR pipeline with honest labeling."""
     content_type = request.headers.get("content-type", "")
     client_transcript = request.headers.get("x-client-transcript") or None
+    locale_hint = request.headers.get("x-locale-hint") or None
     raw_body = await request.body()
     audio_bytes = raw_body
     filename = "voice_note.ogg"
@@ -239,6 +240,11 @@ async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
                 if payload:
                     client_transcript = payload.decode("utf-8", errors="ignore").strip()
                 continue
+            if 'name="locale_hint"' in cd:
+                payload = part.get_payload(decode=True)
+                if payload:
+                    locale_hint = payload.decode("utf-8", errors="ignore").strip()
+                continue
             payload = part.get_payload(decode=True)
             if payload:
                 audio_bytes = payload
@@ -250,6 +256,7 @@ async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
         audio_bytes,
         filename=filename,
         client_transcript=client_transcript,
+        locale_hint=locale_hint,
     )
     return {
         "status": "ok",

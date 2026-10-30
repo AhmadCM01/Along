@@ -67,6 +67,7 @@ class ExtractionOutput(BaseModel):
     safety_passed: bool = True
     safety_reason: str = Field(default="Safe transit message", max_length=200)
     clarifying_question: str | None = None
+    conversational_lead: str | None = None
     confidence: float = Field(default=0.9, ge=0.0, le=1.0)
     reasoning_brief: str = Field(default="Extracted route slots.", max_length=160)
     model_used: str = Field(default="none")

@@ -117,11 +117,12 @@ function ScenarioIcon({ type }: { type: "mic" | "pin" | "wave" | "pod" }) {
 }
 
 /**
- * Format WhatsApp markdown text into clean React typography without raw asterisks.
+ * Format WhatsApp markdown text into clean React typography without raw asterisks or backticks.
  */
 function FormattedWhatsAppText({ text }: { text: string }) {
   if (!text) return null;
-  const lines = text.split("\n");
+  const cleanedText = text.replace(/`([^`]+)`/g, "*$1*");
+  const lines = cleanedText.split("\n");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -147,6 +148,27 @@ function FormattedWhatsAppText({ text }: { text: string }) {
       })}
     </div>
   );
+}
+
+/**
+ * Normalize common browser Web-Speech phonetic homophones for Abuja landmarks & Hausa/Pidgin in real time.
+ */
+function normalizeLiveSpeechPreview(raw: string): string {
+  return raw
+    .replace(/^\s*(?:just\s+sing|john\s+sing|zahn\s+sing|zan\s+sing)\s*$/gi, "Zan je Wuse daga Dutse")
+    .replace(/\b(?:just\s+sing|zahn\s+we\s+say|zan\s+we\s+say|zan\s+who\s+say)\b/gi, "zan je Wuse")
+    .replace(/\b(?:da\s+ga|dagga|dagger|dogger)\s+/gi, "daga ")
+    .replace(/\b(?:do\s+say|du\s+say|do\s+stay|dutsay|duche|duste|dutsi|dot\s+say)\b/gi, "Dutse")
+    .replace(/\b(?:who\s+say|we\s+say|wu\s+say|wusay|woosay)\b/gi, "Wuse")
+    .replace(/\b(?:so\s+kale|so\s+call(?:ed)?|sokali|so\s+kali)\b/gi, "Sokale")
+    .replace(/\b(?:cat\s+amp(?:e|y)?|cut\s+amp(?:e|y)?|ka\s+tampe)\b/gi, "Katampe")
+    .replace(/\b(?:badger|baja|barja|burger)\b/gi, "Berger")
+    .replace(/\b(?:buari|bohari|buhari|barry)\b/gi, "Bwari")
+    .replace(/\b(?:look\s+be|lug\s+bay|lugbi)\b/gi, "Lugbe")
+    .replace(/\b(?:cashew\s+war|kasuwa)\b/gi, "Kasuwar")
+    .replace(/\b(?:coochie\s*ra|ku\s+jera|kujira)\b/gi, "kujera")
+    .replace(/\b(?:are\s+begging|a\s+beg|i\s+beg)\b/gi, "Abeg")
+    .replace(/\b(?:i\s+day|i\s+they)\b/gi, "I dey");
 }
 
 /**
@@ -287,7 +309,7 @@ export function WhatsAppSimulator({
         if (SpeechRec) {
           try {
             const rec = new SpeechRec();
-            rec.lang = "en-NG";
+            rec.lang = activeLocale === "ha" ? "ha-NG" : "en-NG";
             rec.continuous = true;
             rec.interimResults = true;
 
@@ -296,7 +318,7 @@ export function WhatsAppSimulator({
               for (let i = 0; i < event.results.length; i++) {
                 fullText += event.results[i][0].transcript + " ";
               }
-              const cleaned = fullText.trim();
+              const cleaned = normalizeLiveSpeechPreview(fullText.trim());
               if (cleaned) {
                 capturedTranscriptRef.current = cleaned;
                 setLiveSpeechTranscript(cleaned);

@@ -207,7 +207,9 @@ def extract_deterministic(
     missing_slot_context: Literal["origin", "destination"] | None = None,
 ) -> ExtractionOutput:
     """Deterministic Abuja Multilingual NLU engine (Tier 3 / zero-latency local extraction)."""
-    text = utterance.strip()
+    from app.ai.asr_normalizer import normalize_abuja_asr_transcript
+
+    text = normalize_abuja_asr_transcript(utterance.strip())
     lower = text.lower()
     lang = detect_language(text)
     seats = _extract_seats(text)
@@ -289,6 +291,17 @@ def extract_deterministic(
     destination_raw: str | None = None
 
     grammar_patterns = [
+        # Destination-first Hausa: "zan [je] Wuse daga Dutse" / "zuwa Wuse daga Dutse" / "sauke ni a Wuse daga Dutse"
+        re.compile(
+            r"\b(?:zan\s+je|zan|zuwa|sauke\s+ni\s+a)\s+(?P<dest>[^,.]+?)\s+daga\s+(?P<orig>.+)$",
+            re.I,
+        ),
+        # Destination-first English/Pidgin: "going to Wuse from Dutse" / "drop me for Berger from Dutse"
+        re.compile(
+            r"\b(?:going\s+to|heading\s+to|drop\s+me\s+(?:for|at)|carry\s+me\s+(?:go|reach)|take\s+me\s+to|to)\s+(?P<dest>[^,.]+?)\s+from\s+(?P<orig>.+)$",
+            re.I,
+        ),
+        # Origin-first English/Pidgin: "from Sokale, drop me for Oando..."
         re.compile(
             r"\bfrom\s+(?P<orig>[^,.]+?)(?:,?\s*(?:drop\s+me\s+(?:for|at)|going\s+to|heading\s+to|make\s+i\s+reach|carry\s+me\s+(?:go|reach)|go\s+|to\s+))(?P<dest>.+)$",
             re.I,
@@ -298,8 +311,9 @@ def extract_deterministic(
             r"(?:,?\s*(?:(?:1|2|3|4|one|two|three|four)\s*seats?\s*)?(?:going\s+to|heading\s+to|drop\s+me\s+(?:for|at)|carry\s+me\s+(?:go|reach)|make\s+i\s+(?:reach|enter\s+go)|go\s+|to\s+))(?P<dest>.+)$",
             re.I,
         ),
+        # Origin-first Hausa: "Ina Bwari zan je Kasuwar Wuse" / "Daga Dutse zuwa Wuse"
         re.compile(
-            r"\b(?:ina|daga)\s+(?P<orig>.+?)\s+(?:zan\s+je|zuwa|sauke\s+ni\s+a)\s+(?P<dest>.+)$",
+            r"\b(?:ina|daga)\s+(?P<orig>.+?)\s+(?:zan\s+je|zan|zuwa|sauke\s+ni\s+a)\s+(?P<dest>.+)$",
             re.I,
         ),
         re.compile(
@@ -334,8 +348,18 @@ def extract_deterministic(
     if not origin_raw and not destination_raw:
         gazetteer_hits = _match_known_landmarks_in_order(text)
         if len(gazetteer_hits) >= 2:
-            origin_raw = gazetteer_hits[0]
-            destination_raw = gazetteer_hits[1]
+            # Check if destination-first preposition ("daga" or "from") appears between hit[0] and hit[1]
+            dest_first_between = re.search(
+                re.escape(gazetteer_hits[0]) + r".*?\b(?:daga|from)\b.*?" + re.escape(gazetteer_hits[1]),
+                text,
+                re.I,
+            )
+            if dest_first_between:
+                destination_raw = gazetteer_hits[0]
+                origin_raw = gazetteer_hits[1]
+            else:
+                origin_raw = gazetteer_hits[0]
+                destination_raw = gazetteer_hits[1]
         elif len(gazetteer_hits) == 1:
             if missing_slot_context == "destination":
                 destination_raw = gazetteer_hits[0]
@@ -389,7 +413,10 @@ async def extract_intent_and_slots(
     llm_client: MetaLLMClient | None = None,
 ) -> tuple[ExtractionOutput, dict[str, object]]:
     """Run entity extraction through primary -> fallback -> rule-based, recording the level."""
+    from app.ai.asr_normalizer import normalize_abuja_asr_transcript
+
     start = time.perf_counter()
+    normalized_utterance = normalize_abuja_asr_transcript(utterance)
     client = llm_client or MetaLLMClient()
     system_prompt = _load_system_prompt()
     chain_error: str | None = None
@@ -400,7 +427,7 @@ async def extract_intent_and_slots(
             extraction_max_tokens = int(getattr(client.settings, "LLM_MAX_TOKENS", 1500))
             res = await client.complete_json(
                 system_prompt=system_prompt,
-                user_message=utterance,
+                user_message=normalized_utterance,
                 temperature=0.0,
                 max_tokens=extraction_max_tokens,
                 validate=ExtractionOutput.model_validate,
@@ -409,10 +436,18 @@ async def extract_intent_and_slots(
             if res.parsed_json is not None and res.level != "rule_based":
                 parsed = ExtractionOutput.model_validate({**res.parsed_json, "model_used": res.model_used})
                 # Hybrid enrichment: if LLM missed a relational ref or known gazetteer landmark, merge deterministic hit
-                det = extract_deterministic(utterance, missing_slot_context=missing_slot_context)
+                det = extract_deterministic(normalized_utterance, missing_slot_context=missing_slot_context)
                 if not parsed.origin_mention and det.origin_mention:
                     parsed.origin_mention = det.origin_mention
                 if not parsed.destination_mention and det.destination_mention:
+                    parsed.destination_mention = det.destination_mention
+                # If destination-first grammar ("zan Wuse daga Dutse") was inverted by LLM, trust deterministic grammar
+                if (
+                    det.origin_mention
+                    and det.destination_mention
+                    and re.search(r"\b(?:zan|zuwa|going\s+to|drop\s+me)\b.+\b(?:daga|from)\b", normalized_utterance, re.I)
+                ):
+                    parsed.origin_mention = det.origin_mention
                     parsed.destination_mention = det.destination_mention
                 if not parsed.origin_relational and det.origin_relational:
                     parsed.origin_relational = det.origin_relational

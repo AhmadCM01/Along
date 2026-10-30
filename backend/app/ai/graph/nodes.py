@@ -563,7 +563,7 @@ async def execute_conversation_turn(
     state.boarding_otp = state.boarding_otp or generate_boarding_otp()
     state.share_token = state.share_token or generate_share_token()
 
-    state.last_reply_text = render_template(
+    template_reply = render_template(
         "quote_ready",
         state.locale,
         corridor_id=state.corridor_id,
@@ -575,6 +575,19 @@ async def execute_conversation_turn(
         savings_pct=state.savings_pct,
         total_fare_naira=format_naira(state.total_fare_kobo),
     )
+    if (
+        extracted.conversational_lead
+        and len(extracted.conversational_lead.strip()) >= 15
+        and "₦" not in extracted.conversational_lead
+    ):
+        footer = (
+            f"*Farashin Tafiyar Along ({state.corridor_id})*"
+            if state.locale == "ha"
+            else f"*Along Corridor Quote ({state.corridor_id})*"
+        )
+        state.last_reply_text = f"{extracted.conversational_lead.strip()}\n{footer}"
+    else:
+        state.last_reply_text = template_reply
     state.last_buttons = [
         {"id": "CONFIRM_YES", "title": "YES, Lock Seat"},
         {"id": "CANCEL_RIDE", "title": "Cancel"},

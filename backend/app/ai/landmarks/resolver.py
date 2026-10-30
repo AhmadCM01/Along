@@ -89,9 +89,9 @@ def resolve_landmark_mention(
     s1 = candidates[0].final_score
     s2 = candidates[1].final_score if len(candidates) > 1 else 0.0
 
-    # If top 2 candidates are in the exact same zone and within 450m physical distance
-    # (e.g. Dutse First Gate across intersecting corridors or adjacent A.A. Rano station),
-    # treat as unambiguous HIGH confidence when s1 >= 0.80.
+    # If top 2 candidates are in the exact same transit zone and within 2,500m physical distance
+    # (e.g. Dutse First Gate & Total Dutse in ZONE-DUT, or Wuse Market & Wuse II in ZONE-WUS),
+    # treat as unambiguous HIGH confidence when s1 >= 0.80 so single-turn hub names resolve immediately.
     same_hub = (
         len(candidates) > 1
         and candidates[0].zone_id == candidates[1].zone_id
@@ -101,7 +101,7 @@ def resolve_landmark_mention(
             candidates[1].lat,
             candidates[1].lng,
         )
-        <= 450.0
+        <= 2500.0
     )
 
     if s1 >= HIGH_CONFIDENCE_MIN and ((s1 - s2) >= MARGIN_MIN or same_hub):

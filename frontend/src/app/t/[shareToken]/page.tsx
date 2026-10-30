@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { Header } from "@/components/navigation/Header";
 import { BottomTabBar } from "@/components/navigation/BottomTabBar";
 import { DepartureNumeral } from "@/components/ui/DepartureNumeral";
 import { AbujaCorridorMap } from "@/components/demo/AbujaCorridorMap";
 import { TransitStrip } from "@/components/demo/TransitStrip";
-import { LinkChainIcon, SosBeaconIcon } from "@/components/icons/AlongIcons";
+import { LinkChainIcon, SosBeaconIcon, PodNavIcon } from "@/components/icons/AlongIcons";
 import { useAlongTrip } from "@/context/AlongTripContext";
 import {
   getPublicTripShare,
@@ -29,8 +30,23 @@ export default function TripTrackerPage({
   const [sosFeedback, setSosFeedback] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
+  // Only treat as an active booked trip if the user has a currentQuote in context
+  // OR opened a non-default dynamic share token generated from a booking
+  const isCustomShareToken = Boolean(shareToken && shareToken !== "share-bwr-4817");
+  const hasActiveBooking =
+    Boolean(trip.currentQuote) ||
+    trip.journeyStage === "PROPOSAL" ||
+    trip.journeyStage === "CONFIRMED" ||
+    trip.journeyStage === "IN_TRANSIT" ||
+    trip.journeyStage === "COMPLETED";
+
   useEffect(() => {
     let cancelled = false;
+
+    if (!hasActiveBooking && !isCustomShareToken) {
+      setTripData(null);
+      return;
+    }
 
     getPublicTripShare(shareToken)
       .then((res) => {
@@ -40,15 +56,15 @@ export default function TripTrackerPage({
         }
       })
       .catch(() => {
-        if (!cancelled) {
+        if (!cancelled && trip.currentQuote) {
           setTripData({
             share_token: shareToken,
             pod_code: trip.driverInfo.podCode || "POD-842A",
-            corridor_id: trip.activeCorridorId || "BWR-DUT-WUS",
-            corridor_name: "Bwari -> Dutse -> Katampe -> Mabushi -> Berger -> Wuse",
-            status: "IN_TRANSIT",
-            origin_anchor: trip.currentQuote?.anchorName || "A.A. Rano Filling Station (Dutse First Gate)",
-            destination_landmark: trip.currentQuote?.destName || "Berger Roundabout Underbridge",
+            corridor_id: trip.currentQuote.corridorId || trip.activeCorridorId || "BWR-DUT-WUS",
+            corridor_name: `${trip.currentQuote.originName} -> ${trip.currentQuote.destName}`,
+            status: trip.journeyStage === "IN_TRANSIT" ? "IN_TRANSIT" : "AWAITING_BOARDING",
+            origin_anchor: trip.currentQuote.anchorName,
+            destination_landmark: trip.currentQuote.destName,
             driver: {
               full_name: trip.driverInfo.driverName || "Musa Bello",
               vehicle_desc: trip.driverInfo.vehicleDesc || "Volkswagen Golf 4",
@@ -59,11 +75,11 @@ export default function TripTrackerPage({
             },
             telemetry: {
               lat: 9.1105,
-              lng: 7.4250,
-              current_landmark: "Katampe Extension Bridge",
-              progress_pct: 68,
-              eta_minutes: 6,
-              route_deviation_m: 8,
+              lng: 7.425,
+              current_landmark: trip.currentQuote.originName,
+              progress_pct: trip.journeyStage === "IN_TRANSIT" ? 25 : 0,
+              eta_minutes: 8,
+              route_deviation_m: 4,
               is_on_corridor: true,
             },
             escrow_status: "Locked in Atomic Escrow",
@@ -76,7 +92,7 @@ export default function TripTrackerPage({
     return () => {
       cancelled = true;
     };
-  }, [shareToken, trip]);
+  }, [shareToken, hasActiveBooking, isCustomShareToken, trip.currentQuote, trip.activeCorridorId, trip.driverInfo, trip.journeyStage]);
 
   async function handleSosClick() {
     if (sosLoading) return;
@@ -106,6 +122,16 @@ export default function TripTrackerPage({
   const plateNumber = tripData?.driver?.plate_number || trip.driverInfo.plateNumber || "ABJ-402-AL";
   const vehicleDesc = tripData?.driver?.vehicle_desc || trip.driverInfo.vehicleDesc || "Volkswagen Golf 4";
   const podCode = tripData?.pod_code || trip.driverInfo.podCode || "POD-842A";
+
+  const activeOriginName = hasActiveBooking
+    ? trip.currentQuote?.originName || tripData?.origin_anchor
+    : undefined;
+  const activeDestName = hasActiveBooking
+    ? trip.currentQuote?.destName || tripData?.destination_landmark
+    : undefined;
+  const activeAnchorName = hasActiveBooking
+    ? trip.currentQuote?.anchorName || tripData?.origin_anchor
+    : undefined;
 
   return (
     <div
@@ -145,7 +171,9 @@ export default function TripTrackerPage({
               Live Corridor & Safety Tracker
             </h1>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2, marginBottom: 0 }}>
-              Real-time route progression from your safe forecourt pickup to destination
+              {hasActiveBooking
+                ? "Real-time route progression from your booked safe forecourt pickup to destination"
+                : "Interactive Abuja FCT corridor network preview · Book a ride on WhatsApp to track live pod"}
             </p>
           </div>
 
@@ -191,7 +219,7 @@ export default function TripTrackerPage({
                 ? "ARRIVED"
                 : trip.journeyStage === "CONFIRMED" || trip.journeyStage === "PROPOSAL"
                 ? "AWAITING OTP"
-                : "STANDBY"}
+                : "NETWORK PREVIEW"}
             </DepartureNumeral>
           </div>
         </section>
@@ -200,9 +228,9 @@ export default function TripTrackerPage({
         <section>
           <AbujaCorridorMap
             corridorId={trip.currentQuote?.corridorId || trip.activeCorridorId || "BWR-DUT-WUS"}
-            originName={trip.currentQuote?.originName || tripData?.origin_anchor}
-            destName={trip.currentQuote?.destName || tripData?.destination_landmark}
-            anchorName={trip.currentQuote?.anchorName || tripData?.origin_anchor}
+            originName={activeOriginName}
+            destName={activeDestName}
+            anchorName={activeAnchorName}
           />
         </section>
 
@@ -239,54 +267,93 @@ export default function TripTrackerPage({
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800 }}>{driverName}</div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>
+                  {hasActiveBooking ? driverName : "No Active Pod Assigned"}
+                </div>
                 <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>
-                  {vehicleDesc} · {podCode}
+                  {hasActiveBooking
+                    ? `${vehicleDesc} · ${podCode}`
+                    : `Corridor ${trip.activeCorridorId} · Standby Fleet`}
                 </div>
               </div>
 
               <DepartureNumeral size="md" variant="neutral">
-                {plateNumber}
+                {hasActiveBooking ? plateNumber : "STANDBY"}
               </DepartureNumeral>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 10,
-                paddingTop: 12,
-                borderTop: "1px solid var(--border-subtle)",
-                fontSize: 12,
-              }}
-            >
-              <div>
-                <div style={{ color: "var(--text-muted)" }}>Safe Forecourt Anchor</div>
-                <strong style={{ color: "var(--text-ink)" }}>
-                  {trip.currentQuote?.anchorName ||
-                    tripData?.origin_anchor ||
-                    "Select a route on WhatsApp"}
-                </strong>
-              </div>
+            {hasActiveBooking ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                  paddingTop: 12,
+                  borderTop: "1px solid var(--border-subtle)",
+                  fontSize: 12,
+                }}
+              >
+                <div>
+                  <div style={{ color: "var(--text-muted)" }}>Safe Forecourt Anchor</div>
+                  <strong style={{ color: "var(--text-ink)" }}>
+                    {activeAnchorName}
+                  </strong>
+                </div>
 
-              <div>
-                <div style={{ color: "var(--text-muted)" }}>Escrow Protection</div>
-                <strong
+                <div>
+                  <div style={{ color: "var(--text-muted)" }}>Escrow Protection</div>
+                  <strong
+                    style={{
+                      color:
+                        trip.journeyStage === "IN_TRANSIT" || trip.journeyStage === "CONFIRMED"
+                          ? "var(--brand-primary)"
+                          : "var(--text-muted)",
+                    }}
+                  >
+                    {trip.currentQuote
+                      ? `${trip.currentQuote.totalFare} (${
+                          trip.journeyStage === "IN_TRANSIT" ? "Captured" : "Held in Escrow"
+                        })`
+                      : "Locked in Escrow"}
+                  </strong>
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  paddingTop: 12,
+                  borderTop: "1px solid var(--border-subtle)",
+                  fontSize: 12,
+                }}
+              >
+                <span style={{ color: "var(--text-muted)" }}>
+                  Book a ride on WhatsApp to assign a safe filling-station anchor & pod.
+                </span>
+                <Link
+                  href="/"
                   style={{
-                    color:
-                      trip.journeyStage === "IN_TRANSIT" || trip.journeyStage === "CONFIRMED"
-                        ? "var(--brand-primary)"
-                        : "var(--text-muted)",
+                    padding: "6px 12px",
+                    borderRadius: "var(--radius-chip)",
+                    background: "var(--brand-primary)",
+                    color: "#FFFFFF",
+                    textDecoration: "none",
+                    fontWeight: 700,
+                    fontSize: 11.5,
+                    whiteSpace: "nowrap",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
                   }}
                 >
-                  {trip.currentQuote
-                    ? `${trip.currentQuote.totalFare} (${
-                        trip.journeyStage === "IN_TRANSIT" ? "Captured" : "Held in Escrow"
-                      })`
-                    : "Awaiting Booking"}
-                </strong>
+                  <PodNavIcon size={13} color="#FFFFFF" />
+                  <span>Book Ride</span>
+                </Link>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Emergency Anti-One-Chance SOS Card */}

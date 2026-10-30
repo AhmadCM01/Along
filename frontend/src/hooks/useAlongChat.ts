@@ -186,6 +186,9 @@ export function useAlongChat(initialPhone = "+2348031234567") {
       };
 
       if (hasCompleteQuote) {
+        if (!isConfirmTurn) {
+          trip.boardPassengerBySeat(4, false);
+        }
         setCurrentQuote(quote);
         trip.setCurrentQuote({
           corridorId: quote.corridorId,
@@ -311,7 +314,7 @@ export function useAlongChat(initialPhone = "+2348031234567") {
         setIsLoading(false);
       }
     },
-    [phone, startTimer, stopTimer, applyBotResponse, trip]
+    [phone, startTimer, stopTimer, applyBotResponse, trip, activeLocale]
   );
 
   const sendVoiceAudio = useCallback(
@@ -327,12 +330,17 @@ export function useAlongChat(initialPhone = "+2348031234567") {
       startTimer();
 
       try {
-        const asrRes = await transcribeAudio(audioBlob, filename, clientTranscript);
+        const asrRes = await transcribeAudio(
+          audioBlob,
+          filename,
+          clientTranscript,
+          activeLocale
+        );
         const transcript =
+          (asrRes.transcript && asrRes.transcript.trim()) ||
           (clientTranscript && clientTranscript.trim()) ||
-          asrRes.transcript ||
           "Abeg I dey Dutse first gate, two seats go Berger";
-        const asrLabel = asrRes.label || "Live Mic ASR (en-NG)";
+        const asrLabel = asrRes.label || "Live Mic + Meta AI";
 
         const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
         trip.setPersistedMessages((prev) => [
@@ -365,7 +373,7 @@ export function useAlongChat(initialPhone = "+2348031234567") {
         setIsLoading(false);
       }
     },
-    [phone, startTimer, stopTimer, applyBotResponse, trip]
+    [phone, startTimer, stopTimer, applyBotResponse, trip, activeLocale]
   );
 
   const sendSampleInput = useCallback(

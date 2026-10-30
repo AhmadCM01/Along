@@ -800,10 +800,10 @@ export function AbujaCorridorMap({
 
           {/* 2. Abuja Geographic Water Bodies (Usuma Reservoir in Bwari/Ushafa & Jabi Lake) */}
           <path
-            d="M 135,28 C 165,24 182,42 168,58 C 154,70 124,62 122,44 Z"
+            d="M 165,18 C 195,14 212,28 198,42 C 184,52 154,46 152,32 Z"
             className="abuja-water-poly"
           />
-          <text x="150" y="46" textAnchor="middle" className="abuja-water-label">
+          <text x="180" y="34" textAnchor="middle" className="abuja-water-label">
             Usuma Dam
           </text>
 
@@ -817,34 +817,34 @@ export function AbujaCorridorMap({
 
           {/* 3. Aso Rock & Katampe Hill Topographic Contours */}
           <ellipse
-            cx="688"
-            cy="128"
-            rx="38"
-            ry="22"
+            cx="712"
+            cy="72"
+            rx="34"
+            ry="18"
             fill="none"
             stroke="var(--border-strong)"
             strokeWidth="1"
             strokeDasharray="3 3"
-            opacity="0.45"
+            opacity="0.4"
           />
-          <text x="688" y="131" textAnchor="middle" className="abuja-district-label">
+          <text x="712" y="75" textAnchor="middle" className="abuja-district-label">
             ASO ROCK
           </text>
 
-          {/* 4. Abuja District Cartographic Labels */}
+          {/* 4. Abuja District Cartographic Labels (Positioned in clear cartographic margins) */}
           <g className="abuja-district-layer">
-            <text x="85" y="34" className="abuja-district-label">BWARI AREA COUNCIL</text>
-            <text x="245" y="72" className="abuja-district-label">DUTSE ALHAJI</text>
-            <text x="275" y="155" className="abuja-district-label">KUBWA</text>
-            <text x="395" y="112" className="abuja-district-label">KATAMPE EXTENSION</text>
-            <text x="390" y="205" className="abuja-district-label">GWARINPA / LIFE CAMP</text>
-            <text x="615" y="112" className="abuja-district-label">MAITAMA</text>
-            <text x="615" y="142" className="abuja-district-label">WUSE II</text>
-            <text x="580" y="252" className="abuja-district-label">GARKI / AREA 1</text>
-            <text x="705" y="218" className="abuja-district-label">ASOKORO</text>
-            <text x="345" y="275" className="abuja-district-label">LUGBE AIRPORT RD</text>
-            <text x="95" y="304" className="abuja-district-label">GWAGWALADA</text>
-            <text x="685" y="302" className="abuja-district-label">MARARABA / KARU</text>
+            <text x="24" y="24" className="abuja-district-label">BWARI AREA COUNCIL</text>
+            <text x="240" y="52" className="abuja-district-label">DUTSE ALHAJI</text>
+            <text x="265" y="165" className="abuja-district-label">KUBWA</text>
+            <text x="415" y="88" className="abuja-district-label">KATAMPE EXTENSION</text>
+            <text x="380" y="212" className="abuja-district-label">GWARINPA / LIFE CAMP</text>
+            <text x="595" y="76" className="abuja-district-label">MAITAMA</text>
+            <text x="585" y="114" className="abuja-district-label">WUSE II</text>
+            <text x="580" y="256" className="abuja-district-label">GARKI / AREA 1</text>
+            <text x="695" y="222" className="abuja-district-label">ASOKORO</text>
+            <text x="345" y="278" className="abuja-district-label">LUGBE AIRPORT RD</text>
+            <text x="95" y="306" className="abuja-district-label">GWAGWALADA</text>
+            <text x="650" y="306" className="abuja-district-label">MARARABA / KARU</text>
           </g>
 
           {/* 5. Other 5 Abuja Corridors (Subtle Slate Transit Network) */}
@@ -860,15 +860,15 @@ export function AbujaCorridorMap({
             />
           ))}
 
-          {/* 6. Selected Corridor Full Spine (Dimmed outside booked segment) */}
+          {/* 6. Selected Corridor Full Spine */}
           <path
             d={fullPathD}
             fill="none"
-            stroke="var(--corridor-inactive)"
-            strokeWidth="6"
+            stroke={hasBookingOrQuote ? "var(--corridor-inactive)" : "var(--brand-primary)"}
+            strokeWidth={hasBookingOrQuote ? "5.5" : "4"}
             strokeLinecap="round"
-            strokeDasharray="6 6"
-            opacity="0.7"
+            strokeDasharray={hasBookingOrQuote ? "6 6" : "8 5"}
+            opacity={hasBookingOrQuote ? 0.65 : 0.45}
           />
 
           {/* 7. Active Booked Corridor Route Segment (Pickup -> Drop-off) */}
@@ -899,14 +899,14 @@ export function AbujaCorridorMap({
             const isPickup = hasBookingOrQuote && idx === pickupIdx;
             const isDrop = hasBookingOrQuote && idx === dropIdx;
             const isWithinTrip = !hasBookingOrQuote || (idx >= pickupIdx && idx <= dropIdx);
-            const labelY = wp.labelPos === "top" ? -16 : 22;
-            const partnerY = wp.labelPos === "top" ? -28 : 34;
+            const labelY = wp.labelPos === "top" ? -14 : 21;
+            const badgeY = wp.labelPos === "top" ? -26 : 33;
 
             return (
               <g
                 key={wp.id}
                 transform={`translate(${wp.x}, ${wp.y})`}
-                style={{ opacity: isWithinTrip ? 1 : 0.45 }}
+                style={{ opacity: isWithinTrip ? 1 : 0.42 }}
               >
                 {/* Pulsing Ring for Active Pickup or Drop-off */}
                 {(isPickup || isDrop) && (
@@ -958,24 +958,22 @@ export function AbujaCorridorMap({
                   {wp.name}
                 </text>
 
-                {/* Safe Forecourt Partner Label */}
-                <text
-                  x="0"
-                  y={partnerY}
-                  textAnchor="middle"
-                  style={{
-                    fontSize: 8.5,
-                    fontWeight: 700,
-                    fill: isPickup
-                      ? "var(--brand-primary)"
-                      : isDrop
-                      ? "var(--signal-amber)"
-                      : "var(--text-muted)",
-                    fontFamily: "var(--font-mono)",
-                  }}
-                >
-                  {isPickup ? "SAFE PICKUP" : isDrop ? "DESTINATION" : wp.partner}
-                </text>
+                {/* Role Badge only on Active Pickup & Drop-off to keep intermediate spine uncluttered */}
+                {(isPickup || isDrop) && (
+                  <text
+                    x="0"
+                    y={badgeY}
+                    textAnchor="middle"
+                    style={{
+                      fontSize: 8.5,
+                      fontWeight: 800,
+                      fill: isPickup ? "var(--brand-primary)" : "var(--signal-amber)",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  >
+                    {isPickup ? "SAFE PICKUP" : "DESTINATION"}
+                  </text>
+                )}
               </g>
             );
           })}
@@ -1009,13 +1007,13 @@ export function AbujaCorridorMap({
                 x1="0"
                 y1="-8"
                 x2="0"
-                y2="-36"
+                y2="-38"
                 stroke={isTripInitiated || hasArrived ? "var(--brand-primary)" : "var(--signal-amber)"}
                 strokeWidth="1.5"
               />
               <rect
                 x="-58"
-                y="-56"
+                y="-58"
                 width="116"
                 height="20"
                 rx="10"
@@ -1023,7 +1021,7 @@ export function AbujaCorridorMap({
               />
               <text
                 x="0"
-                y="-42.5"
+                y="-44.5"
                 textAnchor="middle"
                 style={{
                   fontSize: 9.2,
@@ -1043,7 +1041,7 @@ export function AbujaCorridorMap({
         </svg>
       </div>
 
-      {/* Dynamic Route Summary Footer (Reflects exact booked anchor & destination) */}
+      {/* Dynamic Route Summary Footer (Reflects exact booked anchor & destination, or Preview Mode when idle) */}
       <div
         style={{
           padding: "12px 18px",
@@ -1057,31 +1055,61 @@ export function AbujaCorridorMap({
           fontSize: 12.5,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div>
-            <span style={{ color: "var(--text-muted)" }}>Safe Pickup Anchor: </span>
-            <strong style={{ color: "var(--brand-primary)" }}>
-              {hasBookingOrQuote ? displayAnchorName : `${pickupWp.partner} (${pickupWp.name})`}
-            </strong>
-          </div>
-          <span style={{ color: "var(--text-faint)" }}>➔</span>
-          <div>
-            <span style={{ color: "var(--text-muted)" }}>Booked Destination: </span>
-            <strong style={{ color: "var(--text-ink)" }}>
-              {hasBookingOrQuote ? displayDestName : dropWp.name}
-            </strong>
-          </div>
-        </div>
+        {hasBookingOrQuote ? (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div>
+                <span style={{ color: "var(--text-muted)" }}>Safe Pickup Anchor: </span>
+                <strong style={{ color: "var(--brand-primary)" }}>{displayAnchorName}</strong>
+              </div>
+              <span style={{ color: "var(--text-faint)" }}>➔</span>
+              <div>
+                <span style={{ color: "var(--text-muted)" }}>Booked Destination: </span>
+                <strong style={{ color: "var(--text-ink)" }}>{displayDestName}</strong>
+              </div>
+            </div>
 
-        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-          {isTripInitiated
-            ? `Live GPS Telemetry · ${vehicleInfo.pct}% Complete`
-            : hasArrived
-            ? "Trip Completed · Escrow Settled (90/10)"
-            : hasBookingOrQuote
-            ? "Waiting for Driver OTP Initiation"
-            : "6 Abuja Corridors · 24 Private Forecourts"}
-        </div>
+            <div
+              style={{
+                fontSize: 11.5,
+                fontWeight: 700,
+                color: "var(--text-muted)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              {isTripInitiated
+                ? `Live GPS Telemetry · ${vehicleInfo.pct}% Complete`
+                : hasArrived
+                ? "Trip Completed · Escrow Settled (90/10)"
+                : "Waiting for Driver OTP Initiation"}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ color: "var(--text-muted)" }}>Corridor Network Preview:</span>
+              <strong style={{ color: "var(--text-ink)" }}>
+                {corridor.waypoints[0].name} ➔ {corridor.waypoints[corridor.waypoints.length - 1].name}
+              </strong>
+              <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                ({corridor.waypoints.length} Safe Forecourt Stops · Fixed {corridor.fare})
+              </span>
+            </div>
+
+            <Link
+              href="/"
+              style={{
+                fontSize: 11.5,
+                fontWeight: 800,
+                color: "var(--brand-primary)",
+                textDecoration: "none",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              No Active Trip · Book on WhatsApp ➔
+            </Link>
+          </>
+        )}
       </div>
 
       <style jsx global>{`

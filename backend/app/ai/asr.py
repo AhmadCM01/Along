@@ -30,11 +30,13 @@ logger = get_logger(__name__)
 
 ABUJA_ASR_VOCABULARY_PROMPT = (
     "Abuja FCT Nigeria shared transit voice note in English, Nigerian Pidgin, or Hausa. "
-    "Key locations: Bwari, Ushafa, Dutse Alhaji, Dutse First Gate, Sokale Roundabout, "
+    "Key locations: Bwari, Ushafa, Dutse, Dutse Alhaji, Dutse First Gate, Sokale Roundabout, "
     "Kubwa Express, Mopol Junction, Tipper Garage, Katampe Bridge, Oando Mabushi, "
-    "Gwarinpa, Galadima, Berger Roundabout, Gadar Berger, Wuse Market, Kasuwar Wuse, "
+    "Gwarinpa, Galadima, Berger Roundabout, Gadar Berger, Wuse, Wuse Market, Kasuwar Wuse, "
     "Zuba, Dei-Dei, Karimo, Life Camp, Jabi, Utako, Gwagwalada, Giri, Lugbe Police Signboard, "
-    "City Gate, Area 1, Mararaba Orange Market, Nyanya, Kugbo, AYA Asokoro, Federal Secretariat."
+    "City Gate, Area 1, Mararaba Orange Market, Nyanya, Kugbo, AYA Asokoro, Federal Secretariat. "
+    "Hausa examples: Ina Bwari zan je Kasuwar Wuse kujera biyu. Zan je Wuse daga Dutse. "
+    "Pidgin examples: Abeg I dey Dutse First Gate, two seats go Berger. Drop me for Oando Katampe."
 )
 
 DEMO_VOICE_FIXTURES: dict[str, tuple[str, str]] = {
@@ -110,8 +112,12 @@ async def transcribe_voice_note(
     filename: str = "voice_note.ogg",
     fixture_id: str | None = None,
     client_transcript: str | None = None,
+    locale_hint: str | None = None,
 ) -> ASRResult:
-    """Transcribe a WhatsApp voice note with API-first routing and honest fallback."""
+    """Transcribe a WhatsApp voice note with API-first routing and Meta AI phonetic post-correction."""
+    from app.ai.asr_normalizer import normalize_abuja_asr_transcript, reconstruct_asr_with_meta_llm
+    from app.ai.extraction import detect_language
+
     start = time.perf_counter()
     settings = get_settings()
 
@@ -140,12 +146,13 @@ async def transcribe_voice_note(
                 resp.raise_for_status()
                 payload = resp.json()
                 returned_model = str(payload.get("model") or "muse-voice-transcribe-1.0")
-                latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
                 text_out = payload.get("text", "").strip()
                 if text_out:
+                    clean_text, _ = await reconstruct_asr_with_meta_llm(text_out, locale_hint=locale_hint)
+                    latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
                     return ASRResult(
-                        transcript=text_out,
-                        detected_language=payload.get("language", "pcm"),
+                        transcript=clean_text,
+                        detected_language=detect_language(clean_text),
                         model_used=returned_model,
                         provider="meta_model_api",
                         label="Meta Model API (Muse Voice)",
@@ -155,52 +162,68 @@ async def transcribe_voice_note(
         except Exception as exc:
             logger.warning("meta_asr_transcribe_fallback", error=str(exc))
 
-    # 2. Groq Whisper (labeled Non-Meta ASR)
-    if groq_key and audio_bytes and not fixture_id:
+    # 2. Groq Whisper (labeled Non-Meta ASR) + Meta AI Phonetic Reconstruction
+    # Note: Skip real HTTP call for synthetic 15-byte unit-test stubs (e.g. b"OggS-demo-voice")
+    is_real_audio = bool(audio_bytes and len(audio_bytes) > 256 and not fixture_id)
+    if groq_key and is_real_audio:
         try:
             url = "https://api.groq.com/openai/v1/audio/transcriptions"
             mime_type = "audio/webm" if filename.lower().endswith(".webm") else "audio/ogg"
+            data_fields: dict[str, str] = {
+                "model": settings.WHISPER_MODEL,
+                "prompt": ABUJA_ASR_VOCABULARY_PROMPT,
+                "response_format": "json",
+            }
+            if locale_hint == "ha":
+                data_fields["language"] = "ha"
             async with httpx.AsyncClient(timeout=12.0) as client:
                 resp = await client.post(
                     url,
                     headers={"Authorization": f"Bearer {groq_key}"},
-                    data={
-                        "model": settings.WHISPER_MODEL,
-                        "prompt": ABUJA_ASR_VOCABULARY_PROMPT,
-                        "response_format": "json",
-                    },
+                    data=data_fields,
                     files={"file": (filename, audio_bytes, mime_type)},
                 )
                 resp.raise_for_status()
                 payload = resp.json()
                 returned_model = str(payload.get("model") or settings.WHISPER_MODEL)
-                latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
                 text_out = payload.get("text", "").strip()
                 if text_out:
+                    clean_text, meta_model = await reconstruct_asr_with_meta_llm(
+                        text_out,
+                        locale_hint=locale_hint,
+                    )
+                    latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
+                    label_str = (
+                        f"Whisper + Meta {meta_model.split('/')[-1]} Correction"
+                        if meta_model
+                        else "Non-Meta ASR"
+                    )
                     return ASRResult(
-                        transcript=text_out,
-                        detected_language=payload.get("language", "pcm"),
+                        transcript=clean_text,
+                        detected_language=detect_language(clean_text),
                         model_used=returned_model,
                         provider="groq_whisper",
-                        label="Non-Meta ASR",
+                        label=label_str,
                         latency_ms=latency_ms,
                         fallback=False,
                     )
         except Exception as exc:
             logger.warning("groq_whisper_error", error=str(exc))
 
-    # 2b. Live Browser Web Speech API Transcript (when user spoke into microphone without cloud ASR key)
+    # 2b. Live Browser Web Speech API Transcript + Meta AI Phonetic Reconstruction
     if client_transcript and client_transcript.strip():
-        clean_live = client_transcript.strip()
-        from app.ai.extraction import detect_language
+        clean_live, meta_model = await reconstruct_asr_with_meta_llm(
+            client_transcript.strip(),
+            locale_hint=locale_hint,
+        )
         detected_lang = detect_language(clean_live)
         latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
         return ASRResult(
             transcript=clean_live,
             detected_language=detected_lang,
-            model_used="web-speech-en-NG",
+            model_used=meta_model or "web-speech-en-NG",
             provider="browser_live_asr",
-            label="Live Microphone ASR (en-NG)",
+            label=f"Live Mic + Meta AI Correction" if meta_model else "Live Microphone ASR (en-NG)",
             latency_ms=latency_ms,
             fallback=False,
         )

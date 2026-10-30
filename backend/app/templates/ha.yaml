@@ -27,11 +27,11 @@ short_trip_rejected: |
   Tsakanin *{origin_name}* da *{dest_name}* bai kai mita 800 ba. Zabi wani wurin sauka na gaba a kan hanyar.
 
 quote_ready: |
-  Toh madalla! Akwai motar Along mai kujera 4 da ke daukar fasinja yanzu a cikin *{anchor_name}* (kusa da *{origin_name}*, gidan mai mai tsaro ba tare da damuwar agbero ba). Zuwa *{dest_name}* zai kama *{unit_fare_naira}* kowace kujera (jimilla *{total_fare_naira}* don kujera *{seats}*, ragin {savings_pct}%). Na kulle maka kujerar a Escrow yanzu?
+  Toh madalla! Motar mu mai kujera 4 na daukar fasinja yanzu a gidan mai na *{anchor_name}* zuwa *{dest_name}* (ragin {savings_pct}% fiye da drop). Duba katin farashin a kasa sai ka danna confirm don kulle kujerarka!
   *Farashin Tafiyar Along ({corridor_id})*
 
 pooling_started: |
-  Alhamdulillah, an kulle kujerarka (`{request_code}`)! Shiga harabar *{anchor_name}* ka nuna wa direba Lambar Shiga Mota *{boarding_otp}* kafin ku tashi. Kudinka *{total_fare_naira}* yana tsare a Escrow har sai direba ya tabbatar da lambarka ({current_seats}/4 sun cika).
+  Alhamdulillah, an kulle kujerarka a Escrow ({current_seats}/4 sun cika)! Shiga harabar *{anchor_name}* yanzu ka nuna wa direba Lambar Shiga Mota *{boarding_otp}* da ke kan katin shiga a kasa.
 
 pod_matched: |
   *An Samu Motar Pod `{pod_code}`!*

@@ -25,11 +25,11 @@ short_trip_rejected: |
   *{origin_name}* and *{dest_name}* are right next to each other (under 800m). Our Along pods run corridor trips of 800m and above. Which further junction down the road are you heading to?
 
 quote_ready: |
-  I have a 4-seat pod loading right now inside *{anchor_name}* (just a short walk from *{origin_name}*, safe forecourt with zero roadside touts). Dropping you at *{dest_name}* is *{unit_fare_naira}* per seat (*{total_fare_naira}* total for *{seats}* seat(s), saving you {savings_pct}% vs a solo ride). Shall I lock your seat in escrow?
+  Got you! We have a 4-seat corridor pod boarding right now inside the safe forecourt at *{anchor_name}* heading to *{dest_name}* (saving {savings_pct}% vs a solo ride). Review your fare card below and tap confirm to lock your seat!
   *Along Corridor Quote ({corridor_id})*
 
 pooling_started: |
-  Awesome, your seat is locked in! Walk into the safe forecourt at *{anchor_name}* and show Boarding Code *{boarding_otp}* to your driver before takeoff. Your *{total_fare_naira}* fare is held safely in escrow until your code is verified ({current_seats}/4 seats filled, Request `{request_code}`).
+  Your seat is locked in atomic escrow ({current_seats}/4 seats filled)! Step into the *{anchor_name}* forecourt and show Boarding Code *{boarding_otp}* on your boarding pass below to your driver.
 
 pod_matched: |
   *Pod `{pod_code}` Matched!*

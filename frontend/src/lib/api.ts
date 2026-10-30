@@ -229,13 +229,17 @@ export async function sendDemoChat(input: {
 export async function transcribeAudio(
   audioBlob: Blob | File,
   filename = "voice_note.webm",
-  clientTranscript?: string
+  clientTranscript?: string,
+  localeHint?: string
 ): Promise<ASRResponse> {
   const url = `${getApiBaseUrl()}/api/v1/demo/asr`;
   const formData = new FormData();
   formData.append("file", audioBlob, filename);
   if (clientTranscript && clientTranscript.trim()) {
     formData.append("client_transcript", clientTranscript.trim());
+  }
+  if (localeHint && localeHint.trim()) {
+    formData.append("locale_hint", localeHint.trim());
   }
 
   const res = await fetch(url, {

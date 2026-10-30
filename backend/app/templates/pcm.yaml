@@ -25,11 +25,11 @@ short_trip_rejected: |
   Oga mi, *{origin_name}* and *{dest_name}* too near each other (under 800m). Along pod na for proper corridor movement pass 800m. Which further junction down the road you wan reach?
 
 quote_ready: |
-  No wahala! Clean 4-seat pod dey load right now inside *{anchor_name}* (just by *{origin_name}*, safe station forecourt, zero agbero wahala). Movement reach *{dest_name}* na *{unit_fare_naira}* per seat (*{total_fare_naira}* total for *{seats}* seat(s), you save {savings_pct}% pass solo drop). Make I lock your seat inside escrow sharp-sharp?
+  Sharp boss! Our clean 4-seat pod dey load right now inside *{anchor_name}* (safe filling station, zero agbero wahala) heading straight go *{dest_name}* ({savings_pct}% cheaper pass solo drop). Check your fare card below make I lock your seat sharp-sharp!
   *Along Corridor Quote ({corridor_id})*
 
 pooling_started: |
-  Twale! Your seat don lock inside pod (`{request_code}`). Just waka enter *{anchor_name}* forecourt now and show driver your Boarding Code *{boarding_otp}* before moto move. Your *{total_fare_naira}* dey safe inside escrow until driver punch your code ({current_seats}/4 seats don full).
+  Twale! Your seat don lock inside escrow ({current_seats}/4 seats ready). Just waka enter *{anchor_name}* forecourt now and show Driver Musa your 4-digit Boarding Code *{boarding_otp}* on the pass below before moto move.
 
 pod_matched: |
   *Pod `{pod_code}` Don Set!*

@@ -62,7 +62,7 @@ export function playAlongVoiceNote({
 
   // 2. Play either the user's live recorded voice Blob URL or the native Nigerian Male (en-NG-AbeoNeural) MP3
   try {
-    const srcUrl = customAudioUrl || "/audio/pidgin_dutse_berger.mp3?v=abeo_male_v2";
+    const srcUrl = customAudioUrl || "/audio/pidgin_dutse_berger.mp3?v=abeo_male_v3";
     const audio = new Audio(srcUrl);
     activeAudioElement = audio;
     audio.playbackRate = 1.0;

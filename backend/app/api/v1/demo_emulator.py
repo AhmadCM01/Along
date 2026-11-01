@@ -8,26 +8,68 @@ Provides:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.ai.asr import transcribe_voice_note
 from app.ai.graph.workflow import AlongConversationWorkflow
-from app.api.v1.drivers import ACTIVE_PODS_STORE
+from app.api.v1.drivers import ACTIVE_PODS_STORE, get_pod_for_corridor
 from app.api.v1.trips_public import PUBLIC_TRIPS_BY_TOKEN
 from app.api.v1.webhooks_whatsapp import get_webhook_redis_store
+from app.core.config import get_settings
 from app.core.ids import generate_boarding_otp, generate_share_token
 from app.core.money import format_naira
 from app.core.security import hash_otp_code
+from app.redis.keys import RedisKeys
 
 router = APIRouter(prefix="/api/v1/demo", tags=["demo-cockpit"])
 
 REPLAY_FILE_PATH = Path(__file__).resolve().parents[4] / "data" / "replays" / "real_replay.json"
+
+CORRIDOR_DRIVERS: dict[str, dict[str, str]] = {
+    "BWR-DUT-WUS": {
+        "full_name": "Musa Bello",
+        "plate_number": "ABJ-402-AL",
+        "vehicle_desc": "Volkswagen Golf 4 (Emerald Green)",
+        "pod_code": "POD-842A",
+    },
+    "ZUB-KUB-WUS": {
+        "full_name": "Chukwudi Nwosu",
+        "plate_number": "ABJ-106-AL",
+        "vehicle_desc": "Toyota Camry (Black)",
+        "pod_code": "POD-519K",
+    },
+    "ZUB-DEI-DUT": {
+        "full_name": "Tunde Adeyemi",
+        "plate_number": "ABJ-108-AL",
+        "vehicle_desc": "Toyota Corolla (Wine Red)",
+        "pod_code": "POD-208D",
+    },
+    "ZUB-KRM-JAB": {
+        "full_name": "Bala Mohammed",
+        "plate_number": "ABJ-110-AL",
+        "vehicle_desc": "Volkswagen Golf 4 (Silver)",
+        "pod_code": "POD-612J",
+    },
+    "GWL-LUG-AR1": {
+        "full_name": "Peter Okon",
+        "plate_number": "ABJ-112-AL",
+        "vehicle_desc": "Toyota Corolla (Gold)",
+        "pod_code": "POD-304L",
+    },
+    "MRB-NYA-CEN": {
+        "full_name": "Kingsley Nnamdi",
+        "plate_number": "ABJ-116-AL",
+        "vehicle_desc": "Toyota Corolla (Blue)",
+        "pod_code": "POD-721M",
+    },
+}
 
 
 class DemoChatInput(BaseModel):
@@ -35,6 +77,7 @@ class DemoChatInput(BaseModel):
     message_text: str | None = None
     audio_fixture_id: str | None = None
     is_peak: bool = False
+    reset_session: bool = False
 
 
 GUIDED_SCENARIOS: list[dict[str, Any]] = [
@@ -264,7 +307,7 @@ async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
         "detected_language": res.detected_language,
         "model_used": res.model_used,
         "provider": res.provider,
-        "label": res.label if res.label != "none" else "Non-Meta ASR (Whisper)",
+        "label": res.label if res.label != "none" else "Meta Muse Spark Voice NLU (meta-models/muse-spark-open-1026)",
         "latency_ms": res.latency_ms,
         "fallback": res.fallback,
     }
@@ -274,6 +317,22 @@ async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
 async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[str, Any]:
     """Execute a live conversational turn in the Judge Cockpit with honest fallback flags."""
     redis_store = get_webhook_redis_store(request)
+
+    # 0. Session reset requested from WhatsApp Simulator
+    if body.reset_session:
+        wa_hash = hashlib.sha256(body.phone.encode("utf-8")).hexdigest()
+        key = RedisKeys.wa_session(wa_hash)
+        if redis_store:
+            try:
+                await redis_store.delete(key)
+            except Exception:
+                pass
+        return {
+            "status": "ok",
+            "message": "Session reset successfully",
+            "pane1_whatsapp": {"stage": "IDLE", "reply_text": ""},
+        }
+
     workflow = AlongConversationWorkflow(redis_store)
 
     audio_bytes = b"OggS-demo-voice" if body.audio_fixture_id else None
@@ -290,42 +349,120 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
     if not state.share_token:
         state.share_token = generate_share_token()
 
-    # Store HMAC of the boarding OTP in active pod store for constant-time driver verification
-    pod_key = (state.pod_code or "POD-842A").split()[0]
-    pod_entry = ACTIVE_PODS_STORE.setdefault(
-        pod_key,
-        {
-            "pod_id": pod_key,
-            "driver_id": "DRV-001",
-            "corridor_id": state.corridor_id or "BWR-DUT-WUS",
-            "anchor_lat": 9.1779,
-            "anchor_lng": 7.3736,
-            "seats_occupied": 4,
-            "status": "BOARDING",
-            "boarded_requests": {"rr-demo-02", "rr-demo-03", "rr-demo-04"},
-        },
-    )
-    pod_entry.setdefault("boarding_otp_hashes", {})["rr-demo-01"] = hash_otp_code(
-        state.boarding_otp, context_id="rr-demo-01"
-    )
-    pod_entry.setdefault("otp_created_at", {})["rr-demo-01"] = time.time()
-    pod_entry.setdefault("otp_attempts", {})["rr-demo-01"] = 0
+    corr_key = state.corridor_id or "BWR-DUT-WUS"
+    driver_info = CORRIDOR_DRIVERS.get(corr_key, CORRIDOR_DRIVERS["BWR-DUT-WUS"])
+    state.pod_code = driver_info["pod_code"]
 
-    # Sync public trip share store with the commuter's exact booked origin/destination
+    # Sync passenger and OTP with active pod for multi-browser concurrent pooling
+    pod_key = driver_info["pod_code"]
+    pod_entry = get_pod_for_corridor(corr_key, pod_key)
+    passengers = pod_entry.setdefault("passengers", [])
+
+    if state.stage in ("AWAITING_CONFIRMATION", "POOLING") and state.destination_name:
+        req_id = state.request_id or f"req-{state.phone_e164[-4:]}"
+        active_passengers = [p for p in passengers if not p.get("is_alighted") and not p.get("alighted")]
+        existing_idx = next(
+            (i for i, p in enumerate(passengers) if p.get("phone") == state.phone_e164),
+            -1,
+        )
+        existing_p = passengers[existing_idx] if existing_idx >= 0 else None
+
+        # Calculate currently occupied seat numbers by other active passengers
+        occupied_seats: set[int] = set()
+        for p in active_passengers:
+            if existing_p and p.get("request_id") == existing_p.get("request_id"):
+                continue
+            for s in p.get("seat_numbers", []):
+                occupied_seats.add(int(s))
+
+        free_seats = [s for s in [1, 2, 3, 4] if s not in occupied_seats]
+        req_seats = max(1, int(state.seats or 1))
+
+        # Enforce strict 4-seat pod capacity
+        if req_seats > len(free_seats):
+            loc = (state.locale or "pcm").lower()
+            if loc == "ha":
+                detail_msg = f"Yawan kujerun mota ya cika. Kujeru 4 ne kacal a mota (kujeru {len(free_seats)} suka rage). Ka nemi kujeru {req_seats}."
+            elif loc == "en":
+                detail_msg = f"Pod capacity exceeded. A pod has exactly 4 seats ({len(free_seats)} free remaining). You requested {req_seats} seats."
+            else:
+                detail_msg = f"Pod capacity don pass limit. Pod get exactly 4 seats ({len(free_seats)} empty). You request {req_seats} seats."
+            raise HTTPException(status_code=409, detail=detail_msg)
+
+        assigned_seats = free_seats[:req_seats]
+        if not assigned_seats:
+            assigned_seats = [4]
+
+        # Use clean names like 'Rider A', 'Rider B' without phone numbers
+        rider_letter = chr(65 + (len(passengers) % 26))
+        display_label = f"Rider {rider_letter}"
+
+        p_entry = {
+            "request_id": req_id,
+            "phone": state.phone_e164,
+            "display_name": display_label,
+            "origin": state.anchor_name or state.origin_name or "Safe Pickup Anchor",
+            "destination": state.destination_name,
+            "seats": req_seats,
+            "seat_numbers": assigned_seats,
+            "fare_naira": state.total_fare_kobo // 100,
+            "otp_code": state.boarding_otp,
+            "is_boarded": req_id in pod_entry.get("boarded_requests", set()),
+            "is_alighted": False,
+            "is_confirmed": state.stage == "POOLING",
+            "booked_at": time.time(),
+        }
+
+        if existing_idx >= 0:
+            passengers[existing_idx] = p_entry
+        else:
+            passengers.append(p_entry)
+
+        pod_entry["seats_occupied"] = min(4, sum(p["seats"] for p in passengers if not p.get("is_alighted") and not p.get("alighted")))
+        pod_entry.setdefault("boarding_otp_hashes", {})[req_id] = hash_otp_code(
+            state.boarding_otp, context_id=req_id
+        )
+        pod_entry.setdefault("boarding_otp_hashes", {})[state.boarding_otp] = hash_otp_code(
+            state.boarding_otp, context_id=""
+        )
+        pod_entry.setdefault("boarding_otps", {})[state.boarding_otp] = req_id
+        pod_entry.setdefault("otp_created_at", {})[req_id] = time.time()
+        pod_entry.setdefault("otp_attempts", {})[req_id] = 0
+
+    settings = get_settings()
+    share_url = f"{settings.PUBLIC_BASE_URL.rstrip('/')}/t/{state.share_token}" if state.share_token else ""
+
+    # Sync public trip share store with the rider's exact booked trip details
     if state.share_token and (state.anchor_name or state.origin_name) and state.destination_name:
         PUBLIC_TRIPS_BY_TOKEN[state.share_token] = {
             "share_token": state.share_token,
-            "pod_code": state.pod_code or "POD-842A",
-            "corridor_id": state.corridor_id or "BWR-DUT-WUS",
+            "share_url": share_url,
+            "pod_code": driver_info["pod_code"],
+            "corridor": corr_key,
+            "corridor_id": corr_key,
             "corridor_name": f"{state.origin_name or 'Origin'} -> {state.destination_name}",
-            "status": "AWAITING_BOARDING",
+            "status": "AWAITING_BOARDING" if state.stage == "POOLING" else state.stage,
+            "pickup_anchor": state.anchor_name or state.origin_name or "Safe Forecourt Anchor",
             "origin_anchor": state.anchor_name or state.origin_name or "Safe Forecourt Anchor",
+            "drop_off": state.destination_name,
             "destination_landmark": state.destination_name,
+            "seats": state.seats,
+            "fare": state.total_fare_kobo // 100,
+            "fare_kobo": state.total_fare_kobo,
+            "fare_naira": state.total_fare_kobo // 100,
+            "demo_driver_profile": {
+                "full_name": driver_info["full_name"],
+                "profile_note": "Demo driver profile",
+                "vehicle_desc": driver_info["vehicle_desc"],
+                "plate_number": driver_info["plate_number"],
+                "id_on_file": True,
+                "rating": 4.94,
+            },
             "driver": {
-                "full_name": "Musa Bello",
-                "profile_note": "Verified commercial driver · NIN verified",
-                "vehicle_desc": "Volkswagen Golf 4 (Silver)",
-                "plate_number": "ABJ-402-AL",
+                "full_name": driver_info["full_name"],
+                "profile_note": "Demo driver profile",
+                "vehicle_desc": driver_info["vehicle_desc"],
+                "plate_number": driver_info["plate_number"],
                 "id_on_file": True,
                 "rating": 4.94,
             },
@@ -338,7 +475,7 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
                 "route_deviation_m": 4,
                 "is_on_corridor": True,
             },
-            "escrow_status": "Locked in Atomic Escrow",
+            "escrow_status": "Simulated escrow",
             "sos_active": state.stage == "SOS_ACTIVE",
             "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
@@ -356,8 +493,10 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
         "fallback": fallback_active,
         "fallback_banner": fallback_banner,
         "traces": traces_list,
+        "share_token": state.share_token,
+        "share_url": share_url,
         "pane1_whatsapp": {
-            "phone": state.phone_e164,
+            "phone": "",
             "locale": state.locale,
             "stage": state.stage,
             "reply_text": state.last_reply_text,
@@ -366,6 +505,7 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
             "request_code": state.request_code,
             "boarding_otp": state.boarding_otp,
             "share_token": state.share_token,
+            "share_url": share_url,
         },
         "pane2_xray_and_ledger": {
             "xray": state.xray_trace,
@@ -388,10 +528,10 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
         },
         "pane3_driver": {
             "profile_type": "Demo driver profile",
-            "pod_code": state.pod_code or "POD-842A (Demo data)",
-            "driver_name": "Musa Danjuma (Demo data)",
-            "plate_number": "ABJ-412K (Demo data)",
-            "vehicle_desc": "Toyota Corolla (Silver)",
+            "pod_code": f"{driver_info['pod_code']} (Demo data)",
+            "driver_name": f"{driver_info['full_name']} (Demo data)",
+            "plate_number": f"{driver_info['plate_number']} (Demo data)",
+            "vehicle_desc": driver_info["vehicle_desc"],
             "phone_mode": "SMARTPHONE_AND_2G_USSD",
             "ussd_shortcode": "*384*247#",
             "boarding_otp_expected": state.boarding_otp or "",

@@ -57,6 +57,8 @@ interface WhatsAppSimulatorProps {
   onResetChat?: () => void;
   activeLocale: "en" | "pcm" | "ha";
   onChangeLocale?: (loc: "en" | "pcm" | "ha") => void;
+  currentPhone?: string;
+  onSwitchCommuter?: (phone: string) => void;
   isProcessing?: boolean;
   elapsedSeconds?: number;
   errorMessage?: string | null;
@@ -217,6 +219,8 @@ export function WhatsAppSimulator({
   onConfirmBooking,
   onResetChat,
   activeLocale,
+  currentPhone,
+  onSwitchCommuter,
   isProcessing = false,
   errorMessage,
 }: WhatsAppSimulatorProps) {
@@ -224,14 +228,12 @@ export function WhatsAppSimulator({
   const [inputText, setInputText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
-  const [liveSpeechTranscript, setLiveSpeechTranscript] = useState("");
   const [activeVoicePlayingId, setActiveVoicePlayingId] = useState<string | null>(null);
+  const [copiedShareId, setCopiedShareId] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const recognitionRef = useRef<any>(null);
-  const capturedTranscriptRef = useRef<string>("");
   const cancelledRecordingRef = useRef<boolean>(false);
   const recordSecondsRef = useRef<number>(0);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -241,8 +243,14 @@ export function WhatsAppSimulator({
   useEffect(() => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+      const t = setTimeout(() => {
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+      }, 90);
+      return () => clearTimeout(t);
     }
-  }, [messages, isRecording, isProcessing, liveSpeechTranscript]);
+  }, [messages, isRecording, isProcessing]);
 
   const handleSend = () => {
     const trimmed = inputText.trim();
@@ -259,14 +267,12 @@ export function WhatsAppSimulator({
   };
 
   /**
-   * Start real microphone recording + real-time Web Speech API transcription
+   * Start real microphone recording and send recorded audio directly to backend ASR + Meta AI
    */
   const startRecording = async () => {
     chunksRef.current = [];
-    capturedTranscriptRef.current = "";
     cancelledRecordingRef.current = false;
     recordSecondsRef.current = 0;
-    setLiveSpeechTranscript("");
     setRecordSeconds(0);
 
     try {
@@ -295,41 +301,11 @@ export function WhatsAppSimulator({
         const mins = Math.floor(secs / 60);
         const remSecs = String(secs % 60).padStart(2, "0");
         const durationStr = `${mins}:${remSecs}`;
-        const finalSpokenText = capturedTranscriptRef.current.trim();
 
         if (onSendVoiceAudio) {
-          onSendVoiceAudio(audioBlob, "voice_note.webm", finalSpokenText, durationStr, audioUrl);
+          onSendVoiceAudio(audioBlob, "voice_note.webm", undefined, durationStr, audioUrl);
         }
       };
-
-      // Start parallel Web Speech API recognition so exact user speech is captured in real time
-      if (typeof window !== "undefined") {
-        const SpeechRec =
-          (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (SpeechRec) {
-          try {
-            const rec = new SpeechRec();
-            rec.lang = activeLocale === "ha" ? "ha-NG" : "en-NG";
-            rec.continuous = true;
-            rec.interimResults = true;
-
-            rec.onresult = (event: any) => {
-              let fullText = "";
-              for (let i = 0; i < event.results.length; i++) {
-                fullText += event.results[i][0].transcript + " ";
-              }
-              const cleaned = normalizeLiveSpeechPreview(fullText.trim());
-              if (cleaned) {
-                capturedTranscriptRef.current = cleaned;
-                setLiveSpeechTranscript(cleaned);
-              }
-            };
-            rec.onerror = () => {};
-            rec.start();
-            recognitionRef.current = rec;
-          } catch {}
-        }
-      }
 
       mr.start(200);
       mediaRecorderRef.current = mr;
@@ -347,12 +323,6 @@ export function WhatsAppSimulator({
   };
 
   const cleanupRecordingHandles = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
-      recognitionRef.current = null;
-    }
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((t) => t.stop());
       mediaStreamRef.current = null;
@@ -362,7 +332,6 @@ export function WhatsAppSimulator({
       timerRef.current = null;
     }
     setIsRecording(false);
-    setLiveSpeechTranscript("");
   };
 
   const finishAndSendRecording = () => {
@@ -408,7 +377,7 @@ export function WhatsAppSimulator({
     });
   };
 
-  const handleTriggerScenario = (scn: (typeof QUICK_SCENARIOS)[number]) => {
+  const handleTriggerScenario = async (scn: (typeof QUICK_SCENARIOS)[number]) => {
     if (isProcessing) return;
     if (scn.isVoice) {
       setActiveVoicePlayingId("hero_sample");
@@ -417,6 +386,22 @@ export function WhatsAppSimulator({
         onStart: () => setActiveVoicePlayingId("hero_sample"),
         onEnd: () => setActiveVoicePlayingId(null),
       });
+      if (onSendVoiceAudio) {
+        try {
+          const resp = await fetch("/audio/Pigdin%20Voice%20Note.ogg");
+          if (resp.ok) {
+            const blob = await resp.blob();
+            onSendVoiceAudio(
+              blob,
+              "Pigdin Voice Note.ogg",
+              undefined,
+              "0:06",
+              "/audio/Pigdin%20Voice%20Note.ogg"
+            );
+            return;
+          }
+        } catch {}
+      }
     }
     if (onSendSampleInput) {
       onSendSampleInput(scn.text, scn.locale, scn.isVoice);
@@ -738,7 +723,7 @@ export function WhatsAppSimulator({
               </div>
               <div
                 style={{
-                  fontSize: 11.5,
+                  fontSize: 12,
                   color: isProcessing ? "#25D366" : "var(--text-muted)",
                   fontWeight: isProcessing ? 700 : 500,
                 }}
@@ -992,13 +977,13 @@ export function WhatsAppSimulator({
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--brand-primary)" }}>
-                            BOARDING PASS · POD-842A
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand-primary)" }}>
+                            BOARDING PASS · {trip.driverInfo.podCode || "POD-842A"}
                           </div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-ink)" }}>
-                            Musa Bello · {trip.driverInfo.plateNumber}
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text-ink)" }}>
+                            {trip.driverInfo.driverName || "Musa Bello"} · {trip.driverInfo.plateNumber}
                           </div>
-                          <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
+                          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
                             {m.quoteData.anchorName} ➔ {m.quoteData.destName}
                           </div>
                         </div>
@@ -1008,12 +993,12 @@ export function WhatsAppSimulator({
                             background: "var(--signal-soft)",
                             border: "1px solid var(--signal-amber)",
                             borderRadius: 8,
-                            padding: "4px 10px",
+                            padding: "6px 12px",
                             textAlign: "center",
                             flexShrink: 0,
                           }}
                         >
-                          <div style={{ fontSize: 9.5, fontWeight: 700, color: "var(--signal-ink)" }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--signal-ink)" }}>
                             BOARDING OTP
                           </div>
                           <div
@@ -1030,25 +1015,82 @@ export function WhatsAppSimulator({
                         </div>
                       </div>
 
-                      <Link
-                        href="/driver"
-                        style={{
-                          textDecoration: "none",
-                          background: "var(--brand-primary)",
-                          color: "#FFFFFF",
-                          borderRadius: 10,
-                          padding: "10px 14px",
-                          fontSize: 13,
-                          fontWeight: 700,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <span>Step 2: Open Driver Terminal & Verify OTP ({msgOtp})</span>
-                        <span>➔</span>
-                      </Link>
+                      {/* Working Copy Family Link Button & Demo Shortcut Driver Link */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const token = m.quoteData?.shareToken || trip.activeShareToken || "share-bwr-4817";
+                            const base = typeof window !== "undefined" ? window.location.origin : "";
+                            const url = `${base}/t/${token}`;
+                            if (typeof navigator !== "undefined" && navigator.clipboard) {
+                              navigator.clipboard.writeText(url);
+                              setCopiedShareId(m.id);
+                              setTimeout(() => setCopiedShareId(null), 2500);
+                            }
+                          }}
+                          style={{
+                            width: "100%",
+                            background: "var(--bg-paper)",
+                            border: "1px solid var(--border-strong)",
+                            color: "var(--text-ink)",
+                            borderRadius: 10,
+                            padding: "9px 12px",
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <span>{copiedShareId === m.id ? "✓ Family link copied!" : "Copy family link"}</span>
+                        </button>
+
+                        {(() => {
+                          const isUserBoarded =
+                            trip.passengers.some((p) => p.isCurrentUser && p.isBoarded) ||
+                            trip.journeyStage === "IN_TRANSIT";
+
+                          return (
+                            <Link
+                              href={`/driver?code=${encodeURIComponent(msgOtp)}`}
+                              style={{
+                                textDecoration: "none",
+                                background: isUserBoarded ? "#059669" : "var(--brand-primary)",
+                                color: "#FFFFFF",
+                                borderRadius: 10,
+                                padding: "10px 14px",
+                                fontSize: 13,
+                                fontWeight: 700,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 8,
+                                transition: "background 0.2s ease",
+                              }}
+                            >
+                              <span>
+                                {isUserBoarded
+                                  ? `✓ Boarded (${msgOtp}) · Escrow Captured`
+                                  : "Open driver view with this code"}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  background: "rgba(255, 255, 255, 0.22)",
+                                  padding: "2px 7px",
+                                  borderRadius: 6,
+                                }}
+                              >
+                                Demo shortcut
+                              </span>
+                            </Link>
+                          );
+                        })()}
+                      </div>
                     </div>
                   )}
 
@@ -1228,21 +1270,42 @@ export function WhatsAppSimulator({
                 </span>
               </div>
 
-              {/* Live Speech Transcript Preview */}
+              {/* Authentic WhatsApp Live Recording Waveform (No Live Text Preview) */}
               <div
                 style={{
                   flex: 1,
-                  fontSize: 13,
-                  color: liveSpeechTranscript ? "var(--text-ink)" : "var(--text-muted)",
-                  fontWeight: liveSpeechTranscript ? 600 : 500,
-                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
                   overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
               >
-                {liveSpeechTranscript
-                  ? `“${liveSpeechTranscript}”`
-                  : "Listening... speak your pickup & destination"}
+                <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  {[6, 12, 16, 9, 15, 11, 17, 8, 14, 10, 16, 12, 7, 13].map((h, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        width: 2.5,
+                        height: h,
+                        borderRadius: 2,
+                        background: "#25D366",
+                        animation: `recBlink ${0.6 + (idx % 4) * 0.15}s infinite ease-in-out`,
+                      }}
+                    />
+                  ))}
+                </div>
+                <span
+                  style={{
+                    fontSize: 12.5,
+                    color: "var(--text-muted)",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  Recording voice note...
+                </span>
               </div>
 
               {/* Send Recorded Voice Note Button */}

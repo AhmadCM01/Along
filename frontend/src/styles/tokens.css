@@ -14,7 +14,7 @@
   /* Text & Ink */
   --text-ink: #0F172A;
   --text-muted: #475569;
-  --text-faint: #94A3B8;
+  --text-faint: #64748B;
 
   /* Hairlines & Borders */
   --border-subtle: #E2E8F0;
@@ -83,7 +83,7 @@
   /* Text & Ink */
   --text-ink: #E9EDEF;
   --text-muted: #8696A0;
-  --text-faint: #667781;
+  --text-faint: #94A3B8;
 
   /* Hairlines & Borders */
   --border-subtle: #222E35;
@@ -93,7 +93,7 @@
   --brand-primary: #00A884;
   --brand-hover: #029072;
   --brand-soft: #103529;
-  --brand-ink: #FFFFFF;
+  --brand-ink: #0B141A;
 
   /* 10% Signals: Amber (Escrow & Boarding only) */
   --signal-amber: #FBBF24;

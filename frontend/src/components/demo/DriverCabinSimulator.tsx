@@ -412,7 +412,7 @@ export function DriverCabinSimulator({
             background: driverMode === "FEATURE_PHONE_2G" ? "#16241E" : "#E8F0EC",
             padding: 10,
             borderRadius: 10,
-            fontSize: 11,
+            fontSize: 12,
             marginTop: "auto",
             display: "flex",
             alignItems: "center",
@@ -422,7 +422,7 @@ export function DriverCabinSimulator({
           <ShieldCheckIcon size={16} color="#008751" />
           <div>
             <div style={{ fontWeight: 700, color: "#008751" }}>
-              [Glimmer vision check] Plate Verified: ABJ-412K [Demo data]
+              [Vehicle KYC Vision Check] Plate Verified: ABJ-412K [Demo data]
             </div>
             <div className="tabular-nums" style={{ color: driverMode === "FEATURE_PHONE_2G" ? "#9FB0A7" : "#374740" }}>
               Plate &amp; Color Check • 4 Passengers Approved (Demo driver profile)

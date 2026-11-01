@@ -1,36 +1,59 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 
 export function HonestyTable() {
+  const [liveModel, setLiveModel] = useState<string>("Muse Spark Open (via Baseten)");
+
+  useEffect(() => {
+    fetch("/api/v1/status")
+      .then((res) => res.json())
+      .then((data) => {
+        const primary = data?.levels?.primary;
+        const modelLabel =
+          primary?.model_label || primary?.response_model_id || primary?.requested_model;
+        if (modelLabel && modelLabel !== "none") {
+          setLiveModel(modelLabel);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const rows = [
     {
-      capability: "Multilingual slot extraction",
+      capability: "Multilingual slot extraction & NLU",
       status: "Live",
-      details: "Llama-3.1-70B / muse-spark-open via Baseten (sub-3s)",
+      details: `${liveModel} (primary) & Llama 3.2 Vision via NVIDIA NIM (fallback)`,
     },
     {
-      capability: "Speech to text (Voice notes)",
+      capability: "Speech to text",
       status: "Live",
-      details: "Whisper ASR via Groq (Non-Meta ASR label)",
+      details: "OpenAI Whisper (whisper-large-v3-turbo via Groq) & Web Audio API (sub-500ms)",
     },
     {
       capability: "Landmark & corridor resolution",
       status: "Live",
-      details: "Character n-gram hashing and Jaro-Winkler scoring (sub-15ms)",
+      details: "Character n-gram hashing + Jaro-Winkler reranking over FAISS index (142 landmarks, 1,122 aliases)",
     },
     {
-      capability: "Boarding code security",
+      capability: "Boarding code verification",
       status: "Live",
-      details: "Per-trip random OTP, HMAC verification, 30m expiry, 5-attempt lock",
+      details: "Per-trip 4-digit OTP, HMAC-SHA256 verification, 30m expiry, 3-attempt lock, 150m anchor geofence",
     },
     {
-      capability: "Double-entry escrow ledger",
+      capability: "Escrow ledger",
       status: "Simulated",
-      details: "Atomic ledger balance simulated for hackathon demo without live NIP",
+      details: "Simulated escrow ledger with 90/10 driver split (live NIP banking integration on Roadmap)",
     },
     {
       capability: "Pod vehicle & GPS",
       status: "Simulated",
       details: "Driver and vehicle telemetry simulated along real Abuja road coordinates",
+    },
+    {
+      capability: "Vehicle KYC & NIN",
+      status: "Roadmap",
+      details: "Meta SAM 3.1 vehicle segmentation & NIN identity verification (on Roadmap; simulated in prototype)",
     },
   ];
 
@@ -84,12 +107,22 @@ export function HonestyTable() {
                 <td style={{ padding: "8px 8px 8px 0" }}>
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 700,
                       padding: "2px 8px",
                       borderRadius: 4,
-                      background: r.status === "Live" ? "var(--brand-soft)" : "var(--signal-soft)",
-                      color: r.status === "Live" ? "var(--brand-primary)" : "var(--signal-ink)",
+                      background:
+                        r.status === "Live"
+                          ? "var(--brand-soft)"
+                          : r.status === "Roadmap"
+                          ? "rgba(100, 116, 139, 0.12)"
+                          : "var(--signal-soft)",
+                      color:
+                        r.status === "Live"
+                          ? "var(--brand-primary)"
+                          : r.status === "Roadmap"
+                          ? "var(--text-muted)"
+                          : "var(--signal-ink)",
                     }}
                   >
                     {r.status}
@@ -125,18 +158,28 @@ export function HonestyTable() {
               </span>
               <span
                 style={{
-                  fontSize: 10.5,
+                  fontSize: 12,
                   fontWeight: 700,
                   padding: "1px 6px",
                   borderRadius: 4,
-                  background: r.status === "Live" ? "var(--brand-soft)" : "var(--signal-soft)",
-                  color: r.status === "Live" ? "var(--brand-primary)" : "var(--signal-ink)",
+                  background:
+                    r.status === "Live"
+                      ? "var(--brand-soft)"
+                      : r.status === "Roadmap"
+                      ? "rgba(100, 116, 139, 0.12)"
+                      : "var(--signal-soft)",
+                  color:
+                    r.status === "Live"
+                      ? "var(--brand-primary)"
+                      : r.status === "Roadmap"
+                      ? "var(--text-muted)"
+                      : "var(--signal-ink)",
                 }}
               >
                 {r.status}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: 11.5, color: "var(--text-muted)", lineHeight: 1.35 }}>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.35 }}>
               {r.details}
             </p>
           </div>

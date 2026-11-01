@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useAlongTrip } from "@/context/AlongTripContext";
 import { AiTelemetryDrawer } from "@/components/demo/AiTelemetryDrawer";
+import { MultiRiderDrawer } from "@/components/demo/MultiRiderDrawer";
 import { PodNavIcon, SteeringNavIcon, RadarNavIcon } from "@/components/icons/AlongIcons";
 
 export interface HeaderProps {
@@ -23,11 +24,12 @@ export function Header({ activeShareToken }: HeaderProps) {
 
   useEffect(() => {
     try {
-      localStorage.removeItem("along-theme");
-      localStorage.removeItem("along-theme-v2");
-      const stored = localStorage.getItem("along-theme-v3");
-      const activeTheme = stored === "dark" ? "dark" : "light";
-      setTheme(activeTheme);
+      const stored = localStorage.getItem("along-theme");
+      let activeTheme = stored;
+      if (!activeTheme) {
+        activeTheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      setTheme(activeTheme === "dark" ? "dark" : "light");
       document.documentElement.setAttribute("data-theme", activeTheme);
     } catch {
       setTheme("light");
@@ -35,12 +37,17 @@ export function Header({ activeShareToken }: HeaderProps) {
     }
   }, []);
 
+  // Close Multi-Rider Lab drawer automatically on navigation
+  useEffect(() => {
+    trip.setMultiRiderDrawerOpen(false);
+  }, [pathname]);
+
   const toggleTheme = () => {
     const next = theme === "light" ? "dark" : "light";
     setTheme(next);
     document.documentElement.setAttribute("data-theme", next);
     try {
-      localStorage.setItem("along-theme-v3", next);
+      localStorage.setItem("along-theme", next);
     } catch {}
   };
 
@@ -181,8 +188,44 @@ export function Header({ activeShareToken }: HeaderProps) {
             </Link>
           </nav>
 
-          {/* Right Utilities: AI X-Ray Drawer Trigger & Theme Toggle */}
+          {/* Right Utilities: Multi-Rider Lab, AI X-Ray Drawer Trigger & Theme Toggle */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              onClick={() => trip.setMultiRiderDrawerOpen(!trip.multiRiderDrawerOpen)}
+              style={{
+                padding: "6px 12px",
+                minHeight: 36,
+                borderRadius: "var(--radius-chip)",
+                background: trip.multiRiderDrawerOpen
+                  ? "var(--brand-primary)"
+                  : "linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.2) 100%)",
+                color: trip.multiRiderDrawerOpen ? "#FFFFFF" : "var(--brand-primary)",
+                border: `1px solid ${trip.multiRiderDrawerOpen ? "var(--brand-primary)" : "rgba(16, 185, 129, 0.4)"}`,
+                fontSize: 12.5,
+                fontWeight: 800,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
+                transition: "all 150ms ease",
+              }}
+              aria-label="Open Multi-Rider Lab Conveyor Simulator"
+            >
+              <span>🧪 Multi-Rider Lab</span>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  padding: "1px 5px",
+                  borderRadius: 6,
+                  background: trip.multiRiderDrawerOpen ? "rgba(255,255,255,0.25)" : "var(--brand-primary)",
+                  color: "#FFFFFF",
+                }}
+              >
+                4/4
+              </span>
+            </button>
+
             <button
               onClick={() => trip.setAiDrawerOpen(!trip.aiDrawerOpen)}
               style={{
@@ -247,6 +290,9 @@ export function Header({ activeShareToken }: HeaderProps) {
 
       {/* Slide-Over AI Telemetry & Honesty Drawer */}
       <AiTelemetryDrawer />
+
+      {/* Slide-Over Multi-Rider Lab & Conveyor Simulator Drawer */}
+      <MultiRiderDrawer />
     </>
   );
 }

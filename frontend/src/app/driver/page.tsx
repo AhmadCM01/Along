@@ -9,7 +9,11 @@ import { CorridorNode } from "@/components/brand/CorridorNode";
 import { LockShieldIcon, PodNavIcon } from "@/components/icons/AlongIcons";
 import { useAlongTrip } from "@/context/AlongTripContext";
 import {
+  ActivePodData,
+  ActivePodPassenger,
+  getActivePod,
   getCorridorDrivers,
+  resetActivePod,
   updateDriverStatus,
   verifyBoardingOtp,
 } from "@/lib/api";
@@ -17,7 +21,6 @@ import {
 interface DriverSummary {
   id: string;
   full_name: string;
-  phone_e164: string;
   plate_number: string;
   vehicle_make_model: string;
   corridor_id: string;
@@ -30,7 +33,6 @@ export default function DriverPage() {
   const [driver, setDriver] = useState<DriverSummary>({
     id: "DRV-001",
     full_name: trip.driverInfo.driverName || "Musa Bello",
-    phone_e164: "+2348030000001",
     plate_number: trip.driverInfo.plateNumber || "ABJ-402-AL",
     vehicle_make_model: trip.driverInfo.vehicleDesc || "Volkswagen Golf 4",
     corridor_id: trip.activeCorridorId || "BWR-DUT-WUS",
@@ -43,26 +45,105 @@ export default function DriverPage() {
   const [otpLoading, setOtpLoading] = useState<boolean>(false);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpSuccessMessage, setOtpSuccessMessage] = useState<string | null>(null);
+  const [revealCodes, setRevealCodes] = useState<boolean>(false);
 
-  const hasActiveBooking = Boolean(trip.currentQuote) && trip.passengers.length > 0;
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const codeParam = params.get("code");
+      if (codeParam) {
+        setOtpCode(codeParam.trim());
+        params.delete("code");
+        const nextQuery = params.toString();
+        const nextUrl = window.location.pathname + (nextQuery ? `?${nextQuery}` : "");
+        window.history.replaceState({}, "", nextUrl);
+      }
+    }
+  }, []);
 
-  const boardedSeatsCount = hasActiveBooking
-    ? trip.passengers.reduce((acc, p) => acc + (p.isBoarded ? p.seatsOccupied || 1 : 0), 0)
+  const [activePod, setActivePod] = useState<ActivePodData | null>(null);
+
+  const fetchActivePod = React.useCallback(async () => {
+    try {
+      const corr = trip.currentQuote?.corridorId || trip.activeCorridorId || "BWR-DUT-WUS";
+      const res = await getActivePod(corr, trip.driverInfo?.podCode);
+      if (res && res.pod) {
+        setActivePod(res.pod);
+        if (res.pod.driver_name) {
+          setDriver((prev) => ({
+            ...prev,
+            id: res.pod.driver_id,
+            full_name: res.pod.driver_name,
+            plate_number: res.pod.plate_number,
+            vehicle_make_model: res.pod.vehicle_desc,
+            corridor_id: res.pod.corridor_id,
+          }));
+        }
+      }
+    } catch {}
+  }, [trip.currentQuote?.corridorId, trip.activeCorridorId, trip.driverInfo?.podCode]);
+
+  useEffect(() => {
+    fetchActivePod();
+    const interval = setInterval(fetchActivePod, 2500);
+    return () => clearInterval(interval);
+  }, [fetchActivePod]);
+
+  async function handleResetPod() {
+    try {
+      const corr = trip.currentQuote?.corridorId || trip.activeCorridorId || "BWR-DUT-WUS";
+      await resetActivePod(corr, activePod?.pod_id || trip.driverInfo?.podCode);
+      await fetchActivePod();
+      trip.resetAll();
+      setOtpSuccessMessage("Pod manifest reset to empty standby queue.");
+      setOtpError(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setOtpError(msg);
+    }
+  }
+
+  const livePassengers = activePod && activePod.passengers.length > 0 ? activePod.passengers : null;
+  const hasActiveBooking =
+    Boolean(livePassengers && livePassengers.length > 0) ||
+    (Boolean(trip.currentQuote) && trip.passengers.length > 0);
+
+  const boardedSeatsCount = livePassengers
+    ? livePassengers.reduce((acc, p) => acc + (p.is_boarded ? p.seats : 0), 0)
+    : trip.passengers.reduce((acc, p) => acc + (p.isBoarded ? p.seatsOccupied || 1 : 0), 0);
+
+  const isPodFull = (activePod?.seats_occupied || 0) >= 4 || boardedSeatsCount >= 4;
+  const isInTransit = activePod?.status === "IN_TRANSIT" || trip.journeyStage === "IN_TRANSIT";
+
+  const totalPodEscrowNaira = livePassengers
+    ? livePassengers.reduce((acc, p) => acc + p.fare_naira, 0)
+    : hasActiveBooking
+    ? trip.passengers.reduce((acc, p) => acc + p.fareNaira, 0)
     : 0;
-  const isPodFull = boardedSeatsCount >= 4;
-  const isInTransit = trip.journeyStage === "IN_TRANSIT";
+
+  const capturedEscrowNaira = livePassengers
+    ? livePassengers.reduce((acc, p) => acc + (p.is_boarded ? p.fare_naira : 0), 0)
+    : hasActiveBooking
+    ? trip.passengers.reduce((acc, p) => acc + (p.isBoarded ? p.fareNaira : 0), 0)
+    : 0;
+
+  const driverNetNaira = Math.round(capturedEscrowNaira * 0.9);
+  const platformFeeNaira = capturedEscrowNaira - driverNetNaira;
 
   const commuterSeat = trip.passengers.find((p) => p.isCurrentUser);
   const commuterOtp = commuterSeat?.otpCode || trip.currentQuote?.otp || "";
 
-  const totalPodEscrowNaira = hasActiveBooking
-    ? trip.passengers.reduce((acc, p) => acc + p.fareNaira, 0)
-    : 0;
-  const capturedEscrowNaira = hasActiveBooking
-    ? trip.passengers.reduce((acc, p) => acc + (p.isBoarded ? p.fareNaira : 0), 0)
-    : 0;
-  const driverNetNaira = Math.round(capturedEscrowNaira * 0.9);
-  const platformFeeNaira = capturedEscrowNaira - driverNetNaira;
+  useEffect(() => {
+    if (trip.driverInfo) {
+      setDriver((prev) => ({
+        ...prev,
+        full_name: trip.driverInfo.driverName,
+        plate_number: trip.driverInfo.plateNumber,
+        vehicle_make_model: trip.driverInfo.vehicleDesc,
+        corridor_id: trip.activeCorridorId,
+      }));
+    }
+  }, [trip.driverInfo, trip.activeCorridorId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,26 +196,23 @@ export default function DriverPage() {
     setOtpSuccessMessage(null);
 
     try {
-      try {
-        await verifyBoardingOtp(
-          driver.id,
-          trip.driverInfo.podCode || "POD-842A",
-          code,
-          "rr-demo-01",
-          9.1779,
-          7.3736
-        );
-      } catch {}
+      const podId = activePod?.pod_id || trip.driverInfo.podCode || "POD-842A";
+      const driverId = activePod?.driver_id || driver.id || "DRV-001";
+      await verifyBoardingOtp(
+        driverId,
+        podId,
+        code,
+        "auto",
+        activePod?.anchor_lat || 9.1779,
+        activePod?.anchor_lng || 7.3736
+      );
 
-      const matched = trip.boardPassengerByOtp(code);
-      if (matched) {
-        setOtpSuccessMessage(
-          `Code ${code} verified via HMAC-SHA256. Atomic Escrow captured (90% Driver Net). Pod ${trip.driverInfo.podCode} is ready for corridor departure.`
-        );
-        setOtpCode(code);
-      } else {
-        setOtpError(`Code ${code} did not match any awaiting passenger in this pod.`);
-      }
+      await fetchActivePod();
+      trip.boardPassengerByOtp(code);
+      setOtpSuccessMessage(
+        `Code ${code} verified via HMAC-SHA256. Atomic Escrow captured (90% Driver Net).`
+      );
+      setOtpCode("");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setOtpError(msg);
@@ -184,22 +262,65 @@ export default function DriverPage() {
             </p>
           </div>
 
-          <button
-            onClick={handleStatusToggle}
-            disabled={statusLoading}
-            style={{
-              background: isOnline ? "var(--brand-primary)" : "var(--bg-surface)",
-              color: isOnline ? "#fff" : "var(--text-muted)",
-              border: `1px solid ${isOnline ? "var(--brand-primary)" : "var(--border-subtle)"}`,
-              padding: "7px 15px",
-              borderRadius: "var(--radius-chip)",
-              fontWeight: 700,
-              fontSize: 12.5,
-              cursor: "pointer",
-            }}
-          >
-            {statusLoading ? "Updating..." : isOnline ? "● Online" : "Offline"}
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 600,
+                color: "var(--text-muted)",
+                cursor: "pointer",
+                background: "var(--bg-paper)",
+                padding: "6px 10px",
+                borderRadius: "var(--radius-chip)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={revealCodes}
+                onChange={(e) => setRevealCodes(e.target.checked)}
+                style={{ cursor: "pointer", accentColor: "var(--brand-primary)" }}
+              />
+              <span>Judge shortcut: reveal codes (Demo shortcut)</span>
+            </label>
+
+            <button
+              onClick={handleResetPod}
+              title="Reset all booked passengers to fresh standby queue"
+              style={{
+                background: "var(--bg-paper)",
+                color: "var(--text-muted)",
+                border: "1px solid var(--border-subtle)",
+                padding: "7px 12px",
+                borderRadius: "var(--radius-chip)",
+                fontWeight: 600,
+                fontSize: 12,
+                cursor: "pointer",
+              }}
+            >
+              Reset Pod
+            </button>
+
+            <button
+              onClick={handleStatusToggle}
+              disabled={statusLoading}
+              style={{
+                background: isOnline ? "var(--brand-primary)" : "var(--bg-surface)",
+                color: isOnline ? "#fff" : "var(--text-muted)",
+                border: `1px solid ${isOnline ? "var(--brand-primary)" : "var(--border-subtle)"}`,
+                padding: "7px 15px",
+                borderRadius: "var(--radius-chip)",
+                fontWeight: 700,
+                fontSize: 12.5,
+                cursor: "pointer",
+              }}
+            >
+              {statusLoading ? "Updating..." : isOnline ? "● Online" : "Offline"}
+            </button>
+          </div>
         </section>
 
         {/* Driver Summary Card */}
@@ -429,116 +550,203 @@ export default function DriverPage() {
                 </div>
               </div>
 
-              {/* Co-Riders (Non-current user seats) */}
-              {trip.passengers
-                .filter((p) => !p.isCurrentUser)
-                .map((p) => (
-                  <div
-                    key={p.seatNumber}
-                    onClick={() => {
-                      setOtpCode(p.otpCode);
-                      if (!p.isBoarded) {
-                        trip.boardPassengerBySeat(p.seatNumber, true);
-                      }
-                    }}
-                    title="Click to load or verify co-rider OTP"
-                    style={{
-                      background: p.isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
-                      borderRadius: "var(--radius-button)",
-                      padding: "12px",
-                      border: `1px solid ${p.isBoarded ? "rgba(5, 150, 105, 0.28)" : "var(--signal-amber)"}`,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span
-                        style={{
-                          fontSize: 10.5,
-                          color: p.isBoarded ? "var(--brand-primary)" : "var(--signal-ink)",
-                          fontWeight: 800,
-                        }}
-                      >
-                        {p.seatLabel} · {p.isBoarded ? "SECURED ✓" : "VERIFY OTP"}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 10.5,
-                          fontFamily: "var(--font-mono)",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        OTP: {p.otpCode}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
-                      {p.passengerName}
-                    </div>
-                    <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
-                      Drop: {p.dropLocation} · ₦{p.fareNaira.toLocaleString()}
-                    </div>
-                  </div>
-                ))}
-
-              {/* Current Commuter Booking Seat(s) */}
-              {commuterSeat && (
-                <div
-                  onClick={() => setOtpCode(commuterOtp)}
-                  style={{
-                    gridColumn: "1 / -1",
-                    background: commuterSeat.isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
-                    borderRadius: "var(--radius-button)",
-                    padding: "14px 16px",
-                    border: `1.5px solid ${
-                      commuterSeat.isBoarded ? "var(--brand-primary)" : "var(--signal-amber)"
-                    }`,
-                    cursor: "pointer",
-                    transition: "all 200ms ease",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span
-                      style={{
-                        fontSize: 11.5,
-                        fontWeight: 800,
-                        color: commuterSeat.isBoarded ? "var(--brand-primary)" : "var(--signal-ink)",
-                      }}
-                    >
-                      {commuterSeat.seatLabel} (YOUR WHATSAPP BOOKING):{" "}
-                      {commuterSeat.isBoarded ? "BOARDED & ESCROW CAPTURED ✓" : "AWAITING BOARDING CODE"}
-                    </span>
-                    <DepartureNumeral size="sm" variant={commuterSeat.isBoarded ? "brand" : "amber"}>
-                      ₦{commuterSeat.fareNaira.toLocaleString()}
-                    </DepartureNumeral>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "baseline",
-                      marginTop: 6,
-                    }}
-                  >
-                    <div style={{ fontSize: 14.5, fontWeight: 800 }}>
-                      {commuterSeat.passengerName}
-                    </div>
+              {/* Real Multi-Browser Live Passengers */}
+              {livePassengers && livePassengers.length > 0 ? (
+                livePassengers.map((p, pIdx) => {
+                  const isBoarded = p.is_boarded;
+                  const firstName = p.first_name || (p.display_name ? p.display_name.split(" ")[0] : `Rider ${String.fromCharCode(65 + pIdx)}`);
+                  return (
                     <div
+                      key={p.request_id || pIdx}
                       style={{
-                        fontSize: 13,
-                        fontWeight: 800,
-                        fontFamily: "var(--font-mono)",
-                        color: "var(--brand-primary)",
+                        gridColumn: p.seats > 1 ? "1 / -1" : undefined,
+                        background: isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
+                        borderRadius: "var(--radius-button)",
+                        padding: "13px 15px",
+                        border: `1.5px solid ${
+                          isBoarded ? "rgba(5, 150, 105, 0.38)" : "var(--signal-amber)"
+                        }`,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
                       }}
                     >
-                      Expected OTP: {commuterOtp}
-                    </div>
-                  </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: isBoarded ? "var(--brand-primary)" : "var(--signal-ink)",
+                          }}
+                        >
+                          SEAT {p.seat_numbers.join(", ")} · {isBoarded ? "✓ BOARDED" : "AWAITING BOARDING"}
+                        </span>
+                        <DepartureNumeral size="sm" variant={isBoarded ? "brand" : "amber"}>
+                          ₦{p.fare_naira.toLocaleString()}
+                        </DepartureNumeral>
+                      </div>
 
-                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                    Pickup: <strong>{trip.currentQuote?.anchorName}</strong> ➔ Drop-off:{" "}
-                    <strong>{commuterSeat.dropLocation}</strong>
-                  </div>
-                </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-ink)" }}>
+                          {firstName}
+                        </div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                          {p.origin} ➔ <strong>{p.destination}</strong> ({p.seats} seat{p.seats > 1 ? "s" : ""})
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
+                        <div style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                          OTP: {revealCodes ? (
+                            <strong style={{ color: "var(--text-ink)", fontSize: 13 }}>{p.otp_code}</strong>
+                          ) : (
+                            <span>•••• (Protected)</span>
+                          )}
+                        </div>
+
+                        {!isBoarded ? (
+                          <button
+                            type="button"
+                            onClick={() => handleVerifyOtp(p.otp_code)}
+                            disabled={otpLoading}
+                            style={{
+                              background: "var(--brand-primary)",
+                              color: "#FFFFFF",
+                              border: "none",
+                              borderRadius: 6,
+                              padding: "6px 14px",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Verify OTP {revealCodes ? `(${p.otp_code})` : ""}
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand-primary)" }}>
+                            Escrow Captured ✓
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <>
+                  {/* Co-Riders (Non-current user seats) */}
+                  {trip.passengers
+                    .filter((p) => !p.isCurrentUser)
+                    .map((p) => {
+                      const firstName = p.passengerName.split(" ")[0];
+                      return (
+                        <div
+                          key={p.seatNumber}
+                          onClick={() => {
+                            setOtpCode(p.otpCode);
+                            if (!p.isBoarded) {
+                              trip.boardPassengerBySeat(p.seatNumber, true);
+                            }
+                          }}
+                          title="Click to load or verify co-rider OTP"
+                          style={{
+                            background: p.isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
+                            borderRadius: "var(--radius-button)",
+                            padding: "12px",
+                            border: `1px solid ${p.isBoarded ? "rgba(5, 150, 105, 0.28)" : "var(--signal-amber)"}`,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span
+                              style={{
+                                fontSize: 12,
+                                color: p.isBoarded ? "var(--brand-primary)" : "var(--signal-ink)",
+                                fontWeight: 800,
+                              }}
+                            >
+                              {p.seatLabel} · {p.isBoarded ? "SECURED ✓" : "AWAITING BOARDING"}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: 12,
+                                fontFamily: "var(--font-mono)",
+                                color: "var(--text-muted)",
+                              }}
+                            >
+                              OTP: {revealCodes ? p.otpCode : "••••"}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: 2 }}>
+                            {firstName}
+                          </div>
+                          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                            Route: {p.dropLocation} · ₦{p.fareNaira.toLocaleString()}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {/* Current Commuter Booking Seat(s) */}
+                  {commuterSeat && (
+                    <div
+                      onClick={() => setOtpCode(commuterOtp)}
+                      style={{
+                        gridColumn: "1 / -1",
+                        background: commuterSeat.isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
+                        borderRadius: "var(--radius-button)",
+                        padding: "14px 16px",
+                        border: `1.5px solid ${
+                          commuterSeat.isBoarded ? "var(--brand-primary)" : "var(--signal-amber)"
+                        }`,
+                        cursor: "pointer",
+                        transition: "all 200ms ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: commuterSeat.isBoarded ? "var(--brand-primary)" : "var(--signal-ink)",
+                          }}
+                        >
+                          {commuterSeat.seatLabel}:{" "}
+                          {commuterSeat.isBoarded ? "BOARDED & ESCROW CAPTURED ✓" : "AWAITING BOARDING"}
+                        </span>
+                        <DepartureNumeral size="sm" variant={commuterSeat.isBoarded ? "brand" : "amber"}>
+                          ₦{commuterSeat.fareNaira.toLocaleString()}
+                        </DepartureNumeral>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "baseline",
+                          marginTop: 6,
+                        }}
+                      >
+                        <div style={{ fontSize: 14.5, fontWeight: 800 }}>
+                          Rider (You)
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: 800,
+                            fontFamily: "var(--font-mono)",
+                            color: "var(--brand-primary)",
+                          }}
+                        >
+                          OTP: {revealCodes ? commuterOtp : "•••• (Protected)"}
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                        Route: {trip.currentQuote?.anchorName} ➔ <strong>{commuterSeat.dropLocation}</strong>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

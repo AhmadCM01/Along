@@ -211,6 +211,7 @@ export async function sendDemoChat(input: {
   message_text?: string | null;
   audio_fixture_id?: string | null;
   is_peak?: boolean;
+  reset_session?: boolean;
 }): Promise<DemoChatResponse> {
   const url = `${getApiBaseUrl()}/api/v1/demo/chat`;
   const res = await fetch(url, {
@@ -221,6 +222,7 @@ export async function sendDemoChat(input: {
       message_text: input.message_text ?? null,
       audio_fixture_id: input.audio_fixture_id ?? null,
       is_peak: input.is_peak ?? false,
+      reset_session: input.reset_session ?? false,
     }),
   });
   return parseJsonResponse<DemoChatResponse>(res);
@@ -336,6 +338,68 @@ export async function verifyBoardingOtp(
       driver_lng: driverLng,
     }),
   });
+  return parseJsonResponse(res);
+}
+
+export interface ActivePodPassenger {
+  request_id: string;
+  first_name?: string;
+  phone: string;
+  display_name: string;
+  origin: string;
+  destination: string;
+  seats: number;
+  seat_numbers: number[];
+  fare_naira: number;
+  otp_code: string;
+  is_boarded: boolean;
+  is_confirmed: boolean;
+}
+
+export interface ActivePodData {
+  pod_id: string;
+  corridor_id: string;
+  driver_id: string;
+  driver_name: string;
+  driver_phone: string;
+  plate_number: string;
+  vehicle_desc: string;
+  anchor_name: string;
+  anchor_lat: number;
+  anchor_lng: number;
+  seats_total: number;
+  seats_occupied: number;
+  passengers: ActivePodPassenger[];
+  status: string;
+  boarded_requests: string[];
+}
+
+export async function getActivePod(
+  corridorId = "BWR-DUT-WUS",
+  podId?: string
+): Promise<{
+  status: string;
+  pod: ActivePodData;
+}> {
+  const params = new URLSearchParams({ corridor_id: corridorId });
+  if (podId) params.set("pod_id", podId);
+  const url = `${getApiBaseUrl()}/api/v1/drivers/active-pod?${params.toString()}`;
+  const res = await fetch(url, { method: "GET" });
+  return parseJsonResponse(res);
+}
+
+export async function resetActivePod(
+  corridorId = "BWR-DUT-WUS",
+  podId?: string
+): Promise<{
+  status: string;
+  message: string;
+  pod_id: string;
+}> {
+  const params = new URLSearchParams({ corridor_id: corridorId });
+  if (podId) params.set("pod_id", podId);
+  const url = `${getApiBaseUrl()}/api/v1/drivers/active-pod/reset?${params.toString()}`;
+  const res = await fetch(url, { method: "POST" });
   return parseJsonResponse(res);
 }
 

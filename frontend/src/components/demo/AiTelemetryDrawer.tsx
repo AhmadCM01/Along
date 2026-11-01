@@ -96,8 +96,8 @@ export function AiTelemetryDrawer() {
               <div style={{ fontSize: 15, fontWeight: 800, color: "var(--text-ink)" }}>
                 Meta AI Pipeline & Judge X-Ray
               </div>
-              <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
-                Llama 3.1-70B Extraction · Jaro-Winkler Gazetteer · Escrow Audit
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                Meta Muse Spark (muse-spark-open-1026) · Meta FAISS Gazetteer · Escrow Audit
               </div>
             </div>
           </div>
@@ -157,7 +157,7 @@ export function AiTelemetryDrawer() {
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-ink)" }}>
                 Abuja Operations Command Center
               </div>
-              <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
                 Inspect 6-corridor fleet & double-entry ledger trial balance
               </div>
             </div>

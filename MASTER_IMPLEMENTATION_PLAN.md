@@ -1,3 +1,5 @@
+Pre-event planning document, drafted 2026-10-23, before the Meta Global AI Developer Hackathon build window. It contains no code. It is superseded by the README and may contain outdated claims.
+
 # Along: Master Implementation Plan
 
 > **Status:** v1.3, architecture frozen and aligned 100% with Official Meta Global AI Developer Hackathon Specifications (`cerebralvalley.ai/e/meta-ai-developer-hackathon/details`)

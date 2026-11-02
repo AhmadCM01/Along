@@ -3,7 +3,7 @@
 > **Format:** 12-Slide Seed / Pre-Seed Investor & Strategic Partner Deck
 > **Company:** Along
 > **Sector:** Urban Corridor Mobility, AI Dispatch & FinTech (Abuja, Nigeria)
-> **Tagline:** Digitizing Africa's shared corridor transit on WhatsApp and 2G phones, with escrow safety and zero roadside extortion.
+> **Tagline:** Digitizing Africa's shared corridor transit on a WhatsApp-style interface and 2G phones, with simulated escrow safety and zero roadside extortion.
 
 ---
 
@@ -12,7 +12,7 @@
 ### **ALONG**
 **The Operating System for Shared Urban Corridor Transit in Africa**
 
-- **What we do:** We turn Nigeria's chaotic, unsafe roadside carpooling ("Along") into verified, escrow-backed 4-seat commuter pods on **WhatsApp** (for riders) and **Smartphone / 2G Feature Phones** (for drivers).
+- **What we do:** We turn Nigeria's chaotic, unsafe roadside carpooling ("Along") into verified, simulated escrow-backed 4-seat commuter pods on a **WhatsApp-style interface** (for riders) and **Smartphone / 2G Feature Phones** (for drivers).
 - **The 10-Second Value Prop:**
   - **Riders** pay **75% less** than solo ride-hailing (**₦600 to ₦2,000** by segment), sit comfortably (**4 seats, never 6 squeezed**), and board at safe private filling stations in **10 seconds**.
   - **Drivers** keep **90% of gross fares**, pay **₦0 in Agbero (tout) extortion**, and fill all 4 seats in **60 seconds**.
@@ -50,8 +50,8 @@
 
 ### **No New App to Download. Built for How Nigerians Actually Move.**
 
-1. **Step 1: Speak or Text on WhatsApp (English, Pidgin, or Hausa):**
-   - A commuter sends a text or voice note on WhatsApp:
+1. **Step 1: Speak or Text on a WhatsApp-style interface (English, Pidgin, or Hausa):**
+   - A commuter sends a text or voice note in the chat:
      *"Abeg I dey second transformer after Dutse first gate, I wan drop for that Oando after Katampe bridge."*
 2. **Step 2: Hyper-Local AI & Private Forecourt Routing:**
    - Along's **multilingual reasoning + FAISS Vector Engine** resolves colloquial street landmarks and directs the rider **100 meters away from the chaotic public junction** onto a safe **Virtual Anchor Point** on private commercial property (such as an *A.A. Rano*, *Oando*, or *TotalEnergies* Filling Station forecourt), where Agberos have **zero legal jurisdiction**.
@@ -59,21 +59,21 @@
    - The rider pays the exact street-competitive segment fare (**₦700** for Dutse to Oando, **₦1,000 to ₦1,200** for Dutse to Wuse) into **Along Escrow** (Simulated escrow in demonstration mode).
 4. **Step 4: Look, Sit, 1-Tap Boarding (Zero Codes, Zero Friction):**
    - Once 4 riders heading down the corridor are matched, a verified driver arrives at the filling station forecourt.
-   - All 4 riders see the **Driver's Photo, Car Color, Plate Number (`ABJ-402-AL` [Demo data]), and Live 4-Seat Co-Rider Manifest** on WhatsApp.
-   - They sit in their 4 comfortable seats (**1 Front, 3 Back**) and tap one button on WhatsApp: **`[ I Have Entered ]`**. The driver gets an instant green go-signal and departs in 10 seconds.
+   - All 4 riders see the **Driver's Photo, Car Color, Plate Number (`ABJ-402-AL` [Demo data]), and Live 4-Seat Co-Rider Manifest** in the demo chat interface.
+   - They sit in their 4 comfortable seats (**1 Front, 3 Back**) and tap one button in chat: **`[ I Have Entered ]`**. The driver gets an instant green go-signal and departs in 10 seconds.
 
 ---
 
 ## Slide 5: Built for Every Driver (Smartphones AND 2G "Torchlight" Phones)
 
-### **Inclusive Technology That Works for 100% of Abuja's Fleet**
+### **Inclusive Technology That Works for Smartphones and 2G Feature Phones**
 
 Most transit startups fail in Africa because they assume every commercial driver owns a modern smartphone with 4G data. Along works across **two native driver tiers**:
 
 | Driver Segment | Device Used | How They Operate on Along |
 |---|---|---|
-| **Tier 1: Smartphone & Fleet Drivers** | Android / iOS Smartphone | **Dual-Theme Driver PWA (`/driver`) + WhatsApp Bot:** Live corridor map, FIFO anchor queue check-in, 30-second pod offers, live 4-seat boarding grid, and instant bank withdrawals. |
-| **Tier 2: Traditional "Along" Drivers** | Basic 2G Feature Phone (Nokia / Itel "Torchlight" Phone, Zero Internet) | **1-Key "Flash-to-Queue" + Spoken Hausa/Pidgin Voice Call:**<br>1. Driver holds **Key `1`** to "flash" (missed-call) Along at ₦0 airtime cost to join the filling station queue.<br>2. Along places an **automated spoken voice call** in Hausa/Pidgin (*"4 passengers ready at A.A. Rano Dutse, net pay ₦3,690. Press 1 to accept"*).<br>3. Riders tap **`[ I Have Entered ]`** on their own WhatsApp, and the driver's Nokia phone beeps: `ALL 4 PAID & INSIDE - OYA MOVE!` |
+| **Tier 1: Smartphone & Fleet Drivers** | Android / iOS Smartphone | **Dual-Theme Driver PWA (`/driver`) + WhatsApp-style demo bot:** Live corridor map, FIFO anchor queue check-in, 30-second pod offers, live 4-seat boarding grid, and instant bank withdrawals. |
+| **Tier 2: Traditional "Along" Drivers** | Basic 2G Feature Phone (Nokia / Itel "Torchlight" Phone, Zero Internet) | **1-Key "Flash-to-Queue" + Spoken Hausa/Pidgin Voice Call:**<br>1. Driver holds **Key `1`** to "flash" (missed-call) Along at ₦0 airtime cost to join the filling station queue.<br>2. Along places an **automated spoken voice call** in Hausa/Pidgin (*"4 passengers ready at A.A. Rano Dutse, net pay ₦3,690. Press 1 to accept"*).<br>3. Riders tap **`[ I Have Entered ]`** in their demo chat, and the driver's Nokia phone beeps: `ALL 4 PAID & INSIDE - OYA MOVE!` |
 
 ---
 
@@ -116,7 +116,7 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
 3. **Computer Vision Vehicle Inspection:**
    - Llama 3.2 vision check inspects vehicle registration photo and plate text during onboarding to verify identity against fleet records.
 4. **Speech Recognition:**
-   - Non-Meta ASR via Groq Whisper (`whisper-large-v3-turbo`) and Meta Model API when enabled, providing spoken voice transcription on WhatsApp.
+   - Non-Meta ASR via Groq Whisper (`whisper-large-v3-turbo`), providing spoken voice transcription in the demo interface.
 
 ---
 
@@ -131,7 +131,7 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
 3. **Atomic Double-Entry Kobo Escrow & Mid-Corridor Reloading (Technical Moat):**
    - Our Redis Lua spatial pod matcher (`form_pod.lua`) guarantees zero overbooking under high concurrency and dynamically reloads vacated seats mid-corridor.
 4. **Zero-App-Download Distribution (Channel Moat):**
-   - Riders use WhatsApp (already on an estimated 95%+ of Nigerian smartphones (illustrative estimate)). Drivers use WhatsApp, our lightweight PWA, or a 2G Nokia phone. Customer acquisition cost (CAC) is near zero.
+   - Riders use a WhatsApp-style web flow (target production channel is WhatsApp; illustrative estimate of 95%+ smartphone adoption). Drivers use WhatsApp, our lightweight PWA, or a 2G Nokia phone. Customer acquisition cost (CAC) is near zero.
 
 ---
 
@@ -159,7 +159,7 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
    - **Forecourt Partner Rebates:** Filling stations gain verified vehicles and commuters passing through their forecourts every morning.
 2. **Go-To-Market (Starting With Dutse -> Oando -> Berger -> Wuse):**
    - **Supply First (Commercial & Fleet Drivers):** Fast-track onboarding of vetted Abuja commercial drivers and independent Golf/Corolla owners tired of paying ₦1,500/trip to Agberos.
-   - **Demand Loop (WhatsApp Co-Rider Viral Invite):** When 2 or 3 riders are waiting at *A.A. Rano Dutse*, WhatsApp gives them a 1-tap **"Invite Commuter Standing Next to You"** link to fill the 4th seat immediately.
+   - **Demand Loop (Co-Rider Viral Invite):** When 2 or 3 riders are waiting at *A.A. Rano Dutse*, the interface provides a 1-tap **"Invite Commuter Standing Next to You"** link to fill the 4th seat immediately.
 
 ---
 
@@ -181,7 +181,7 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
 
 - **What Is Built & Ready Today:**
   - Full-stack production platform supporting **6 Abuja corridors, 20 fare zones, 24 private filling station Virtual Anchor Points, and 500+ multilingual landmark aliases**.
-  - End-to-end **WhatsApp Commuter Bot** (Text + Voice Notes in English, Pidgin, and Hausa), **Dual-Theme Driver PWA**, **2G Feature-Phone Voice/USSD channel**, **Double-Entry Kobo Escrow Ledger**, and **Operations Command Center**.
+  - End-to-end **WhatsApp-style Commuter Bot** (Text + Voice Notes in English, Pidgin, and Hausa), **Dual-Theme Driver PWA**, **2G Feature-Phone Voice/USSD channel**, **Double-Entry Kobo Escrow Ledger**, and **Operations Command Center**.
 - **12-Month Rollout Roadmap:**
   - **Quarter 1 (Abuja Flagship Launch):** Commercial operations on the **Bwari - Dutse First Gate - Oando - Berger - Wuse** corridor with 100 vetted drivers and 6 partner filling station forecourts (*A.A. Rano, Oando, TotalEnergies*).
   - **Quarter 2 (FCT Corridor Expansion):** Activate the **Zuba - Dei-Dei - Kubwa** and **Mararaba - Nyanya - Central Area** corridors.
@@ -190,3 +190,7 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
 - **The Opportunity for Investors & Forecourt Partners:**
   - **Seed / Pre-Seed Capital:** Funding fleet onboarding, forecourt marshals at high-density Abuja junctions, and working capital for instant driver liquidity.
   - **Downstream Energy & Retail Partnerships:** Partnering with major petroleum marketers (*A.A. Rano, Oando, TotalEnergies, NNPC, Conoil*) to turn their forecourts into verified, high-throughput commuter hubs.
+
+---
+
+*Disclaimer: Along is an independent project. It is not affiliated with or endorsed by WhatsApp or Meta.*

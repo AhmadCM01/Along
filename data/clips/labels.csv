@@ -2,13 +2,13 @@ filename,category,split,spoken_text,pickup,drop,seats,language,expected_behavior
 c01,english_direct,dev,"I am at Dutse first gate going to Berger roundabout, one seat.",Dutse First Gate,Berger Roundabout Underbridge,1,english,book,
 c02,english_direct,test,"Pick me up at Wuse Market, I'm heading to Dutse Alhaji Market. Two seats, please.",Wuse Market Main Gate,Dutse Alhaji Market,2,english,book,
 c03,english_direct,test,I need a ride from Gwarinpa 3rd avenue gate to Federal Secretariat. Just me.,Gwarinpa Third Avenue Setraco Gate,Federal Secretariat Eagle Square,1,english,book,
-c04,english_direct,dev,"I'm currently waiting at Jabi Lake Mall going to Zuba interchange, I need three seats.",Jabi Motor Park Garage,Zuba Motor Park Interchange,3,english,book,label_uncertain: spoken place may differ from label; no_shared_corridor
+c04,english_direct,dev,"I'm currently waiting at Jabi Lake Mall going to Zuba interchange, I need three seats.",Jabi Motor Park Garage,Zuba Motor Park Interchange,3,english,book,label_uncertain: spoken place may differ from label
 c05,english_direct,test,"From Area 1 Roundabout to Lugbe Police Signboard, one passenger.",Area 1 Roundabout Garki Old Secretariat,Lugbe Police Signboard,1,english,book,
-c06,english_direct,test,"Pick me up at Kubwa Gate 1, dropping off at Wuse Zone 4.",Kubwa Arab Road Junction,Wuse Zone 4 Sheraton Bridge,1,english,book,no_shared_corridor
-c07,english_direct,test,"I am at Nyanya Underbridge, I want to go to Central Area. Two seats.",Nyanya Underbridge Motor Park,Federal Secretariat / Eagle Square,2,english,book,no_shared_corridor
+c06,english_direct,test,"Pick me up at Kubwa Gate 1, dropping off at Wuse Zone 4.",Kubwa Arab Road Junction,Wuse Zone 4 Sheraton Bridge,1,english,book,
+c07,english_direct,test,"I am at Nyanya Underbridge, I want to go to Central Area. Two seats.",Nyanya Underbridge Motor Park,Federal Secretariat / Eagle Square,2,english,book,"label_ambiguous: spoken 'Central Area' is an area, not one landmark"
 c08,pidgin_direct,dev,"Abeg I dey Dutse first gate, I wan drop for Berger. One seat.",Dutse First Gate,Berger Roundabout Underbridge,1,pidgin,book,
 c09,pidgin_direct,test,"I dey wait for Banex, carry me go Dawaki junction. Two people we dey.",Banex Plaza Wuse II,Dawaki Hillside Junction,2,pidgin,book,
-c10,pidgin_direct,test,Make we enter from Kubwa Arab road go Mabushi bridge. Abeg one seat.,Kubwa Arab Road Junction,Mabushi Interchange VIO,1,pidgin,book,no_shared_corridor
+c10,pidgin_direct,test,Make we enter from Kubwa Arab road go Mabushi bridge. Abeg one seat.,Kubwa Arab Road Junction,Mabushi Interchange VIO,1,pidgin,book,
 c11,pidgin_direct,test,"I dey Katampe bridge, I wan go Wuse market.",Katampe Extension Bridge,Wuse Market Main Gate,1,pidgin,book,
 c12,pidgin_direct,dev,Carry me from Zuba park drop me for Dei-Dei building materials. Just me one.,Zuba Motor Park Interchange,Dei-Dei Building Materials Market,1,pidgin,book,
 c13,pidgin_direct,test,"I dey for Lugbe FHA, I wan drop for Area 1 stadium. Two seats.",Lugbe Police Signboard,Area 1 Roundabout Garki Old Secretariat,2,pidgin,book,
@@ -21,7 +21,7 @@ c19,relational,test,"I am at the second transformer after Dutse first gate, goin
 c20,relational,dev,"Pick me up at the Oando after Katampe extension bridge, dropping at Berger.",Oando Filling Station (After Katampe Ext Bridge),Berger Roundabout Underbridge,1,english,book,
 c21,relational,test,"Abeg I dey that filling station opposite Dawaki junction, I wan go Wuse zone 4.",Dawaki Hillside Junction,Wuse Zone 4 Sheraton Bridge,1,pidgin,book,
 c22,relational,test,"I dey wait under Berger bridge, carry me go the Oando after Gwarinpa.",Berger Roundabout Underbridge,Oando Filling Station (After Katampe Ext Bridge),1,pidgin,book,label_uncertain: spoken place may differ from label
-c23,relational,test,"Pick me up just before the bridge after Gwarinpa, going to Central Area.",Katampe Extension Bridge,Federal Secretariat / Eagle Square,1,english,book,no_shared_corridor
+c23,relational,test,"Pick me up just before the bridge after Gwarinpa, going to Central Area.",Katampe Extension Bridge,Federal Secretariat / Eagle Square,1,english,book,"label_ambiguous: spoken 'Central Area' is an area, not one landmark"
 c24,noisy,dev,I need a ride going to Berger.,,,,english,clarify,"noise: loud car horn and traffic between ""a ride"" and ""going to Berger"""
 c25,noisy,test,Abeg I dey Dutse carry me go,,,,pidgin,clarify,"noise: wind and muffled speech after ""Dutse"" and at the end"
 c26,noisy,test,Ina Wuse mutum biyu.,,,,hausa,clarify,"noise: indistinct background chatter after ""Wuse"""

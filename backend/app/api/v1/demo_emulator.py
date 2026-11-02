@@ -399,6 +399,7 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
 
         p_entry = {
             "request_id": req_id,
+            "first_name": display_label,
             "phone": state.phone_e164,
             "display_name": display_label,
             "origin": state.anchor_name or state.origin_name or "Safe Pickup Anchor",

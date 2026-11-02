@@ -1,6 +1,6 @@
 /**
  * Audio playback utility for Along WhatsApp voice notes.
- * Plays the real native Nigerian English (en-NG) MP3 fixture (/audio/pidgin_dutse_berger.mp3)
+ * Plays the real native Nigerian English (en-NG) audio fixture (/audio/pidgin_voice_note.ogg)
  * so every laptop and mobile phone hears an authentic Nigerian accent instead of a European OS robot.
  */
 
@@ -60,9 +60,9 @@ export function playAlongVoiceNote({
     }
   } catch {}
 
-  // 2. Play either the user's live recorded voice Blob URL or the native Nigerian Male (en-NG-AbeoNeural) MP3
+  // 2. Play either the user's live recorded voice Blob URL or the authentic pidgin_voice_note.ogg
   try {
-    const srcUrl = customAudioUrl || "/audio/pidgin_dutse_berger.mp3?v=abeo_male_v3";
+    const srcUrl = customAudioUrl || "/audio/pidgin_voice_note.ogg";
     const audio = new Audio(srcUrl);
     activeAudioElement = audio;
     audio.playbackRate = 1.0;

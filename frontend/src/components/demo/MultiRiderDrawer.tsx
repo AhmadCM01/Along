@@ -48,19 +48,19 @@ const CONVEYOR_STAGES: ConveyorStage[] = [
     id: 1,
     label: "1. Board Dutse",
     location: "Dutse First Gate Forecourt (Km 0)",
-    description: "Amina books 1 seat to Gwarinpa. Chinedu books Seat 2 and Fatima books Seat 3 to Berger. 3/4 seats filled.",
+    description: "Rider B books 1 seat to Gwarinpa. Rider C books Seat 2 and Fatima books Seat 3 to Berger. 3/4 seats filled.",
     podFill: "3/4 Seats Secured",
     grossEscrow: 1800,
     seats: {
       seat1: {
-        passenger: "Amina Danjuma",
+        passenger: "Rider B",
         route: "Dutse First Gate ➔ Gwarinpa Setraco",
         fare: 600,
         otp: "2639",
         status: "BOARDED",
       },
       seat2: {
-        passenger: "Chinedu Okeke",
+        passenger: "Rider C",
         route: "Dutse First Gate ➔ Berger Underbridge",
         fare: 600,
         otp: "0930",
@@ -91,14 +91,14 @@ const CONVEYOR_STAGES: ConveyorStage[] = [
     grossEscrow: 2200,
     seats: {
       seat1: {
-        passenger: "Amina Danjuma",
+        passenger: "Rider B",
         route: "Dutse First Gate ➔ Gwarinpa Setraco",
         fare: 600,
         otp: "2639",
         status: "BOARDED",
       },
       seat2: {
-        passenger: "Chinedu Okeke",
+        passenger: "Rider C",
         route: "Dutse First Gate ➔ Berger Underbridge",
         fare: 600,
         otp: "0930",
@@ -124,7 +124,7 @@ const CONVEYOR_STAGES: ConveyorStage[] = [
     id: 3,
     label: "3. Hot-Swap Gwarinpa",
     location: "Gwarinpa 3rd Avenue Setraco (Km 12.0)",
-    description: "Amina alights at Gwarinpa. Grace immediately hot-swaps into vacant Seat 1 to Banex/Wuse!",
+    description: "Rider B alights at Gwarinpa. Grace immediately hot-swaps into vacant Seat 1 to Banex/Wuse!",
     podFill: "4/4 Seats Reloaded (Conveyor)",
     grossEscrow: 2800,
     seats: {
@@ -136,7 +136,7 @@ const CONVEYOR_STAGES: ConveyorStage[] = [
         status: "RELOADED",
       },
       seat2: {
-        passenger: "Chinedu Okeke",
+        passenger: "Rider C",
         route: "Dutse First Gate ➔ Berger Underbridge",
         fare: 600,
         otp: "0930",
@@ -162,7 +162,7 @@ const CONVEYOR_STAGES: ConveyorStage[] = [
     id: 4,
     label: "4. Terminus Berger",
     location: "Berger Roundabout Underbridge (Km 19.5)",
-    description: "Chinedu, Fatima, and Grace arrive at destinations. Full corridor circuit completed. Escrow disbursed.",
+    description: "Rider C, Fatima, and Grace arrive at destinations. Full corridor circuit completed. Escrow disbursed.",
     podFill: "Trip Complete • ₦2,800 Gross",
     grossEscrow: 2800,
     seats: {
@@ -174,7 +174,7 @@ const CONVEYOR_STAGES: ConveyorStage[] = [
         status: "ALIGHTED",
       },
       seat2: {
-        passenger: "Chinedu Okeke",
+        passenger: "Rider C",
         route: "Berger Underbridge (Seat 1/2)",
         fare: 600,
         otp: "0930",

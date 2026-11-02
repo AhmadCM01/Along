@@ -346,6 +346,7 @@ export interface ActivePodPassenger {
   first_name?: string;
   phone: string;
   display_name: string;
+  simulated?: boolean;
   origin: string;
   destination: string;
   seats: number;
@@ -399,6 +400,34 @@ export async function resetActivePod(
   const params = new URLSearchParams({ corridor_id: corridorId });
   if (podId) params.set("pod_id", podId);
   const url = `${getApiBaseUrl()}/api/v1/drivers/active-pod/reset?${params.toString()}`;
+  const res = await fetch(url, { method: "POST" });
+  return parseJsonResponse(res);
+}
+
+export async function dispatchPodEarly(
+  driverId = "DRV-001",
+  podId = "POD-842A"
+): Promise<{
+  status: string;
+  pod_id: string;
+  message: string;
+}> {
+  const url = `${getApiBaseUrl()}/api/v1/drivers/${encodeURIComponent(driverId)}/pods/${encodeURIComponent(podId)}/dispatch`;
+  const res = await fetch(url, { method: "POST" });
+  return parseJsonResponse(res);
+}
+
+export async function fillPodCoRiders(
+  driverId = "DRV-001",
+  podId = "POD-842A"
+): Promise<{
+  status: string;
+  pod_id: string;
+  added_count: number;
+  seats_occupied: number;
+  pod_status: string;
+}> {
+  const url = `${getApiBaseUrl()}/api/v1/drivers/${encodeURIComponent(driverId)}/pods/${encodeURIComponent(podId)}/fill-coriders`;
   const res = await fetch(url, { method: "POST" });
   return parseJsonResponse(res);
 }

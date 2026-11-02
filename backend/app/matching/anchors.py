@@ -54,6 +54,20 @@ def snap_to_anchor(
         scored.append((dist_m, anc))
     scored.sort(key=lambda item: item[0])
 
+    # If the closest anchor on (corridor_id, direction) is further than 900m,
+    # also check all active anchors across the Abuja network so cross-corridor
+    # or reverse-direction origins (e.g. Banex, Berger, Dutse, Gwarinpa) snap
+    # to the filling station right next to the rider.
+    if not scored or scored[0][0] > 900.0:
+        all_scored: list[tuple[float, AnchorPointModel]] = [
+            (haversine_distance_m(lat, lng, anc.lat, anc.lng), anc)
+            for anc in cat.anchors.values()
+            if anc.is_active
+        ]
+        all_scored.sort(key=lambda item: item[0])
+        if all_scored and (not scored or all_scored[0][0] < scored[0][0]):
+            scored = all_scored
+
     if not scored:
         return AnchorSnapResult(
             status="NONE_FOUND",

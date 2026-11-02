@@ -110,11 +110,11 @@ Unlike flat-rate apps, Along uses a **Dynamic Origin-to-Destination Zone Matrix*
 In Abuja, commuters do not use street addresses or zip codes. They navigate by spoken, multilingual, relational landmarks (*"second transformer after Dutse first gate"*, *"Ina Dei-Dei zan tafi gadar Berger"*).
 
 1. **Multilingual Reasoning & Slot Extraction:**
-   - Powered by Meta open-weight models (Muse Glimmer / Llama) for intent and route extraction across **English, Nigerian Pidgin, and Hausa**, resolving complex relational landmarks.
+   - Powered by Meta open-weight models (Muse Spark Open via Baseten / Llama 3.2 Vision via NVIDIA NIM) for intent and route extraction across **English, Nigerian Pidgin, and Hausa**, resolving complex relational landmarks.
 2. **Hyper-Local Spatial Search (Character N-Gram Hashing + FAISS):**
-   - Indexes **500+ hyper-local Abuja landmark aliases** across 6 corridors, snapping informal spoken descriptions to exact **Virtual Anchor Point** coordinates in **< 15 milliseconds**.
+   - Indexes **1,122 hyper-local Abuja landmark aliases** across 142 landmarks and 6 corridors, snapping informal spoken descriptions to exact **Virtual Anchor Point** coordinates in **< 15 milliseconds**.
 3. **Computer Vision Vehicle Inspection:**
-   - Glimmer vision check inspects vehicle registration photo and plate text during onboarding to verify identity against fleet records.
+   - Llama 3.2 vision check inspects vehicle registration photo and plate text during onboarding to verify identity against fleet records.
 4. **Speech Recognition:**
    - Non-Meta ASR via Groq Whisper (`whisper-large-v3-turbo`) and Meta Model API when enabled, providing spoken voice transcription on WhatsApp.
 

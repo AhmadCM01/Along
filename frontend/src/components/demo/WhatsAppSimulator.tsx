@@ -388,15 +388,15 @@ export function WhatsAppSimulator({
       });
       if (onSendVoiceAudio) {
         try {
-          const resp = await fetch("/audio/Pigdin%20Voice%20Note.ogg");
+          const resp = await fetch("/audio/pidgin_voice_note.ogg");
           if (resp.ok) {
             const blob = await resp.blob();
             onSendVoiceAudio(
               blob,
-              "Pigdin Voice Note.ogg",
+              "pidgin_voice_note.ogg",
               undefined,
               "0:06",
-              "/audio/Pigdin%20Voice%20Note.ogg"
+              "/audio/pidgin_voice_note.ogg"
             );
             return;
           }
@@ -730,9 +730,7 @@ export function WhatsAppSimulator({
               >
                 {isProcessing
                   ? "typing..."
-                  : `Online · Abuja Corridor Coordinator (${
-                      activeLocale === "pcm" ? "Pidgin" : activeLocale === "ha" ? "Hausa" : "English"
-                    })`}
+                  : "Online · Abuja Corridor Coordinator"}
               </div>
             </div>
           </div>

@@ -71,7 +71,7 @@ export default function TripTrackerPage({
               plate_number: trip.driverInfo.plateNumber || "ABJ-402-AL",
               rating: 4.94,
               id_on_file: true,
-              profile_note: "Verified commercial driver · NIN verified",
+              profile_note: "Verified commercial driver · Registered on file",
             },
             telemetry: {
               lat: 9.1105,

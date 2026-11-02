@@ -12,6 +12,7 @@ export interface PodPassenger {
   otpCode: string;
   isBoarded: boolean;
   isCurrentUser?: boolean;
+  simulated?: boolean;
   seatsOccupied?: number;
 }
 
@@ -96,6 +97,8 @@ interface AlongTripContextType {
   setAudioPlaying: (playing: boolean) => void;
   aiDrawerOpen: boolean;
   setAiDrawerOpen: (open: boolean) => void;
+  multiRiderDrawerOpen: boolean;
+  setMultiRiderDrawerOpen: (open: boolean) => void;
   persistedMessages: PersistedChatMessage[];
   setPersistedMessages: React.Dispatch<React.SetStateAction<PersistedChatMessage[]>>;
 }
@@ -105,9 +108,9 @@ const CORRIDOR_CO_RIDERS: Record<
   Array<{ name: string; drop: string; fare: number; otp: string }>
 > = {
   "BWR-DUT-WUS": [
-    { name: "Amina Danjuma", drop: "Katampe Bridge (Oando)", fare: 900, otp: "8241" },
-    { name: "Chinedu Okeke", drop: "Berger Underbridge", fare: 900, otp: "5190" },
-    { name: "Ibrahim Musa", drop: "Wuse Market Main Gate", fare: 1200, otp: "3764" },
+    { name: "Rider B", drop: "Katampe Bridge (Oando)", fare: 900, otp: "8241" },
+    { name: "Rider C", drop: "Berger Underbridge", fare: 900, otp: "5190" },
+    { name: "Rider D", drop: "Wuse Market Main Gate", fare: 1200, otp: "3764" },
   ],
   "ZUB-KUB-WUS": [
     { name: "Hauwa Sani", drop: "Kubwa NNPC Junction", fare: 700, otp: "6412" },
@@ -162,6 +165,7 @@ function buildCorridorPassengers(quote: TripQuote | null, corridorId: string): P
       // First co-rider(s) already boarded at forecourt; last co-rider if 3 co-riders can be toggled/verified
       isBoarded: i < coRiderCount - 1 || coRiderCount === 1,
       isCurrentUser: false,
+      simulated: true,
       seatsOccupied: 1,
     });
   }
@@ -186,14 +190,58 @@ function buildCorridorPassengers(quote: TripQuote | null, corridorId: string): P
   return list;
 }
 
-const DEFAULT_DRIVER: DriverInfo = {
-  podCode: "POD-842A",
-  driverName: "Musa Bello",
-  plateNumber: "ABJ-402-AL",
-  vehicleDesc: "Volkswagen Golf 4 (Silver)",
-  phoneMode: "SMARTPHONE_AND_2G_USSD",
-  ussdShortcode: "*384*247#",
+const CORRIDOR_DRIVERS: Record<string, DriverInfo> = {
+  "BWR-DUT-WUS": {
+    podCode: "POD-842A",
+    driverName: "Musa Bello",
+    plateNumber: "ABJ-402-AL",
+    vehicleDesc: "Volkswagen Golf 4 (Emerald Green)",
+    phoneMode: "SMARTPHONE_AND_2G_USSD",
+    ussdShortcode: "*384*247#",
+  },
+  "ZUB-KUB-WUS": {
+    podCode: "POD-519K",
+    driverName: "Chukwudi Nwosu",
+    plateNumber: "ABJ-106-AL",
+    vehicleDesc: "Toyota Camry (Black)",
+    phoneMode: "SMARTPHONE_AND_2G_USSD",
+    ussdShortcode: "*384*247#",
+  },
+  "ZUB-DEI-DUT": {
+    podCode: "POD-208D",
+    driverName: "Tunde Adeyemi",
+    plateNumber: "ABJ-108-AL",
+    vehicleDesc: "Toyota Corolla (Wine Red)",
+    phoneMode: "SMARTPHONE_AND_2G_USSD",
+    ussdShortcode: "*384*247#",
+  },
+  "ZUB-KRM-JAB": {
+    podCode: "POD-612J",
+    driverName: "Bala Mohammed",
+    plateNumber: "ABJ-110-AL",
+    vehicleDesc: "Volkswagen Golf 4 (Silver)",
+    phoneMode: "SMARTPHONE_AND_2G_USSD",
+    ussdShortcode: "*384*247#",
+  },
+  "GWL-LUG-AR1": {
+    podCode: "POD-304L",
+    driverName: "Peter Okon",
+    plateNumber: "ABJ-112-AL",
+    vehicleDesc: "Toyota Corolla (Gold)",
+    phoneMode: "SMARTPHONE_AND_2G_USSD",
+    ussdShortcode: "*384*247#",
+  },
+  "MRB-NYA-CEN": {
+    podCode: "POD-721M",
+    driverName: "Kingsley Nnamdi",
+    plateNumber: "ABJ-116-AL",
+    vehicleDesc: "Toyota Corolla (Blue)",
+    phoneMode: "SMARTPHONE_AND_2G_USSD",
+    ussdShortcode: "*384*247#",
+  },
 };
+
+const DEFAULT_DRIVER: DriverInfo = CORRIDOR_DRIVERS["BWR-DUT-WUS"];
 
 const AlongTripContext = createContext<AlongTripContextType | undefined>(undefined);
 
@@ -204,14 +252,23 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
   const [activeLocale, setActiveLocale] = useState<"en" | "pcm" | "ha">("pcm");
   const [currentQuote, setCurrentQuote] = useState<TripQuote | null>(null);
   const [journeyStage, setJourneyStage] = useState<PodJourneyStage>("IDLE");
-  const [driverInfo] = useState<DriverInfo>(DEFAULT_DRIVER);
+  const [driverInfo, setDriverInfo] = useState<DriverInfo>(DEFAULT_DRIVER);
   const [passengers, setPassengers] = useState<PodPassenger[]>([]);
   const [activeShareToken, setActiveShareToken] = useState<string>("share-bwr-4817");
   const [traces, setTraces] = useState<StageTrace[]>([]);
   const [resolverScores, setResolverScores] = useState<any>(null);
   const [audioPlaying, setAudioPlaying] = useState<boolean>(false);
   const [aiDrawerOpen, setAiDrawerOpen] = useState<boolean>(false);
+  const [multiRiderDrawerOpen, setMultiRiderDrawerOpen] = useState<boolean>(false);
   const [persistedMessages, setPersistedMessages] = useState<PersistedChatMessage[]>([]);
+
+  // Keep driver profile dynamically aligned with active corridor
+  useEffect(() => {
+    const cid = currentQuote?.corridorId || activeCorridorId;
+    if (cid && CORRIDOR_DRIVERS[cid]) {
+      setDriverInfo(CORRIDOR_DRIVERS[cid]);
+    }
+  }, [currentQuote?.corridorId, activeCorridorId]);
 
   // Restore from sessionStorage on client mount
   useEffect(() => {
@@ -329,10 +386,13 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
 
       const userSeat = updated.find((p) => p.isCurrentUser);
       if (matched && userSeat?.isBoarded) {
-        // Also mark remaining co-riders boarded when user boards to complete 4/4 pod takeoff
-        const completedPod = updated.map((p) => ({ ...p, isBoarded: true }));
-        setJourneyStage("IN_TRANSIT");
-        return completedPod;
+        const totalBoardedSeats = updated.reduce(
+          (acc, p) => acc + (p.isBoarded ? p.seatsOccupied || 1 : 0),
+          0
+        );
+        if (totalBoardedSeats >= 4 && updated.every((p) => p.isBoarded)) {
+          setJourneyStage("IN_TRANSIT");
+        }
       }
       return updated;
     });
@@ -396,6 +456,8 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
         setAudioPlaying,
         aiDrawerOpen,
         setAiDrawerOpen,
+        multiRiderDrawerOpen,
+        setMultiRiderDrawerOpen,
         persistedMessages,
         setPersistedMessages,
       }}

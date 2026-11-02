@@ -6,7 +6,12 @@ import time
 from typing import Any
 
 from app.ai.asr import transcribe_voice_note
-from app.ai.extraction import extract_intent_and_slots
+from app.ai.extraction import (
+    detect_language,
+    extract_intent_and_slots,
+    has_explicit_language_markers,
+    is_neutral_confirmation,
+)
 from app.ai.graph.state import ConversationSessionState, DisambiguationOption
 from app.ai.guard import check_input_safety, check_safety_with_glimmer
 from app.ai.landmarks.resolver import resolve_landmark_mention, resolve_route_and_quote
@@ -173,8 +178,17 @@ async def execute_conversation_turn(
     extracted, ext_meta = await extract_intent_and_slots(
         effective_text,
         missing_slot_context=missing_context,  # type: ignore[arg-type]
+        known_origin=state.origin_name or state.origin_mention,
+        known_destination=state.destination_name or state.destination_mention,
     )
-    if state.turn_count == 1 or extracted.detected_locale != "en":
+    is_short_slot = (
+        len(effective_text.strip().split()) <= 3
+        and not has_explicit_language_markers(effective_text)
+    )
+    if is_neutral_confirmation(effective_text) or (is_short_slot and state.locale):
+        # Preserve active session language for neutral confirmations, clicks, or short landmark replies (e.g. "berger")
+        pass
+    elif extracted.detected_locale in ("pcm", "ha", "en"):
         state.locale = extracted.detected_locale
 
     ext_fallback = bool(ext_meta.get("fallback", True))
@@ -282,6 +296,9 @@ async def execute_conversation_turn(
         state.request_code = state.request_code or generate_short_code("REQ")
         state.boarding_otp = state.boarding_otp or generate_boarding_otp()
         state.share_token = state.share_token or generate_share_token()
+        corr = state.corridor_id or "BWR-DUT-WUS"
+        from app.api.v1.demo_emulator import CORRIDOR_DRIVERS
+        drv = CORRIDOR_DRIVERS.get(corr, CORRIDOR_DRIVERS["BWR-DUT-WUS"])
         state.last_reply_text = render_template(
             "pooling_started",
             state.locale,
@@ -292,6 +309,7 @@ async def execute_conversation_turn(
             total_fare_naira=format_naira(state.total_fare_kobo),
             seats=state.seats,
             current_seats=min(4, state.seats + 1),
+            driver_name=drv["full_name"],
         )
         xray["next_stage"] = state.stage
         xray["total_turn_ms"] = round((time.perf_counter() - turn_start) * 1000.0, 2)
@@ -312,18 +330,28 @@ async def execute_conversation_turn(
         state.boarding_otp = None
         state.share_token = None
         state.request_code = None
+        state.turn_count = 1
         state.seats = extracted.seat_count_requested or 1
     elif extracted.seat_count_requested and (extracted.seat_count_requested > 1 or state.seats == 1):
         state.seats = extracted.seat_count_requested
 
-    if extracted.origin_mention:
+    has_both_new = bool(extracted.origin_mention and extracted.destination_mention)
+    if has_both_new:
         state.origin_mention = extracted.origin_mention
-    if extracted.destination_mention:
         state.destination_mention = extracted.destination_mention
-
-    # If user replied with a single landmark while in AWAITING_DESTINATION, assign it to destination
-    if missing_context == "destination" and not state.destination_mention and extracted.origin_mention:
-        state.destination_mention = extracted.origin_mention
+    elif missing_context == "destination" and state.origin_mention:
+        single_dest = extracted.destination_mention or extracted.origin_mention
+        if single_dest:
+            state.destination_mention = single_dest
+    elif missing_context == "origin" and state.destination_mention:
+        single_orig = extracted.origin_mention or extracted.destination_mention
+        if single_orig:
+            state.origin_mention = single_orig
+    else:
+        if extracted.origin_mention:
+            state.origin_mention = extracted.origin_mention
+        if extracted.destination_mention:
+            state.destination_mention = extracted.destination_mention
 
     # 8. Check if both slots are empty
     if not state.origin_mention and not state.destination_mention and not extracted.origin_relational and not extracted.destination_relational:
@@ -549,10 +577,11 @@ async def execute_conversation_turn(
 
     if quote.anchor_snap and quote.anchor_snap.anchor:
         state.anchor_id = quote.anchor_snap.anchor.id
-        state.anchor_name = quote.anchor_snap.anchor.name
     else:
         state.anchor_id = f"ANC-{orig_lmk.landmark_id}"
-        state.anchor_name = orig_lmk.canonical_name
+    # Always use the commuter's exact resolved Abuja pickup landmark name
+    # so no distant or mismatched filling station name is forced onto another area.
+    state.anchor_name = orig_lmk.canonical_name
 
     state.unit_fare_kobo = quote.active_fare_kobo
     state.total_fare_kobo = quote.active_fare_kobo * state.seats
@@ -575,17 +604,44 @@ async def execute_conversation_turn(
         savings_pct=state.savings_pct,
         total_fare_naira=format_naira(state.total_fare_kobo),
     )
+
+    lead_locale_match = False
     if (
         extracted.conversational_lead
         and len(extracted.conversational_lead.strip()) >= 15
         and "₦" not in extracted.conversational_lead
     ):
+        lead_lang = detect_language(extracted.conversational_lead)
+        if lead_lang == state.locale:
+            lead_locale_match = True
+        elif state.locale == "pcm":
+            lower_lead = extracted.conversational_lead.lower()
+            if any(m in lower_lead for m in ("dey", "abeg", "sharp", "boss", "enter", "moto", "waka", "drop", "don", "wan go")):
+                lead_locale_match = True
+
+    if lead_locale_match and extracted.conversational_lead:
+        clean_lead = extracted.conversational_lead.strip()
+        if (
+            state.origin_mention
+            and state.origin_name
+            and state.origin_mention.lower() != state.origin_name.lower()
+            and state.origin_name.lower() not in clean_lead.lower()
+        ):
+            clean_lead = clean_lead.replace(state.origin_mention, state.origin_name)
+        if (
+            state.destination_mention
+            and state.destination_name
+            and state.destination_mention.lower() != state.destination_name.lower()
+            and state.destination_name.lower() not in clean_lead.lower()
+        ):
+            clean_lead = clean_lead.replace(state.destination_mention, state.destination_name)
+        clean_lead = clean_lead.replace("Dusi", "Dutse").replace("Duste", "Dutse").replace("dusi", "Dutse").replace("duste", "Dutse")
         footer = (
             f"*Farashin Tafiyar Along ({state.corridor_id})*"
             if state.locale == "ha"
             else f"*Along Corridor Quote ({state.corridor_id})*"
         )
-        state.last_reply_text = f"{extracted.conversational_lead.strip()}\n{footer}"
+        state.last_reply_text = f"{clean_lead}\n{footer}"
     else:
         state.last_reply_text = template_reply
     state.last_buttons = [

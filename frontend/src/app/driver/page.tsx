@@ -11,6 +11,8 @@ import { useAlongTrip } from "@/context/AlongTripContext";
 import {
   ActivePodData,
   ActivePodPassenger,
+  dispatchPodEarly,
+  fillPodCoRiders,
   getActivePod,
   getCorridorDrivers,
   resetActivePod,
@@ -183,7 +185,10 @@ export default function DriverPage() {
     }
   }
 
-  async function handleVerifyOtp(codeToVerify?: string) {
+  const [coRidersLoading, setCoRidersLoading] = useState<boolean>(false);
+  const [dispatchLoading, setDispatchLoading] = useState<boolean>(false);
+
+  async function handleVerifyOtp(codeToVerify?: string, requestId?: string) {
     const code = (codeToVerify || otpCode).trim();
     if (!code) {
       setOtpError("Enter the 4-digit passenger boarding code");
@@ -198,11 +203,14 @@ export default function DriverPage() {
     try {
       const podId = activePod?.pod_id || trip.driverInfo.podCode || "POD-842A";
       const driverId = activePod?.driver_id || driver.id || "DRV-001";
+      const matchingPassenger = activePod?.passengers?.find((p) => p.otp_code === code);
+      const targetReqId = requestId || matchingPassenger?.request_id || "auto";
+
       await verifyBoardingOtp(
         driverId,
         podId,
         code,
-        "auto",
+        targetReqId,
         activePod?.anchor_lat || 9.1779,
         activePod?.anchor_lng || 7.3736
       );
@@ -218,6 +226,45 @@ export default function DriverPage() {
       setOtpError(msg);
     } finally {
       setOtpLoading(false);
+    }
+  }
+
+  async function handleFillCoRiders() {
+    if (coRidersLoading) return;
+    setCoRidersLoading(true);
+    setOtpError(null);
+    setOtpSuccessMessage(null);
+    try {
+      const podId = activePod?.pod_id || trip.driverInfo.podCode || "POD-842A";
+      const driverId = activePod?.driver_id || driver.id || "DRV-001";
+      await fillPodCoRiders(driverId, podId);
+      await fetchActivePod();
+      setOtpSuccessMessage("Co-riders matched and boarded! 4/4 pod seats complete.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setOtpError(msg);
+    } finally {
+      setCoRidersLoading(false);
+    }
+  }
+
+  async function handleDispatchEarly() {
+    if (dispatchLoading) return;
+    setDispatchLoading(true);
+    setOtpError(null);
+    setOtpSuccessMessage(null);
+    try {
+      const podId = activePod?.pod_id || trip.driverInfo.podCode || "POD-842A";
+      const driverId = activePod?.driver_id || driver.id || "DRV-001";
+      await dispatchPodEarly(driverId, podId);
+      await fetchActivePod();
+      trip.startCorridorTrip();
+      setOtpSuccessMessage("Pod dispatched into transit!");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setOtpError(msg);
+    } finally {
+      setDispatchLoading(false);
     }
   }
 
@@ -529,6 +576,79 @@ export default function DriverPage() {
               </div>
             </div>
 
+            {/* Pod Lifecycle & Fullness Bar */}
+            <div
+              style={{
+                background: isInTransit ? "var(--brand-soft)" : "var(--signal-soft)",
+                border: `1.5px solid ${isInTransit ? "rgba(5, 150, 105, 0.38)" : "var(--signal-amber)"}`,
+                borderRadius: 10,
+                padding: "10px 14px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 8,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: isInTransit ? "var(--brand-primary)" : "var(--signal-ink)" }}>
+                  {isInTransit
+                    ? "● POD IN TRANSIT · DEPARTED FORECOURT"
+                    : `● POD STANDBY AT FORECOURT · ${boardedSeatsCount}/4 SEATS BOARDED`}
+                </div>
+                <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
+                  {isInTransit
+                    ? "En route to destination along corridor."
+                    : isPodFull
+                    ? "All 4 seats occupied! Verify boarding codes to depart."
+                    : "Shared corridor pooling active: waiting for remaining co-riders."}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {!isPodFull && !isInTransit && (
+                  <button
+                    type="button"
+                    onClick={handleFillCoRiders}
+                    disabled={coRidersLoading}
+                    title="Simulate co-riders matching and filling the empty seats to 4/4"
+                    style={{
+                      background: "var(--brand-primary)",
+                      color: "#FFFFFF",
+                      border: "none",
+                      padding: "6px 12px",
+                      borderRadius: "var(--radius-chip)",
+                      fontWeight: 700,
+                      fontSize: 11.5,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {coRidersLoading ? "Matching..." : "+ Simulate Co-Riders (Demo shortcut)"}
+                  </button>
+                )}
+                {!isInTransit && boardedSeatsCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleDispatchEarly}
+                    disabled={dispatchLoading}
+                    title="Depart early with currently boarded seats"
+                    style={{
+                      background: "var(--bg-paper)",
+                      color: "var(--text-ink)",
+                      border: "1px solid var(--border-subtle)",
+                      padding: "6px 12px",
+                      borderRadius: "var(--radius-chip)",
+                      fontWeight: 700,
+                      fontSize: 11.5,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {dispatchLoading ? "Departing..." : "Force Dispatch Pod (Demo shortcut)"}
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {/* Driver Tile */}
               <div
@@ -546,91 +666,164 @@ export default function DriverPage() {
                   {driver.full_name}
                 </div>
                 <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
-                  Verified NIN · {trip.currentQuote?.anchorName || "Safe Forecourt"}
+                  Registered Commercial Driver · {trip.currentQuote?.anchorName || "Safe Forecourt"}
                 </div>
               </div>
 
               {/* Real Multi-Browser Live Passengers */}
               {livePassengers && livePassengers.length > 0 ? (
-                livePassengers.map((p, pIdx) => {
-                  const isBoarded = p.is_boarded;
-                  const firstName = p.first_name || (p.display_name ? p.display_name.split(" ")[0] : `Rider ${String.fromCharCode(65 + pIdx)}`);
-                  return (
-                    <div
-                      key={p.request_id || pIdx}
-                      style={{
-                        gridColumn: p.seats > 1 ? "1 / -1" : undefined,
-                        background: isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
-                        borderRadius: "var(--radius-button)",
-                        padding: "13px 15px",
-                        border: `1.5px solid ${
-                          isBoarded ? "rgba(5, 150, 105, 0.38)" : "var(--signal-amber)"
-                        }`,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 8,
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 800,
-                            color: isBoarded ? "var(--brand-primary)" : "var(--signal-ink)",
-                          }}
-                        >
-                          SEAT {p.seat_numbers.join(", ")} · {isBoarded ? "✓ BOARDED" : "AWAITING BOARDING"}
-                        </span>
-                        <DepartureNumeral size="sm" variant={isBoarded ? "brand" : "amber"}>
-                          ₦{p.fare_naira.toLocaleString()}
-                        </DepartureNumeral>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-ink)" }}>
-                          {firstName}
-                        </div>
-                        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                          {p.origin} ➔ <strong>{p.destination}</strong> ({p.seats} seat{p.seats > 1 ? "s" : ""})
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
-                        <div style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
-                          OTP: {revealCodes ? (
-                            <strong style={{ color: "var(--text-ink)", fontSize: 13 }}>{p.otp_code}</strong>
-                          ) : (
-                            <span>•••• (Protected)</span>
-                          )}
-                        </div>
-
-                        {!isBoarded ? (
-                          <button
-                            type="button"
-                            onClick={() => handleVerifyOtp(p.otp_code)}
-                            disabled={otpLoading}
+                <>
+                  {livePassengers.map((p, pIdx) => {
+                    const isBoarded = p.is_boarded;
+                    const firstName = p.first_name || (p.display_name && !p.display_name.startsWith("Rider") ? p.display_name.split(" ")[0] : p.display_name || `Rider ${String.fromCharCode(65 + pIdx)}`);
+                    return (
+                      <div
+                        key={p.request_id || pIdx}
+                        style={{
+                          gridColumn: p.seats > 1 ? "1 / -1" : undefined,
+                          background: isBoarded ? "var(--brand-soft)" : "var(--signal-soft)",
+                          borderRadius: "var(--radius-button)",
+                          padding: "13px 15px",
+                          border: `1.5px solid ${
+                            isBoarded ? "rgba(5, 150, 105, 0.38)" : "var(--signal-amber)"
+                          }`,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span
                             style={{
-                              background: "var(--brand-primary)",
-                              color: "#FFFFFF",
-                              border: "none",
-                              borderRadius: 6,
-                              padding: "6px 14px",
                               fontSize: 12,
-                              fontWeight: 700,
-                              cursor: "pointer",
+                              fontWeight: 800,
+                              color: isBoarded ? "var(--brand-primary)" : "var(--signal-ink)",
                             }}
                           >
-                            Verify OTP {revealCodes ? `(${p.otp_code})` : ""}
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand-primary)" }}>
-                            Escrow Captured ✓
+                            SEAT {p.seat_numbers.join(", ")} · {isBoarded ? "✓ BOARDED" : "AWAITING BOARDING"}
                           </span>
-                        )}
+                          <DepartureNumeral size="sm" variant={isBoarded ? "brand" : "amber"}>
+                            ₦{p.fare_naira.toLocaleString()}
+                          </DepartureNumeral>
+                        </div>
+
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: "var(--text-ink)" }}>
+                              {firstName}
+                            </span>
+                            {(p.simulated || p.display_name?.toLowerCase().includes("simulated") || firstName.startsWith("Rider")) && (
+                              <span
+                                style={{
+                                  fontSize: 10.5,
+                                  fontWeight: 600,
+                                  background: "var(--bg-paper)",
+                                  color: "var(--text-muted)",
+                                  padding: "1px 6px",
+                                  borderRadius: 4,
+                                  border: "1px solid var(--border-subtle)",
+                                }}
+                              >
+                                Simulated rider
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                            {p.origin} ➔ <strong>{p.destination}</strong> ({p.seats} seat{p.seats > 1 ? "s" : ""})
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
+                          <div style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                            OTP: {revealCodes ? (
+                              <strong style={{ color: "var(--text-ink)", fontSize: 13 }}>{p.otp_code}</strong>
+                            ) : (
+                              <span>•••• (Protected)</span>
+                            )}
+                          </div>
+
+                          {!isBoarded ? (
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyOtp(p.otp_code, p.request_id)}
+                              disabled={otpLoading}
+                              style={{
+                                background: "var(--brand-primary)",
+                                color: "#FFFFFF",
+                                border: "none",
+                                borderRadius: 6,
+                                padding: "6px 14px",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Verify OTP {revealCodes ? `(${p.otp_code})` : ""}
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand-primary)" }}>
+                              Escrow Captured ✓
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+
+                  {/* Vacant Seats in 4-Seat Automobile Pod */}
+                  {(() => {
+                    const occupiedSeats = new Set<number>();
+                    livePassengers.forEach((p) => p.seat_numbers.forEach((s) => occupiedSeats.add(Number(s))));
+                    const vacantSeats = [1, 2, 3, 4].filter((s) => !occupiedSeats.has(s));
+                    return vacantSeats.map((sNum) => (
+                      <div
+                        key={`vacant-${sNum}`}
+                        style={{
+                          background: "var(--bg-paper)",
+                          borderRadius: "var(--radius-button)",
+                          padding: "13px 15px",
+                          border: "1.5px dashed var(--border-subtle)",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                          gap: 8,
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>
+                              SEAT {sNum} · VACANT
+                            </span>
+                            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Standby</span>
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", marginTop: 4 }}>
+                            Awaiting Corridor Co-Rider
+                          </div>
+                          <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
+                            Corridor {trip.currentQuote?.corridorId || trip.activeCorridorId}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleFillCoRiders}
+                          disabled={coRidersLoading}
+                          style={{
+                            background: "transparent",
+                            color: "var(--brand-primary)",
+                            border: "1px dashed var(--brand-primary)",
+                            borderRadius: 6,
+                            padding: "4px 8px",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          + Match Co-Rider
+                        </button>
+                      </div>
+                    ));
+                  })()}
+                </>
               ) : (
                 <>
                   {/* Co-Riders (Non-current user seats) */}

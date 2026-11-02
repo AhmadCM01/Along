@@ -4,7 +4,7 @@ Two-tier architecture:
 1. Fast rule-based safety gate (< 2ms deterministic regex):
    - SOS distress detection
    - Prompt injection and oversized payload blocking
-2. LLM-based safety classification (using configured model / Muse Glimmer):
+2. LLM-based safety classification (using configured model / Muse Spark Open):
    - Executed after the rule-based gate when live API is configured
    - Falls back honestly with provider="local_fallback", model_used="none", fallback=True
 """

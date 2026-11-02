@@ -22,6 +22,31 @@ logger = get_logger(__name__)
 # Ordered regex rules mapping common English Web-Speech / Whisper phonetic misrecognitions
 # of Hausa, Nigerian Pidgin, and Abuja FCT landmarks to their canonical forms.
 _PHONETIC_REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
+    # Sub-word glued Hausa & Pidgin expressions observed in live Whisper voice notes
+    (
+        re.compile(r"\b(?:inawko\s*ana|inakwana|ina\s+ko\s+ana)\b", re.I),
+        "Ina kwana",
+    ),
+    (
+        re.compile(r"\binabwari(?:ye|ne)?\b", re.I),
+        "ina Bwari",
+    ),
+    (
+        re.compile(r"\bina+(?:dusi|duse|duste|dutse|dutsay)\b", re.I),
+        "Ina Dutse",
+    ),
+    (
+        re.compile(r"\b(?:ina\s+)?(?:awu\s*sene|awuse\s*ne|a\s+wuse\s+ne)\b", re.I),
+        "Ina Wuse",
+    ),
+    (
+        re.compile(r"\bzanje\b", re.I),
+        "zan je",
+    ),
+    (
+        re.compile(r"\buzu\b", re.I),
+        "yanzu",
+    ),
     # Full-phrase Hausa misrecognitions observed in live testing ("zan wuse daga dutse" -> "just sing")
     (
         re.compile(
@@ -69,17 +94,37 @@ _PHONETIC_REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     ),
     # Nigerian Pidgin common phonetic confusions
     (
+        re.compile(r"\b(?:aupa\s+abos|alpha\s+boss|how\s+far\s+abos|aupa\s+boss|alpha\s+abos)\b", re.I),
+        "How far boss",
+    ),
+    (
+        re.compile(r"\b(?:awafa|alpha|aupa)\b", re.I),
+        "How far",
+    ),
+    (
         re.compile(r"^\s*(?:are\s+begging|a\s+beg|i\s+beg|abeg)\b", re.I),
         "Abeg",
     ),
     (
-        re.compile(r"\b(?:i\s+day|i\s+they|ah\s+dey)\b", re.I),
+        re.compile(r"\b(?:aidee|aide|ai\s+dey|i\s+day|i\s+they|ah\s+dey)\b", re.I),
         "I dey",
     ),
-    # Abuja Landmarks: Dutse ("do say", "du say", "do stay", "duste", "duche", "dutsay", "dutsi")
+    (
+        re.compile(r"\b(?:aongo|awango|a\s+won\s+go|i\s+won\s+go|i\s+wan\s+go|a\s+wan\s+go)\b", re.I),
+        "I wan go",
+    ),
+    (
+        re.compile(r"\bnao\b", re.I),
+        "now",
+    ),
+    (
+        re.compile(r"\b(?:mbenga|benga)\b", re.I),
+        "Berger",
+    ),
+    # Abuja Landmarks: Dutse ("do say", "du say", "do stay", "duste", "dusi", "duse", "duche", "dutsay", "dutsi")
     (
         re.compile(
-            r"\b(?:do\s+say|du\s+say|do\s+stay|do\s+see|dutsay|duche|duste|dutsi|dot\s+say|dutsch|du\s+che)\b",
+            r"\b(?:do\s+say|du\s+say|do\s+stay|do\s+see|dutsay|duche|duste|dutsi|dusi|duse|dot\s+say|dutsch|du\s+che)\b",
             re.I,
         ),
         "Dutse",
@@ -226,10 +271,60 @@ _PHONETIC_REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
         ),
         "Dei-Dei",
     ),
+    # Abuja Landmarks: Mpape, Banex, Galadima, Dawaki, Ushafa, Usman Dam, Muko Junction
+    (
+        re.compile(
+            r"\b(?:mpape|m\s+pape|em\s+pape|impape|mpappe)\b",
+            re.I,
+        ),
+        "Mpape",
+    ),
+    (
+        re.compile(
+            r"\b(?:banex|bar\s+next|bannex|ban\s+ex)\b",
+            re.I,
+        ),
+        "Banex",
+    ),
+    (
+        re.compile(
+            r"\b(?:gala\s*dima(?:wa)?)\b",
+            re.I,
+        ),
+        "Galadima",
+    ),
+    (
+        re.compile(
+            r"\b(?:da\s*waki|dawa\s*ki)\b",
+            re.I,
+        ),
+        "Dawaki",
+    ),
+    (
+        re.compile(
+            r"\b(?:oo\s*shafa|u\s*shafa|ushafa)\b",
+            re.I,
+        ),
+        "Ushafa",
+    ),
+    (
+        re.compile(
+            r"\b(?:usman\s+dam|usuma\s+dam|osman\s+dam)\b",
+            re.I,
+        ),
+        "Usman Dam",
+    ),
+    (
+        re.compile(
+            r"\b(?:muko|mu\s+ko|muco)\s+junction\b",
+            re.I,
+        ),
+        "Muko Junction",
+    ),
     # Hausa verb normalization: "zan Wuse" (when "je" is omitted before an Abuja landmark) -> "zan je Wuse"
     (
         re.compile(
-            r"\bzan\s+(?!je\b|zuwa\b)(?P<place>Wuse|Kasuwar\s+Wuse|Dutse|Bwari|Berger|Gadar\s+Berger|Sokale|Katampe|Mabushi|Kubwa|Zuba|Jabi|Utako|Gwagwalada|Lugbe|Area\s*1|Mararaba|Nyanya)\b",
+            r"\bzan\s+(?!je\b|zuwa\b)(?P<place>Wuse|Kasuwar\s+Wuse|Banex|Dutse|Bwari|Ushafa|Usman\s+Dam|Muko|Sokale|Galadima|Dawaki|Gwarinpa|Katampe|Oando|Mabushi|Berger|Gadar\s+Berger|Mpape|Kubwa|Zuba|Dei-Dei|Jabi|Utako|Gwagwalada|Lugbe|Area\s*1|AYA|Mararaba|Nyanya)\b",
             re.I,
         ),
         r"zan je \g<place>",

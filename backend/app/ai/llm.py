@@ -54,7 +54,7 @@ def label_model(model_id: str | None) -> str:
     if "muse-spark-open" in m_lower:
         return "Meta open-weight model (Muse Spark Open)"
     if "glimmer" in m_lower:
-        return "Meta open-weight model (Muse Glimmer)"
+        return "Meta open-weight model (Muse Spark Open)"
     if "llama" in m_lower:
         return "Meta open-weight model (Llama)"
     return "Non-Meta"

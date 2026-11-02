@@ -34,80 +34,80 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
     waypoints: [
       {
         id: "BWR",
-        name: "Bwari",
+        name: "Bwari / Ushafa",
         km: 0.0,
-        x: 115,
-        y: 56,
+        x: 105,
+        y: 54,
         isAnchor: true,
-        partner: "NIPCO Bwari",
+        partner: "Bwari Central / Ushafa Jct",
         labelPos: "top",
-        keywords: ["bwari", "ushafa", "nipco"],
+        keywords: ["bwari", "ushafa", "usman dam", "usuma dam", "law school", "nipco"],
+      },
+      {
+        id: "SOK",
+        name: "Sokale / Muko",
+        km: 11.5,
+        x: 195,
+        y: 96,
+        isAnchor: true,
+        partner: "Sokale Roundabout / Dutse Mkt",
+        labelPos: "bottom",
+        keywords: ["sokale", "muko", "dutse market", "duste market", "alhaji market", "bovas", "matrix"],
       },
       {
         id: "DUT",
         name: "Dutse 1st Gate",
         km: 15.1,
-        x: 205,
-        y: 118,
+        x: 282,
+        y: 78,
         isAnchor: true,
-        partner: "A.A. Rano Dutse",
-        labelPos: "bottom",
-        keywords: ["dutse", "first gate", "1st gate", "alhaji", "a.a. rano"],
-      },
-      {
-        id: "SOK",
-        name: "Sokale",
-        km: 18.2,
-        x: 295,
-        y: 96,
-        isAnchor: true,
-        partner: "Matrix / Bovas Sokale",
+        partner: "Dutse First Gate",
         labelPos: "top",
-        keywords: ["sokale", "matrix", "bovas", "mopol", "tipper"],
+        keywords: ["dutse", "duste", "dutse first gate", "dutse 1st gate", "dutse alhaji", "a.a. rano dutse"],
       },
       {
-        id: "KAT",
-        name: "Katampe",
-        km: 26.1,
-        x: 398,
-        y: 146,
+        id: "GAL",
+        name: "Galadima / Dawaki",
+        km: 19.0,
+        x: 365,
+        y: 122,
         isAnchor: true,
-        partner: "Oando Katampe Bridge",
+        partner: "Galadima / Dawaki Jct",
         labelPos: "bottom",
-        keywords: ["katampe", "oando", "extension"],
+        keywords: ["galadima", "galadimawa", "dawaki", "news engineering"],
       },
       {
-        id: "MAB",
-        name: "Mabushi",
-        km: 29.4,
-        x: 488,
-        y: 124,
-        isAnchor: false,
-        partner: "Mabushi Bridge",
+        id: "GWA",
+        name: "Gwarinpa / Oando",
+        km: 24.5,
+        x: 452,
+        y: 102,
+        isAnchor: true,
+        partner: "Gwarinpa / Oando Katampe",
         labelPos: "top",
-        keywords: ["mabushi", "minister"],
+        keywords: ["gwarinpa", "3rd avenue", "1st avenue", "katampe", "oando", "setraco"],
       },
       {
         id: "BER",
-        name: "Berger",
-        km: 32.5,
-        x: 572,
-        y: 184,
-        isAnchor: false,
-        partner: "Berger Underbridge",
+        name: "Mabushi / Berger",
+        km: 31.0,
+        x: 548,
+        y: 168,
+        isAnchor: true,
+        partner: "Berger Roundabout",
         labelPos: "bottom",
-        keywords: ["berger", "gadar", "underbridge"],
+        keywords: ["mabushi", "berger", "gadar", "underbridge", "utako"],
       },
       {
         id: "WUS",
-        name: "Wuse Market",
-        km: 36.5,
-        x: 662,
-        y: 158,
+        name: "Banex / Wuse",
+        km: 35.5,
+        x: 648,
+        y: 138,
         isAnchor: true,
-        partner: "Total Wuse Mkt",
+        partner: "Wuse Market / Banex",
         labelPos: "top",
-        keywords: ["wuse", "kasuwar"],
+        keywords: ["wuse", "kasuwar", "banex", "mpape", "central area", "secretariat", "maitama", "area 1", "aya"],
       },
     ],
   },
@@ -157,9 +157,9 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
         x: 412,
         y: 164,
         isAnchor: true,
-        partner: "A.A. Rano Gwarinpa",
+        partner: "Gwarinpa 3rd Ave Gate",
         labelPos: "bottom",
-        keywords: ["gwarinpa", "galadima"],
+        keywords: ["gwarinpa", "galadima", "dawaki", "3rd avenue"],
       },
       {
         id: "MAB",
@@ -174,14 +174,14 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
       },
       {
         id: "WUS",
-        name: "Wuse Market",
+        name: "Banex / Wuse",
         km: 38.2,
         x: 662,
         y: 158,
         isAnchor: true,
-        partner: "Total Wuse",
+        partner: "Banex / Wuse Mkt",
         labelPos: "top",
-        keywords: ["wuse", "kasuwar"],
+        keywords: ["wuse", "kasuwar", "banex", "mpape", "central area"],
       },
     ],
   },
@@ -523,8 +523,8 @@ export function AbujaCorridorMap({
     }
   }, [isTripInitiated, isTripCompleted, currentCorridorId, trip.currentQuote?.originName, trip.currentQuote?.destName]);
 
-  // Identify pickup and drop-off waypoint indices dynamically from the booked route
-  const { pickupIdx, dropIdx, displayAnchorName, displayDestName } = useMemo(() => {
+  // Identify pickup and drop-off waypoint indices dynamically from the booked route (supports both North->South and South->North)
+  const { pickupIdx, dropIdx, displayAnchorName, displayDestName, shortOriginLabel, shortDestLabel } = useMemo(() => {
     const wps = corridor.waypoints;
     const rawOrigin = trip.currentQuote?.originName || originName || "";
     const rawAnchor = trip.currentQuote?.anchorName || anchorName || "";
@@ -533,38 +533,54 @@ export function AbujaCorridorMap({
     const pickupSearch = `${rawOrigin} ${rawAnchor}`.toLowerCase();
     const dropSearch = rawDest.toLowerCase();
 
-    let pIdx = wps.findIndex(
-      (w) =>
-        pickupSearch.includes(w.name.toLowerCase()) ||
-        w.keywords.some((k) => pickupSearch.includes(k))
-    );
+    const findBestWaypointIndex = (search: string, excludeIdx = -1) => {
+      if (!search.trim()) return -1;
+      let bestIdx = -1;
+      let bestScore = 0;
+      wps.forEach((w, idx) => {
+        if (idx === excludeIdx) return;
+        const wName = w.name.toLowerCase();
+        if (search.includes(wName) && wName.length > bestScore) {
+          bestScore = wName.length;
+          bestIdx = idx;
+        }
+        for (const k of w.keywords) {
+          if (search.includes(k) && k.length > bestScore) {
+            bestScore = k.length;
+            bestIdx = idx;
+          }
+        }
+      });
+      return bestIdx;
+    };
+
+    let pIdx = findBestWaypointIndex(pickupSearch);
     if (pIdx < 0) pIdx = 0;
 
-    let dIdx = wps.findIndex(
-      (w, idx) =>
-        idx > pIdx &&
-        (dropSearch.includes(w.name.toLowerCase()) ||
-          w.keywords.some((k) => dropSearch.includes(k)))
-    );
-    if (dIdx < 0) {
-      dIdx = wps.findIndex(
-        (w) =>
-          dropSearch.includes(w.name.toLowerCase()) ||
-          w.keywords.some((k) => dropSearch.includes(k))
-      );
-    }
-    if (dIdx <= pIdx) {
-      dIdx = Math.min(wps.length - 1, Math.max(pIdx + 1, wps.length - 2));
+    let dIdx = findBestWaypointIndex(dropSearch, pIdx);
+    if (dIdx < 0 || dIdx === pIdx) {
+      dIdx = pIdx < wps.length - 1 ? wps.length - 1 : 0;
     }
 
     const pWp = wps[pIdx];
     const dWp = wps[dIdx];
 
+    const shortenLabel = (full: string, fallback: string) => {
+      if (!full) return fallback;
+      const cleaned = full
+        .replace(/\b(?:Filling Station|Main Gate|Roundabout Underbridge|Express Junction|Hillside Junction|Setraco Gate|Crush Rock|Old Secretariat|Building Materials Market|Eagle Square)\b/gi, "")
+        .replace(/\s*\([^)]*\)/g, "")
+        .trim();
+      return cleaned.length >= 3 && cleaned.length <= 24 ? cleaned : fallback;
+    };
+
     return {
       pickupIdx: pIdx,
       dropIdx: dIdx,
-      displayAnchorName: rawAnchor || `${pWp.partner} (${pWp.name})`,
+      displayAnchorName: rawOrigin || rawAnchor || pWp.partner,
       displayDestName: rawDest || dWp.name,
+      shortOriginLabel: shortenLabel(rawOrigin || rawAnchor, pWp.name),
+      shortDestLabel: shortenLabel(rawDest, dWp.name),
     };
   }, [corridor, trip.currentQuote, anchorName, originName, destName]);
 
@@ -596,12 +612,14 @@ export function AbujaCorridorMap({
     [corridor.id]
   );
 
-  // Full selected corridor path & booked segment path
+  // Full selected corridor path & booked segment path (supports both forward & reverse travel)
   const fullPathD = useMemo(() => buildSmoothCurvePath(corridor.waypoints), [corridor]);
-  const bookedWaypoints = useMemo(
-    () => corridor.waypoints.slice(pickupIdx, dropIdx + 1),
-    [corridor, pickupIdx, dropIdx]
-  );
+  const bookedWaypoints = useMemo(() => {
+    if (pickupIdx <= dropIdx) {
+      return corridor.waypoints.slice(pickupIdx, dropIdx + 1);
+    }
+    return corridor.waypoints.slice(dropIdx, pickupIdx + 1).reverse();
+  }, [corridor, pickupIdx, dropIdx]);
   const bookedPathD = useMemo(() => buildSmoothCurvePath(bookedWaypoints), [bookedWaypoints]);
 
   // Interpolate vehicle position strictly along bookedWaypoints (Pickup -> Destination)
@@ -658,7 +676,7 @@ export function AbujaCorridorMap({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <CorridorNode size={18} variant={isTripInitiated ? "pickup" : "pending"} />
+          <CorridorNode size={18} variant={isTripInitiated ? "pickup" : "default"} />
           <div>
             <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-ink)" }}>
               Abuja FCT Transit Map · {corridor.name} ({corridor.id})
@@ -666,7 +684,7 @@ export function AbujaCorridorMap({
             <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
               {hasBookingOrQuote ? (
                 <>
-                  Route: <strong>{pickupWp.name}</strong> ➔ <strong>{dropWp.name}</strong> ({corridor.highway})
+                  Route: <strong>{shortOriginLabel}</strong> ➔ <strong>{shortDestLabel}</strong> ({corridor.highway})
                 </>
               ) : (
                 <>{corridor.highway} · Select a corridor or book a ride on WhatsApp</>
@@ -721,10 +739,16 @@ export function AbujaCorridorMap({
                   fontFamily: "var(--font-mono)",
                 }}
               >
-                ● STANDBY AT {pickupWp.name.toUpperCase()} · AWAITING DRIVER OTP
+                ● STANDBY AT {pickupWp.name.toUpperCase()} · POD BOARDING
               </div>
               <Link
-                href="/driver"
+                href={
+                  (trip.passengers.find((p) => p.isCurrentUser)?.otpCode || trip.currentQuote?.otp)
+                    ? `/driver?code=${encodeURIComponent(
+                        trip.passengers.find((p) => p.isCurrentUser)?.otpCode || trip.currentQuote?.otp || ""
+                      )}`
+                    : "/driver"
+                }
                 style={{
                   fontSize: 11.5,
                   fontWeight: 800,
@@ -735,7 +759,7 @@ export function AbujaCorridorMap({
                   textDecoration: "none",
                 }}
               >
-                Verify OTP to Start Trip ➔
+                Demo Shortcut: Open Driver Terminal ➔
               </Link>
             </div>
           ) : (
@@ -898,9 +922,12 @@ export function AbujaCorridorMap({
           {corridor.waypoints.map((wp, idx) => {
             const isPickup = hasBookingOrQuote && idx === pickupIdx;
             const isDrop = hasBookingOrQuote && idx === dropIdx;
-            const isWithinTrip = !hasBookingOrQuote || (idx >= pickupIdx && idx <= dropIdx);
+            const minIdx = Math.min(pickupIdx, dropIdx);
+            const maxIdx = Math.max(pickupIdx, dropIdx);
+            const isWithinTrip = !hasBookingOrQuote || (idx >= minIdx && idx <= maxIdx);
             const labelY = wp.labelPos === "top" ? -14 : 21;
             const badgeY = wp.labelPos === "top" ? -26 : 33;
+            const nodeDisplayLabel = isPickup ? shortOriginLabel : isDrop ? shortDestLabel : wp.name;
 
             return (
               <g
@@ -955,7 +982,7 @@ export function AbujaCorridorMap({
                     fontFamily: "var(--font-heading)",
                   }}
                 >
-                  {wp.name}
+                  {nodeDisplayLabel}
                 </text>
 
                 {/* Role Badge only on Active Pickup & Drop-off to keep intermediate spine uncluttered */}
@@ -1092,7 +1119,7 @@ export function AbujaCorridorMap({
                 {corridor.waypoints[0].name} ➔ {corridor.waypoints[corridor.waypoints.length - 1].name}
               </strong>
               <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
-                ({corridor.waypoints.length} Safe Forecourt Stops · Fixed {corridor.fare})
+                ({corridor.waypoints.length} Safe Corridor Stops · From {corridor.unitFare})
               </span>
             </div>
 

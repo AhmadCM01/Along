@@ -94,6 +94,18 @@ class AbujaSeedCatalog:
                 and row.dest_zone_id == origin_zone_id
             ):
                 return row
+        for row in self.fare_matrix:
+            if (
+                row.origin_zone_id == origin_zone_id
+                and row.dest_zone_id == dest_zone_id
+            ):
+                return row
+        for row in self.fare_matrix:
+            if (
+                row.origin_zone_id == dest_zone_id
+                and row.dest_zone_id == origin_zone_id
+            ):
+                return row
         return None
 
 

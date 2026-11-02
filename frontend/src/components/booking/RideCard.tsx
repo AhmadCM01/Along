@@ -235,13 +235,27 @@ export function RideCard({
             style={{
               fontSize: 13,
               fontWeight: 600,
-              color: "var(--text-muted)",
+              color: "var(--brand-primary)",
               display: "inline-flex",
               alignItems: "center",
+              gap: 6,
               minHeight: 36,
+              textDecoration: "none",
             }}
           >
-            Open driver view ›
+            <span>Open driver view with this code</span>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                background: "var(--brand-soft)",
+                color: "var(--brand-primary)",
+                padding: "2px 6px",
+                borderRadius: 4,
+              }}
+            >
+              Demo shortcut
+            </span>
           </Link>
         </div>
 

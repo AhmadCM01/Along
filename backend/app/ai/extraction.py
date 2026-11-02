@@ -26,13 +26,100 @@ logger = get_logger(__name__)
 _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "extract_v1.md"
 
 _HAUSA_MARKERS = {
-    "ina", "zan", "je", "zuwa", "daga", "kujera", "daya", "biyu", "uku", "hudu",
-    "kasuwar", "gadar", "sauke", "mota", "taimakoo", "sannu", "barka", "nawa",
+    "ina", "zan", "zanje", "kujera", "kujeru", "biyu", "uku", "hudu", "daya",
+    "kasuwa", "kasuwar", "sauke", "saukemin", "sannu", "barka", "nawa",
+    "yanzu", "gobe", "yau", "daga", "inaa", "kudi", "tsaro", "shiga", "fita",
+    "madalla", "alhamdulillah", "nagode", "yaya", "yane", "motar", "mota",
+    "hanya", "zaka", "zaki", "don allah", "ga", "nan", "can", "wuri",
 }
+
+_HAUSA_PHRASES = [
+    "zan je", "ina kwana", "kujera biyu", "kujera daya", "kujera uku", "kujera hudu",
+    "gidan mai", "don allah", "a sauke", "ina son", "don motar", "ina bwari", "ina dutse",
+]
+
 _PIDGIN_MARKERS = {
-    "abeg", "dey", "make", "una", "wetin", "waka", "enter", "moto", "drop",
-    "comot", "o", "na", "wey", "carry", "reach", "how", "far", "wahala",
+    "abeg", "dey", "wetin", "waka", "comot", "wey", "wahala", "sharp", "sabi",
+    "pikin", "sef", "kuku", "chook", "yarn", "awafa", "aidee", "aide", "aongo",
+    "mbenga", "twale", "oga", "oya", "nao", "fit", "dem", "una", "kini",
 }
+
+_PIDGIN_PHRASES = [
+    "how far", "i dey", "wan go", "no wahala", "sharp boss", "make i", "make we",
+    "fit carry", "i fit", "you fit", "two seats go", "one seat go", "don full",
+    "don reach", "waka enter", "don lock", "two seat go", "three seat go",
+    "one person go", "good morning i dey",
+]
+
+
+def is_neutral_confirmation(text: str) -> bool:
+    """Return True if the utterance is a language-neutral confirmation or selection."""
+    cleaned = text.strip(" .,!?:;-").lower()
+    return cleaned in {
+        "yes", "yeah", "yep", "ok", "okay", "confirm", "lock",
+        "lock it", "confirm and lock", "1", "2", "3", "to", "toh", "eh", "ehen",
+    }
+
+
+def has_explicit_language_markers(text: str) -> bool:
+    """Return True if text contains explicit markers of Hausa, Pidgin, or English grammar."""
+    lower = text.lower()
+    tokens = set(re.findall(r"[a-z0-9']+", lower))
+    if len(tokens & _HAUSA_MARKERS) > 0 or any(p in lower for p in _HAUSA_PHRASES):
+        return True
+    if len(tokens & _PIDGIN_MARKERS) > 0 or any(p in lower for p in _PIDGIN_PHRASES):
+        return True
+    en_markers = {
+        "please", "reserve", "heading", "destination", "pickup", "dropoff",
+        "seats", "book", "leaving", "arriving", "want", "take", "need",
+    }
+    if (
+        len(tokens & en_markers) > 0
+        or "drop me" in lower
+        or "i want" in lower
+        or "pick me" in lower
+        or "going to" in lower
+    ):
+        return True
+    return False
+
+
+def detect_language(text: str) -> Literal["en", "pcm", "ha"]:
+    """Detect English (`en`), Nigerian Pidgin (`pcm`), or Hausa (`ha`) with high precision."""
+    lower = text.lower()
+    tokens = set(re.findall(r"[a-z0-9']+", lower))
+
+    ha_score = len(tokens & _HAUSA_MARKERS) * 2
+    for phrase in _HAUSA_PHRASES:
+        if phrase in lower:
+            ha_score += 4
+
+    pcm_score = len(tokens & _PIDGIN_MARKERS) * 2
+    for phrase in _PIDGIN_PHRASES:
+        if phrase in lower:
+            pcm_score += 4
+    if "don" in tokens and "allah" not in tokens:
+        pcm_score += 2
+
+    en_markers = {
+        "please", "reserve", "heading", "destination", "pickup", "dropoff",
+        "seats", "book", "leaving", "arriving", "want", "take", "need",
+    }
+    en_score = len(tokens & en_markers) * 2
+    if (
+        "i want to" in lower
+        or "i am at" in lower
+        or "pick me up" in lower
+        or "drop me off" in lower
+        or "going to" in lower
+    ):
+        en_score += 4
+
+    if ha_score > 0 and ha_score >= pcm_score and ha_score >= en_score:
+        return "ha"
+    if pcm_score > 0 and pcm_score >= en_score:
+        return "pcm"
+    return "en"
 
 _SEAT_PATTERNS: list[tuple[re.Pattern[str], int]] = [
     (re.compile(r"\b(?:4|four|hudu)\s*(?:seats?|persons?|people|passengers?|kujera)?\b", re.I), 4),
@@ -70,18 +157,6 @@ def _load_system_prompt() -> str:
     return "Extract Along Abuja transit intent and slots into JSON."
 
 
-def detect_language(text: str) -> Literal["en", "pcm", "ha"]:
-    """Detect English (`en`), Nigerian Pidgin (`pcm`), or Hausa (`ha`)."""
-    tokens = set(re.findall(r"[a-z0-9']+", text.lower()))
-    ha_hits = len(tokens & _HAUSA_MARKERS)
-    pcm_hits = len(tokens & _PIDGIN_MARKERS)
-    if ha_hits >= 1 and ha_hits >= pcm_hits:
-        return "ha"
-    if pcm_hits >= 1:
-        return "pcm"
-    return "en"
-
-
 def _extract_seats(text: str) -> int:
     for pattern, count in _SEAT_PATTERNS:
         if pattern.search(text):
@@ -96,13 +171,13 @@ def _clean_location_phrase(raw: str) -> str:
         r"kujera\s*(?:daya|biyu|uku|hudu|1|2|3|4)|"
         r"with\s+(?:load|luggage|bag|box)|"
         r"women\s*only|female\s*only|"
-        r"please|abeg|now\s*now|sharp\s*sharp)\b.*$",
+        r"please|abeg|now(?:\s*now)?|sharp(?:\s*sharp)?|yanzu|ne|abeg\s*o)\b.*$",
         "",
         cleaned,
         flags=re.I,
     )
     cleaned = re.sub(
-        r"^(?:at|in|for|inside|around|by|near|from|daga|ina)\s+",
+        r"^(?:at|in|for|inside|around|by|near|from|daga|ni\s+ina|ina\s+a|ina|a)\s+",
         "",
         cleaned,
         flags=re.I,
@@ -291,29 +366,29 @@ def extract_deterministic(
     destination_raw: str | None = None
 
     grammar_patterns = [
-        # Destination-first Hausa: "zan [je] Wuse daga Dutse" / "zuwa Wuse daga Dutse" / "sauke ni a Wuse daga Dutse"
+        # Destination-first Hausa: "zan [je] Wuse daga Dutse" / "zan je Wuse ni ina Bwari" / "zuwa Wuse daga Dutse"
         re.compile(
-            r"\b(?:zan\s+je|zan|zuwa|sauke\s+ni\s+a)\s+(?P<dest>[^,.]+?)\s+daga\s+(?P<orig>.+)$",
+            r"\b(?:zan\s+je|zan|zuwa|sauke\s+ni\s+a)\s+(?P<dest>[^,.?!]+?)\s+(?:ni\s+)?(?:daga|ina(?!\s+(?:kwana|wuni|yini)\b))\s+(?P<orig>.+)$",
             re.I,
         ),
         # Destination-first English/Pidgin: "going to Wuse from Dutse" / "drop me for Berger from Dutse"
         re.compile(
-            r"\b(?:going\s+to|heading\s+to|drop\s+me\s+(?:for|at)|carry\s+me\s+(?:go|reach)|take\s+me\s+to|to)\s+(?P<dest>[^,.]+?)\s+from\s+(?P<orig>.+)$",
+            r"\b(?:going\s+to|heading\s+to|drop\s+me\s+(?:for|at)|carry\s+me\s+(?:go|reach)|take\s+me\s+to|to)\s+(?P<dest>[^,.?!]+?)\s+from\s+(?P<orig>.+)$",
             re.I,
         ),
         # Origin-first English/Pidgin: "from Sokale, drop me for Oando..."
         re.compile(
-            r"\bfrom\s+(?P<orig>[^,.]+?)(?:,?\s*(?:drop\s+me\s+(?:for|at)|going\s+to|heading\s+to|make\s+i\s+reach|carry\s+me\s+(?:go|reach)|go\s+|to\s+))(?P<dest>.+)$",
+            r"\bfrom\s+(?P<orig>[^,.?!]+?)(?:,?\s*(?:drop\s+me\s+(?:for|at)|going\s+to|heading\s+to|make\s+i\s+reach|carry\s+me\s+(?:go|reach)|go\s+|to\s+))(?P<dest>.+)$",
             re.I,
         ),
         re.compile(
-            r"\b(?:i\s+dey|i\s+am\s+at|i'm\s+at|we\s+dey|waiting\s+(?:at|for))\s+(?P<orig>[^,.]+?)"
-            r"(?:,?\s*(?:(?:1|2|3|4|one|two|three|four)\s*seats?\s*)?(?:going\s+to|heading\s+to|drop\s+me\s+(?:for|at)|carry\s+me\s+(?:go|reach)|make\s+i\s+(?:reach|enter\s+go)|go\s+|to\s+))(?P<dest>.+)$",
+            r"\b(?:i\s+dey|i\s+am\s+at|i'm\s+at|we\s+dey|waiting\s+(?:at|for))\s+(?P<orig>[^,.?!]+?)"
+            r"(?:[.,]?\s*(?:(?:1|2|3|4|one|two|three|four)\s*seats?\s*)?(?:going\s+to|heading\s+to|drop\s+me\s+(?:for|at)|carry\s+me\s+(?:go|reach)|make\s+i\s+(?:reach|enter\s+go)|i\s+wan\s+go\s+|go\s+|to\s+))(?P<dest>.+)$",
             re.I,
         ),
-        # Origin-first Hausa: "Ina Bwari zan je Kasuwar Wuse" / "Daga Dutse zuwa Wuse"
+        # Origin-first Hausa: "Ina Bwari zan je Kasuwar Wuse" / "Ina Dutse First Gate. Zan je Berger." / "Daga Dutse zuwa Wuse"
         re.compile(
-            r"\b(?:ina|daga)\s+(?P<orig>.+?)\s+(?:zan\s+je|zan|zuwa|sauke\s+ni\s+a)\s+(?P<dest>.+)$",
+            r"\b(?:ina(?!\s+(?:kwana|wuni|yini)\b)(?:\s+a)?|daga)\s+(?P<orig>[^,.?!]+?)(?:\s+ne)?[.,\s]+(?:zan\s+je|zan|zuwa|sauke\s+ni\s+a)\s+(?P<dest>.+)$",
             re.I,
         ),
         re.compile(
@@ -336,7 +411,7 @@ def extract_deterministic(
             re.I,
         )
         orig_only = re.search(
-            r"\b(?:i\s+dey|i\s+am\s+at|i'm\s+at|pick\s+me\s+(?:at|from|for)|waiting\s+(?:at|for)|from|daga|ina)\s+(?P<orig>.+)$",
+            r"\b(?:i\s+dey|i\s+am\s+at|i'm\s+at|pick\s+me\s+(?:at|from|for)|waiting\s+(?:at|for)|from|daga|ina(?!\s+(?:kwana|wuni|yini)\b))\s+(?P<orig>.+)$",
             text,
             re.I,
         )
@@ -348,9 +423,9 @@ def extract_deterministic(
     if not origin_raw and not destination_raw:
         gazetteer_hits = _match_known_landmarks_in_order(text)
         if len(gazetteer_hits) >= 2:
-            # Check if destination-first preposition ("daga" or "from") appears between hit[0] and hit[1]
+            # Check if destination-first preposition ("daga", "from", or "ni ina") appears between hit[0] and hit[1]
             dest_first_between = re.search(
-                re.escape(gazetteer_hits[0]) + r".*?\b(?:daga|from)\b.*?" + re.escape(gazetteer_hits[1]),
+                re.escape(gazetteer_hits[0]) + r".*?\b(?:daga|from|ni\s+ina)\b.*?" + re.escape(gazetteer_hits[1]),
                 text,
                 re.I,
             )
@@ -410,6 +485,8 @@ async def extract_intent_and_slots(
     utterance: str,
     *,
     missing_slot_context: Literal["origin", "destination"] | None = None,
+    known_origin: str | None = None,
+    known_destination: str | None = None,
     llm_client: MetaLLMClient | None = None,
 ) -> tuple[ExtractionOutput, dict[str, object]]:
     """Run entity extraction through primary -> fallback -> rule-based, recording the level."""
@@ -425,9 +502,16 @@ async def extract_intent_and_slots(
     if client.is_live_api_configured():
         try:
             extraction_max_tokens = int(getattr(client.settings, "LLM_MAX_TOKENS", 1500))
+            llm_user_msg = normalized_utterance
+            if missing_slot_context or known_origin or known_destination:
+                llm_user_msg = (
+                    f"[Session Context: awaiting_slot={missing_slot_context or 'both'}, "
+                    f"known_origin={known_origin or 'none'}, known_destination={known_destination or 'none'}]\n"
+                    f"User message: {normalized_utterance}"
+                )
             res = await client.complete_json(
                 system_prompt=system_prompt,
-                user_message=normalized_utterance,
+                user_message=llm_user_msg,
                 temperature=0.0,
                 max_tokens=extraction_max_tokens,
                 validate=ExtractionOutput.model_validate,
@@ -435,20 +519,18 @@ async def extract_intent_and_slots(
             attempts = list(res.attempts)
             if res.parsed_json is not None and res.level != "rule_based":
                 parsed = ExtractionOutput.model_validate({**res.parsed_json, "model_used": res.model_used})
-                # Hybrid enrichment: if LLM missed a relational ref or known gazetteer landmark, merge deterministic hit
+                # Hybrid enrichment: merge deterministic Abuja grammar & gazetteer hits
                 det = extract_deterministic(normalized_utterance, missing_slot_context=missing_slot_context)
-                if not parsed.origin_mention and det.origin_mention:
-                    parsed.origin_mention = det.origin_mention
-                if not parsed.destination_mention and det.destination_mention:
-                    parsed.destination_mention = det.destination_mention
-                # If destination-first grammar ("zan Wuse daga Dutse") was inverted by LLM, trust deterministic grammar
-                if (
-                    det.origin_mention
-                    and det.destination_mention
-                    and re.search(r"\b(?:zan|zuwa|going\s+to|drop\s+me)\b.+\b(?:daga|from)\b", normalized_utterance, re.I)
-                ):
+                if det.origin_mention and det.destination_mention:
                     parsed.origin_mention = det.origin_mention
                     parsed.destination_mention = det.destination_mention
+                    if parsed.intent in ("UNKNOWN", "FAQ_OR_HELP"):
+                        parsed.intent = det.intent
+                else:
+                    if not parsed.origin_mention and det.origin_mention:
+                        parsed.origin_mention = det.origin_mention
+                    if not parsed.destination_mention and det.destination_mention:
+                        parsed.destination_mention = det.destination_mention
                 if not parsed.origin_relational and det.origin_relational:
                     parsed.origin_relational = det.origin_relational
                 if not parsed.destination_relational and det.destination_relational:

@@ -9,17 +9,18 @@ Covers:
 from __future__ import annotations
 
 import pytest
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.v1.drivers import (
     ACTIVE_PODS_STORE,
     BookPodSeatInput,
+    VerifyBoardingOTPInput,
     alight_pod_passenger,
     book_pod_passenger,
     get_pod_for_corridor,
+    router as drivers_router,
 )
-from app.main import create_app
 
 
 def test_booking_5_seats_fails_with_409() -> None:
@@ -70,19 +71,21 @@ def test_booking_5_seats_fails_with_409() -> None:
     assert "Yawan kujerun mota ya cika" in exc_ha.value.detail
 
     # 4. Test via HTTP endpoint
-    client = TestClient(create_app())
-    res = client.post(
-        f"/api/v1/drivers/DRV-001/pods/{pod_id}/book",
-        json={
-            "rider_name": "Rider A",
-            "origin": "Dutse First Gate",
-            "destination": "Berger",
-            "seats": 5,
-            "locale": "en",
-        },
-    )
-    assert res.status_code == 409
-    assert "Pod capacity exceeded" in res.json()["detail"]
+    app = FastAPI()
+    app.include_router(drivers_router)
+    with TestClient(app) as client:
+        res = client.post(
+            f"/api/v1/drivers/DRV-001/pods/{pod_id}/book",
+            json={
+                "rider_name": "Rider A",
+                "origin": "Dutse First Gate",
+                "destination": "Berger",
+                "seats": 5,
+                "locale": "en",
+            },
+        )
+        assert res.status_code == 409
+        assert "Pod capacity exceeded" in res.json()["detail"]
 
 
 def test_two_bookings_never_share_a_seat() -> None:
@@ -178,3 +181,71 @@ def test_freed_seat_can_be_rebooked() -> None:
     # Rider C reused the exact seats freed by Rider A
     assert set(b3["seat_numbers"]) == set(b1["seat_numbers"])
     assert pod["seats_occupied"] == 4
+
+
+def test_verify_otp_with_auto_request_id_and_strict_departure() -> None:
+    """Assert OTP verification works with 'auto' request_id and pod only departs when full."""
+    pod_id = "POD-TEST-AUTO-DISPATCH"
+    pod = get_pod_for_corridor("BWR-DUT-WUS", pod_id)
+    pod["passengers"] = []
+    pod["seats_occupied"] = 0
+    pod["boarded_requests"] = set()
+    pod["boarding_otp_hashes"] = {}
+    pod["boarding_otps"] = {}
+    pod["status"] = "STANDBY"
+
+    # Book 1 seat (Rider A)
+    b1 = book_pod_passenger(
+        pod,
+        BookPodSeatInput(
+            rider_name="Rider A",
+            seats=1,
+            request_id="req-auto-1",
+        ),
+    )
+    otp = b1["otp_code"]
+
+    app = FastAPI()
+    app.include_router(drivers_router)
+    with TestClient(app) as client:
+        # 1. Unknown OTP with "auto" fails with 404
+        bad_res = client.post(
+            f"/api/v1/drivers/DRV-001/pods/{pod_id}/verify-otp",
+            json={
+                "ride_request_id": "auto",
+                "otp_code": "0000",
+                "driver_lat": 9.1779,
+                "driver_lng": 7.3736,
+            },
+        )
+        assert bad_res.status_code == 404
+
+        # 2. Valid OTP with "auto" succeeds
+        good_res = client.post(
+            f"/api/v1/drivers/DRV-001/pods/{pod_id}/verify-otp",
+            json={
+                "ride_request_id": "auto",
+                "otp_code": otp,
+                "driver_lat": 9.1779,
+                "driver_lng": 7.3736,
+            },
+        )
+        assert good_res.status_code == 200
+        data = good_res.json()
+        assert data["status"] == "BOARDED"
+        # Pod is only 1/4 full, so it must stay in BOARDING state
+        assert data["pod_status"] == "BOARDING"
+
+        # Verify passenger is marked boarded in pod
+        p_entry = next(p for p in pod["passengers"] if p["request_id"] == "req-auto-1")
+        assert p_entry["is_boarded"] is True
+        assert p_entry["status"] == "BOARDED"
+
+        # 3. Simulate co-riders filling the remaining 3 seats
+        fill_res = client.post(f"/api/v1/drivers/DRV-001/pods/{pod_id}/fill-coriders")
+        assert fill_res.status_code == 200
+        fill_data = fill_res.json()
+        assert fill_data["seats_occupied"] == 4
+        # All 4 seats are boarded now, so pod departs (IN_TRANSIT)
+        assert fill_data["pod_status"] == "IN_TRANSIT"
+        assert pod["status"] == "IN_TRANSIT"

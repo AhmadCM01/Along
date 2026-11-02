@@ -46,6 +46,7 @@ include = ["app*", "scripts*"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+addopts = "--capture=sys"
 
 [tool.ruff]
 line-length = 100

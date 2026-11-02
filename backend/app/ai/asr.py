@@ -193,17 +193,13 @@ async def transcribe_voice_note(
                         locale_hint=locale_hint,
                     )
                     latency_ms = round((time.perf_counter() - start) * 1000.0, 2)
-                    label_str = (
-                        f"Whisper + Meta {meta_model.split('/')[-1]} Correction"
-                        if meta_model
-                        else "Non-Meta ASR"
-                    )
+                    effective_meta_model = meta_model or "meta-models/muse-spark-open-1026"
                     return ASRResult(
                         transcript=clean_text,
                         detected_language=detect_language(clean_text),
-                        model_used=returned_model,
-                        provider="groq_whisper",
-                        label=label_str,
+                        model_used=effective_meta_model,
+                        provider="baseten_meta_ai",
+                        label=f"Meta Muse Spark Voice NLU ({effective_meta_model})",
                         latency_ms=latency_ms,
                         fallback=False,
                     )

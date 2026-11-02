@@ -43,6 +43,7 @@ export default function RidePage() {
 
   const handleReset = () => {
     trip.resetAll();
+    chat.resetChat();
   };
 
   const shareToken = trip.currentQuote?.shareToken || trip.activeShareToken || "share-bwr-4817";
@@ -92,6 +93,8 @@ export default function RidePage() {
           onTriggerSos={() => chat.triggerSos()}
           onResetChat={handleReset}
           activeLocale={chat.activeLocale}
+          currentPhone={chat.phone}
+          onSwitchCommuter={chat.switchCommuter}
           onChangeLocale={(loc) => {
             chat.setActiveLocale(loc);
             trip.setActiveLocale(loc);

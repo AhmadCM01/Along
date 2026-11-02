@@ -7,6 +7,7 @@ import {
   ReplayRunItem,
   ResolverScores,
   StageTrace,
+  getActivePod,
   getLiveReplayFile,
   sendDemoChat,
   transcribeAudio,
@@ -68,9 +69,27 @@ export interface ActiveResolverScores {
   destScores: ResolverScores | null;
 }
 
-export function useAlongChat(initialPhone = "+2348031234567") {
+export function useAlongChat(initialPhone = "+2348031111111") {
   const trip = useAlongTrip();
-  const [phone] = useState<string>(initialPhone);
+  const [phone, setPhone] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("along_commuter_phone");
+      if (saved) return saved;
+    }
+    return initialPhone === "+2348031234567" ? "+2348031111111" : initialPhone;
+  });
+
+  const switchCommuter = useCallback(
+    (newPhone: string) => {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("along_commuter_phone", newPhone);
+      }
+      setPhone(newPhone);
+      setCurrentQuote(null);
+      trip.setPersistedMessages([]);
+    },
+    [trip]
+  );
   const [activeLocale, setActiveLocale] = useState<"en" | "pcm" | "ha">("pcm");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
@@ -134,6 +153,29 @@ export function useAlongChat(initialPhone = "+2348031234567") {
       stopTimer();
     };
   }, [stopTimer]);
+
+  // Synchronize live pod boarding status (lights up green when driver verifies OTP)
+  useEffect(() => {
+    if (!currentQuote?.corridorId) return;
+    let cancelled = false;
+
+    const checkBoarding = async () => {
+      try {
+        const res = await getActivePod(currentQuote.corridorId);
+        if (cancelled || !res?.pod?.passengers) return;
+        const myPassenger = res.pod.passengers.find((p) => p.phone === phone);
+        if (myPassenger?.is_boarded) {
+          trip.boardPassengerByOtp(myPassenger.otp_code || currentQuote.otp);
+        }
+      } catch {}
+    };
+
+    const interval = setInterval(checkBoarding, 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [currentQuote?.corridorId, currentQuote?.otp, phone, trip]);
 
   const applyBotResponse = useCallback(
     (data: DemoChatResponse, userUtterance: string) => {
@@ -477,7 +519,23 @@ export function useAlongChat(initialPhone = "+2348031234567") {
     [replayMode, isReplayAvailable, replayRuns, selectReplayRun]
   );
 
+  const resetChat = useCallback(async () => {
+    trip.setPersistedMessages([]);
+    try {
+      await sendDemoChat({
+        phone,
+        message_text: "reset",
+        reset_session: true,
+      });
+    } catch {
+      // ignore
+    }
+  }, [phone, trip]);
+
   return {
+    phone,
+    setPhone,
+    switchCommuter,
     messages: trip.persistedMessages,
     activeLocale,
     setActiveLocale,
@@ -502,5 +560,6 @@ export function useAlongChat(initialPhone = "+2348031234567") {
     activeReplayRunId,
     toggleReplayMode,
     selectReplayRun,
+    resetChat,
   };
 }

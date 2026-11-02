@@ -136,9 +136,15 @@ def _select_shared_corridor(
     """Choose the best connecting corridor for an origin and destination zone pair."""
     if orig.corridor_id == dest.corridor_id:
         return orig.corridor_id
-    for corr_id in catalog.corridors:
-        if catalog.lookup_fare(corr_id, orig.zone_id, dest.zone_id) is not None:
-            return corr_id
+
+    # Check for exact fare matrix row connecting origin zone and destination zone
+    for row in catalog.fare_matrix:
+        if (
+            (row.origin_zone_id == orig.zone_id and row.dest_zone_id == dest.zone_id)
+            or (row.origin_zone_id == dest.zone_id and row.dest_zone_id == orig.zone_id)
+        ):
+            return row.corridor_id
+
     return orig.corridor_id
 
 
@@ -259,6 +265,7 @@ def resolve_route_and_quote(
         lng=orig_lmk.lng,
         corridor_id=corridor_id,
         direction=direction,
+        snap_radius_m=4500,
         catalog=cat,
     )
 

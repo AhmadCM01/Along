@@ -37,6 +37,13 @@ data/faiss/*.json
 evals/reports/*.json
 evals/reports/*.md
 !evals/reports/latest.md
+data/clips/*.wav
+data/clips/*.mp3
+data/clips/*.m4a
+data/clips/*.webm
+data/clips/*.ogg
+data/clips/*.aac
+data/clips/*.opus
 
 # OS / IDE
 .DS_Store

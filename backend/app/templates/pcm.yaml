@@ -29,7 +29,7 @@ quote_ready: |
   *Along Corridor Quote ({corridor_id})*
 
 pooling_started: |
-  Twale! Your seat don lock inside escrow ({current_seats}/4 seats ready). Just waka enter *{anchor_name}* forecourt now and show Driver Musa your 4-digit Boarding Code *{boarding_otp}* on the pass below before moto move.
+  Twale! Your seat don lock inside escrow ({current_seats}/4 seats ready). Just waka enter *{anchor_name}* forecourt now and show Driver {driver_name} your 4-digit Boarding Code *{boarding_otp}* on the pass below before moto move.
 
 pod_matched: |
   *Pod `{pod_code}` Don Set!*

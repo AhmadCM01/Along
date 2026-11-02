@@ -31,7 +31,7 @@ quote_ready: |
   *Farashin Tafiyar Along ({corridor_id})*
 
 pooling_started: |
-  Alhamdulillah, an kulle kujerarka a Escrow ({current_seats}/4 sun cika)! Shiga harabar *{anchor_name}* yanzu ka nuna wa direba Lambar Shiga Mota *{boarding_otp}* da ke kan katin shiga a kasa.
+  Alhamdulillah, an kulle kujerarka a Escrow ({current_seats}/4 sun cika)! Shiga harabar *{anchor_name}* yanzu ka nuna wa direba {driver_name} Lambar Shiga Mota *{boarding_otp}* da ke kan katin shiga a kasa.
 
 pod_matched: |
   *An Samu Motar Pod `{pod_code}`!*

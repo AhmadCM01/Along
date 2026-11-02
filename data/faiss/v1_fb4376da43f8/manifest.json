@@ -1,0 +1,6 @@
+{
+  "version": "v1_fb4376da43f8",
+  "dim": 768,
+  "n_vectors": 1247,
+  "embedding_model": "deterministic-ngram-768d"
+}

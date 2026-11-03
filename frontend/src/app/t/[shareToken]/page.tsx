@@ -11,14 +11,17 @@ import { useAlongTrip } from "@/context/AlongTripContext";
 import {
   getPublicTripShare,
   triggerPublicTripSos,
+  updateTripLocation,
   PublicTripShareResponse,
 } from "@/lib/api";
 
 type TripStage = "waiting for a driver" | "driver on the way" | "boarding" | "in trip" | "completed";
 
-function resolveStage(status?: string): TripStage {
+const STAGE_ORDER: TripStage[] = ["waiting for a driver", "driver on the way", "boarding", "in trip", "completed"];
+
+function resolveStage(status?: string, progressPct?: number): TripStage {
   const s = (status || "").toUpperCase();
-  if (s === "COMPLETED" || s === "ARRIVED") return "completed";
+  if (s === "COMPLETED" || s === "ARRIVED" || (typeof progressPct === "number" && progressPct >= 100)) return "completed";
   if (s === "IN_TRANSIT" || s === "IN_TRIP" || s === "EN_ROUTE") return "in trip";
   if (s === "BOARDING" || s === "AWAITING_BOARDING" || s === "CONFIRMED" || s === "PROPOSAL") return "boarding";
   if (s === "DRIVER_EN_ROUTE" || s === "DRIVER_ON_THE_WAY" || s === "ASSIGNED") return "driver on the way";
@@ -26,12 +29,12 @@ function resolveStage(status?: string): TripStage {
   return "boarding";
 }
 
-const STAGE_STEPS: { stage: TripStage; label: string; desc: string }[] = [
-  { stage: "waiting for a driver", label: "Waiting for driver", desc: "Matching registered corridor driver at forecourt" },
-  { stage: "driver on the way", label: "Driver on the way", desc: "Driver pod is navigating to pickup forecourt" },
-  { stage: "boarding", label: "Boarding", desc: "Pod docked at safe forecourt bay, awaiting OTP check" },
-  { stage: "in trip", label: "In trip", desc: "Pod en route along corridor with live GPS progression" },
-  { stage: "completed", label: "Completed", desc: "Ride completed safely at designated drop off point" },
+const STAGE_STEPS: { stage: TripStage; label: string; shortLabel: string; desc: string }[] = [
+  { stage: "waiting for a driver", label: "Waiting for driver", shortLabel: "Waiting", desc: "Matching registered corridor driver at forecourt" },
+  { stage: "driver on the way", label: "Driver on the way", shortLabel: "On way", desc: "Driver pod is navigating to pickup forecourt" },
+  { stage: "boarding", label: "Boarding", shortLabel: "Boarding", desc: "Pod docked at safe forecourt bay, awaiting OTP check" },
+  { stage: "in trip", label: "In trip", shortLabel: "In trip", desc: "Pod en route along corridor with live GPS progression" },
+  { stage: "completed", label: "Completed", shortLabel: "Completed", desc: "Ride completed safely at designated drop off point" },
 ];
 
 export default function TripTrackerPage({
@@ -110,6 +113,32 @@ export default function TripTrackerPage({
       setTimeout(() => setCopiedLink(false), 2000);
     }
   }
+
+  const handleTripCompleted = useCallback(async () => {
+    setTripData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        status: "COMPLETED",
+        telemetry: {
+          ...prev.telemetry,
+          progress_pct: 100,
+          eta_minutes: 0,
+        },
+      };
+    });
+    try {
+      await updateTripLocation(shareToken, {
+        lat: 9.0765,
+        lng: 7.3986,
+        progress_pct: 100,
+        status: "COMPLETED",
+        eta_minutes: 0,
+      });
+    } catch {
+      // Ignore network errors in fallback update
+    }
+  }, [shareToken]);
 
   // Handle Unknown or Expired Token screen
   if (notFound && !tripData && !initialLoading) {
@@ -199,7 +228,7 @@ export default function TripTrackerPage({
     );
   }
 
-  const currentStage = resolveStage(tripData?.status);
+  const currentStage = resolveStage(tripData?.status, tripData?.telemetry?.progress_pct);
   const activeOrigin = tripData?.origin_anchor || "Safe Forecourt Anchor";
   const activeDest = tripData?.destination_landmark || "Destination";
   const driverName = tripData?.driver?.full_name || "Musa Bello";
@@ -299,40 +328,85 @@ export default function TripTrackerPage({
           </div>
         </section>
 
-        {/* Clear 5-Stage Lifecycle Progress Bar */}
+        {/* Sleek Connected 5-Stage Journey Stepper */}
         <section
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--border-subtle)",
             borderRadius: "var(--radius-card)",
-            padding: "16px 18px",
+            padding: "12px 14px",
             boxShadow: "var(--shadow-soft)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
           }}
         >
+          {/* Header row: title and status chip */}
           <div
             style={{
-              fontSize: 12,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontSize: 11,
               fontWeight: 800,
               color: "var(--text-muted)",
               letterSpacing: "0.04em",
-              marginBottom: 12,
             }}
           >
-            TRIP STAGE
+            <span>TRIP STAGE</span>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: currentStage === "completed" ? "var(--brand-primary)" : "var(--text-ink)",
+              }}
+            >
+              {currentStage === "completed"
+                ? "Safe Arrival Confirmed"
+                : currentStage === "in trip"
+                ? `In Transit (${Math.round(progressPct)}%)`
+                : STAGE_STEPS.find((s) => s.stage === currentStage)?.label || "Active"}
+            </span>
           </div>
 
+          {/* Connected progress track */}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
-              gap: 8,
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
               position: "relative",
+              width: "100%",
             }}
-            className="along-stages-grid"
           >
+            {/* Background connecting bar */}
+            <div
+              style={{
+                position: "absolute",
+                top: 11,
+                left: "8%",
+                right: "8%",
+                height: 2,
+                background: "var(--border-subtle)",
+                zIndex: 0,
+              }}
+            />
+            {/* Active filled connecting bar */}
+            <div
+              style={{
+                position: "absolute",
+                top: 11,
+                left: "8%",
+                width: `${Math.min(100, Math.max(0, (STAGE_ORDER.indexOf(currentStage) / 4) * 84))}%`,
+                height: 2,
+                background: "var(--brand-primary)",
+                zIndex: 0,
+                transition: "width 0.3s ease",
+              }}
+            />
+
             {STAGE_STEPS.map((step, idx) => {
-              const stageOrder = ["waiting for a driver", "driver on the way", "boarding", "in trip", "completed"];
-              const currentIdx = stageOrder.indexOf(currentStage);
+              const currentIdx = STAGE_ORDER.indexOf(currentStage);
               const isPast = idx < currentIdx;
               const isCurrent = idx === currentIdx;
 
@@ -342,70 +416,83 @@ export default function TripTrackerPage({
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: 6,
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    background: isCurrent
-                      ? "var(--brand-soft)"
-                      : isPast
-                      ? "var(--bg-paper)"
-                      : "transparent",
-                    border: `1px solid ${
-                      isCurrent
-                        ? "var(--brand-primary)"
-                        : isPast
-                        ? "var(--border-subtle)"
-                        : "transparent"
-                    }`,
+                    alignItems: "center",
+                    gap: 4,
+                    zIndex: 1,
+                    flex: 1,
+                    textAlign: "center",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span
-                      style={{
-                        width: 18,
-                        height: 18,
-                        borderRadius: "50%",
-                        fontSize: 10,
-                        fontWeight: 800,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: isCurrent
-                          ? "var(--brand-primary)"
-                          : isPast
-                          ? "var(--brand-primary)"
-                          : "var(--border-subtle)",
-                        color: isCurrent || isPast ? "#FFFFFF" : "var(--text-muted)",
-                      }}
-                    >
-                      {isPast ? "✓" : idx + 1}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        fontWeight: isCurrent ? 800 : 600,
-                        color: isCurrent ? "var(--brand-primary)" : isPast ? "var(--text-ink)" : "var(--text-muted)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {step.label}
-                    </span>
-                  </div>
-                  <div
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "50%",
+                      fontSize: 10.5,
+                      fontWeight: 800,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: isCurrent || isPast ? "var(--brand-primary)" : "var(--bg-paper)",
+                      border: `1.5px solid ${isCurrent || isPast ? "var(--brand-primary)" : "var(--border-subtle)"}`,
+                      color: isCurrent || isPast ? "#FFFFFF" : "var(--text-muted)",
+                      boxShadow: isCurrent ? "0 0 0 3px var(--brand-soft)" : "none",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {isPast ? "✓" : idx + 1}
+                  </span>
+                  <span
                     style={{
                       fontSize: 11,
-                      color: "var(--text-muted)",
-                      lineHeight: 1.3,
+                      fontWeight: isCurrent ? 800 : isPast ? 700 : 500,
+                      color: isCurrent
+                        ? "var(--brand-primary)"
+                        : isPast
+                        ? "var(--text-ink)"
+                        : "var(--text-muted)",
+                      whiteSpace: "nowrap",
                     }}
-                    className="along-stage-desc"
                   >
-                    {step.desc}
-                  </div>
+                    {step.shortLabel}
+                  </span>
                 </div>
               );
             })}
+          </div>
+
+          {/* 1-Line Contextual Status Banner */}
+          <div
+            style={{
+              fontSize: 12,
+              lineHeight: 1.35,
+              padding: "6px 10px",
+              borderRadius: 6,
+              background:
+                currentStage === "completed" || currentStage === "in trip"
+                  ? "var(--brand-soft)"
+                  : "var(--bg-paper)",
+              color:
+                currentStage === "completed" || currentStage === "in trip"
+                  ? "var(--brand-primary)"
+                  : "var(--text-ink)",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <span>
+              {currentStage === "completed"
+                ? `✓ Ride completed safely at ${activeDest}. Escrow released to driver.`
+                : currentStage === "in trip"
+                ? `● Pod en route along corridor: passing ${currentLandmark} (${Math.round(progressPct)}% complete)`
+                : currentStage === "boarding"
+                ? `● Pod docked at safe forecourt bay. Awaiting passenger 4-digit boarding OTP.`
+                : currentStage === "driver on the way"
+                ? `● Driver pod is navigating to pickup forecourt at ${activeOrigin}.`
+                : `● Matching registered corridor driver at forecourt.`}
+            </span>
           </div>
         </section>
 
@@ -419,6 +506,7 @@ export default function TripTrackerPage({
             journeyStage={tripData?.status || "BOARDING"}
             progressPct={progressPct}
             driverMarkerLabel="Simulated driver position"
+            onTripCompleted={handleTripCompleted}
           />
         </section>
 
@@ -573,9 +661,6 @@ export default function TripTrackerPage({
       <style jsx>{`
         @media (max-width: 720px) {
           .tracker-cards-grid {
-            grid-template-columns: 1fr !important;
-          }
-          .along-stages-grid {
             grid-template-columns: 1fr !important;
           }
         }

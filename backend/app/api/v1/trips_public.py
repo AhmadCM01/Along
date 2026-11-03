@@ -73,6 +73,8 @@ PUBLIC_TRIPS_BY_TOKEN: dict[str, dict[str, Any]] = {
 async def get_public_trip_share(share_token: str) -> dict[str, Any]:
     """Return live trip telemetry for `/t/[shareToken]` without requiring login.
     
+    Synchronizes real-time progress for family members and riders, automatically
+    advancing in-transit trips and completing them at destination arrival.
     Returns 404 if token is unknown.
     """
     trip = PUBLIC_TRIPS_BY_TOKEN.get(share_token)
@@ -81,6 +83,35 @@ async def get_public_trip_share(share_token: str) -> dict[str, Any]:
             status_code=404,
             detail=f"Trip with share token '{share_token}' was not found. Please verify your family link or book a trip first.",
         )
+
+    trip_status = (trip.get("status") or "").upper()
+    if trip_status in ("IN_TRANSIT", "IN_TRIP", "EN_ROUTE"):
+        now_dt = datetime.now(timezone.utc)
+        if not trip.get("in_transit_started_at"):
+            trip["in_transit_started_at"] = now_dt.isoformat()
+
+        try:
+            started_dt = datetime.fromisoformat(trip["in_transit_started_at"])
+            elapsed = max(0.0, (now_dt - started_dt).total_seconds())
+            demo_duration_sec = 35.0
+            computed_pct = min(100.0, (elapsed / demo_duration_sec) * 100.0)
+
+            trip.setdefault("telemetry", {})
+            current_pct = float(trip["telemetry"].get("progress_pct", 0.0))
+            effective_pct = max(current_pct, computed_pct)
+
+            trip["telemetry"]["progress_pct"] = round(effective_pct, 1)
+            trip["telemetry"]["eta_minutes"] = max(0, int(14 * (1.0 - effective_pct / 100.0)))
+
+            if effective_pct >= 100.0:
+                trip["status"] = "COMPLETED"
+                drop_target = trip.get("destination_landmark") or trip.get("drop_off") or "Destination"
+                trip["telemetry"]["current_landmark"] = drop_target
+
+            trip["updated_at"] = now_dt.isoformat()
+        except Exception:
+            pass
+
     return trip
 
 
@@ -111,6 +142,8 @@ async def update_public_trip_location(share_token: str, body: TripLocationInput)
         trip["status"] = "COMPLETED"
     elif body.progress_pct > 0:
         trip["status"] = "IN_TRANSIT"
+        if not trip.get("in_transit_started_at"):
+            trip["in_transit_started_at"] = datetime.now(timezone.utc).isoformat()
 
     trip["updated_at"] = datetime.now(timezone.utc).isoformat()
     return {

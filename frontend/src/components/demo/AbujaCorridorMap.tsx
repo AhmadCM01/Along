@@ -485,6 +485,7 @@ interface AbujaCorridorMapProps {
   journeyStage?: string;
   progressPct?: number;
   driverMarkerLabel?: string;
+  onTripCompleted?: () => void;
 }
 
 export function AbujaCorridorMap({
@@ -495,6 +496,7 @@ export function AbujaCorridorMap({
   journeyStage,
   progressPct,
   driverMarkerLabel,
+  onTripCompleted,
 }: AbujaCorridorMapProps) {
   const trip = useAlongTrip();
   const currentCorridorId = trip.currentQuote?.corridorId || trip.activeCorridorId || corridorId;
@@ -525,9 +527,13 @@ export function AbujaCorridorMap({
     if (typeof progressPct === "number") {
       const p = Math.min(1, Math.max(0, progressPct / 100));
       setSegmentProgress(p);
-      setHasArrived(p >= 1.0 || isTripCompleted);
+      const arrived = p >= 1.0 || isTripCompleted;
+      setHasArrived(arrived);
+      if (arrived) {
+        onTripCompleted?.();
+      }
     }
-  }, [progressPct, isTripCompleted]);
+  }, [progressPct, isTripCompleted, onTripCompleted]);
 
   // Reset or start progress when journeyStage or route changes
   useEffect(() => {
@@ -610,19 +616,20 @@ export function AbujaCorridorMap({
 
   // Animate vehicle ONLY when trip is initiated (IN_TRANSIT) and until it reaches destination (1.0)
   useEffect(() => {
-    if (!isTripInitiated || hasArrived) return;
+    if (typeof progressPct === "number" || !isTripInitiated || hasArrived) return;
     const interval = setInterval(() => {
       setSegmentProgress((prev) => {
         const next = prev + 0.008;
         if (next >= 1.0) {
           setHasArrived(true);
+          onTripCompleted?.();
           return 1.0;
         }
         return next;
       });
     }, 180);
     return () => clearInterval(interval);
-  }, [isTripInitiated, hasArrived]);
+  }, [isTripInitiated, hasArrived, progressPct, onTripCompleted]);
 
   // All 6 corridors for background Abuja transit network rendering
   const otherCorridors = useMemo(

@@ -21,7 +21,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.ai.vision_sam import verify_vehicle_photo_sam
-from app.api.v1.trips_public import PUBLIC_TRIPS_BY_TOKEN
+from app.api.v1.trips_public import PUBLIC_TRIPS_BY_TOKEN, get_default_demo_trip
 from app.core.config import BusinessRules
 from app.core.ids import generate_boarding_otp
 from app.core.security import hash_otp_code, verify_otp_code
@@ -364,6 +364,8 @@ async def verify_rider_boarding_otp(
             or trip.get("corridor_id") == pod.get("corridor_id")
         ):
             trip["status"] = pod["status"]
+            if pod["status"] == "IN_TRANSIT" and not trip.get("in_transit_started_at"):
+                trip["in_transit_started_at"] = datetime.now(timezone.utc).isoformat()
             trip["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     return {
@@ -390,6 +392,8 @@ async def dispatch_pod_early(driver_id: str, pod_id: str) -> dict[str, Any]:
             or trip.get("corridor_id") == pod.get("corridor_id")
         ):
             trip["status"] = "IN_TRANSIT"
+            if not trip.get("in_transit_started_at"):
+                trip["in_transit_started_at"] = datetime.now(timezone.utc).isoformat()
             trip["updated_at"] = datetime.now(timezone.utc).isoformat()
     return {"status": "IN_TRANSIT", "pod_id": pod_id, "message": "Pod dispatched"}
 
@@ -420,7 +424,12 @@ async def update_pod_location(
 
     synced = 0
     for trip in PUBLIC_TRIPS_BY_TOKEN.values():
-        if trip.get("pod_code") == pod_id or trip.get("share_token") == "share-bwr-4817":
+        if (
+            trip.get("pod_code") == pod_id
+            or trip.get("pod_code") == "POD-842A"
+            or trip.get("share_token") == "share-bwr-4817"
+            or trip.get("corridor_id") == pod.get("corridor_id")
+        ):
             trip.setdefault("telemetry", {})
             trip["telemetry"]["lat"] = body.lat
             trip["telemetry"]["lng"] = body.lng
@@ -431,6 +440,8 @@ async def update_pod_location(
             else:
                 trip["telemetry"]["eta_minutes"] = max(0, int(14 * (1 - body.progress_pct / 100)))
             trip["status"] = new_status
+            if new_status == "IN_TRANSIT" and not trip.get("in_transit_started_at"):
+                trip["in_transit_started_at"] = datetime.now(timezone.utc).isoformat()
             trip["updated_at"] = datetime.now(timezone.utc).isoformat()
             synced += 1
 
@@ -632,6 +643,7 @@ async def reset_active_corridor_pod(
         ACTIVE_PODS_STORE[pid]["boarding_otps"] = {}
         ACTIVE_PODS_STORE[pid]["otp_created_at"] = {}
         ACTIVE_PODS_STORE[pid]["otp_attempts"] = {}
+    PUBLIC_TRIPS_BY_TOKEN["share-bwr-4817"] = get_default_demo_trip()
     return {"status": "ok", "message": "Pod reset to standby", "pod_id": pid}
 
 

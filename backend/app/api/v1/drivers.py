@@ -14,12 +14,14 @@ from __future__ import annotations
 
 import hmac
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.ai.vision_sam import verify_vehicle_photo_sam
+from app.api.v1.trips_public import PUBLIC_TRIPS_BY_TOKEN
 from app.core.config import BusinessRules
 from app.core.ids import generate_boarding_otp
 from app.core.security import hash_otp_code, verify_otp_code
@@ -355,6 +357,11 @@ async def verify_rider_boarding_otp(
     else:
         pod["status"] = "BOARDING"
 
+    for trip in PUBLIC_TRIPS_BY_TOKEN.values():
+        if trip.get("pod_code") == pod_id or trip.get("share_token") == "share-bwr-4817":
+            trip["status"] = pod["status"]
+            trip["updated_at"] = datetime.now(timezone.utc).isoformat()
+
     return {
         "status": "BOARDED",
         "pod_id": pod_id,
@@ -371,7 +378,62 @@ async def dispatch_pod_early(driver_id: str, pod_id: str) -> dict[str, Any]:
     """Manually dispatch pod into transit (e.g. at departure window deadline or driver choice)."""
     pod = ACTIVE_PODS_STORE.get(pod_id) or get_pod_for_corridor("BWR-DUT-WUS", pod_id)
     pod["status"] = "IN_TRANSIT"
+    for trip in PUBLIC_TRIPS_BY_TOKEN.values():
+        if trip.get("pod_code") == pod_id or trip.get("share_token") == "share-bwr-4817":
+            trip["status"] = "IN_TRANSIT"
+            trip["updated_at"] = datetime.now(timezone.utc).isoformat()
     return {"status": "IN_TRANSIT", "pod_id": pod_id, "message": "Pod dispatched"}
+
+
+class PodLocationInput(BaseModel):
+    lat: float
+    lng: float
+    progress_pct: float = Field(default=0.0, ge=0.0, le=100.0)
+    current_landmark: str = "Corridor Route"
+    status: str | None = None
+    eta_minutes: int | None = None
+
+
+@router.post("/{driver_id}/pods/{pod_id}/location")
+async def update_pod_location(
+    driver_id: str,
+    pod_id: str,
+    body: PodLocationInput,
+) -> dict[str, Any]:
+    """Update driver simulated GPS position and synchronize public trip shares."""
+    pod = ACTIVE_PODS_STORE.get(pod_id) or get_pod_for_corridor("BWR-DUT-WUS", pod_id)
+    pod["anchor_lat"] = body.lat
+    pod["anchor_lng"] = body.lng
+    pod["current_landmark"] = body.current_landmark
+
+    new_status = body.status if body.status else ("COMPLETED" if body.progress_pct >= 100 else "IN_TRANSIT")
+    pod["status"] = new_status
+
+    synced = 0
+    for trip in PUBLIC_TRIPS_BY_TOKEN.values():
+        if trip.get("pod_code") == pod_id or trip.get("share_token") == "share-bwr-4817":
+            trip.setdefault("telemetry", {})
+            trip["telemetry"]["lat"] = body.lat
+            trip["telemetry"]["lng"] = body.lng
+            trip["telemetry"]["progress_pct"] = body.progress_pct
+            trip["telemetry"]["current_landmark"] = body.current_landmark
+            if body.eta_minutes is not None:
+                trip["telemetry"]["eta_minutes"] = body.eta_minutes
+            else:
+                trip["telemetry"]["eta_minutes"] = max(0, int(14 * (1 - body.progress_pct / 100)))
+            trip["status"] = new_status
+            trip["updated_at"] = datetime.now(timezone.utc).isoformat()
+            synced += 1
+
+    return {
+        "status": "ok",
+        "pod_id": pod_id,
+        "pod_status": new_status,
+        "lat": body.lat,
+        "lng": body.lng,
+        "progress_pct": body.progress_pct,
+        "synced_public_trips": synced,
+    }
 
 
 @router.post("/{driver_id}/pods/{pod_id}/fill-coriders")

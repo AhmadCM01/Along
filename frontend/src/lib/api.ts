@@ -133,6 +133,7 @@ export interface PublicTripShareResponse {
   };
   escrow_status: string;
   sos_active: boolean;
+  fare_naira?: number;
   updated_at: string;
 }
 
@@ -297,6 +298,47 @@ export async function triggerPublicTripSos(shareToken: string): Promise<{
 }> {
   const url = `${getApiBaseUrl()}/api/v1/trips/share/${encodeURIComponent(shareToken)}/sos`;
   const res = await fetch(url, { method: "POST" });
+  return parseJsonResponse(res);
+}
+
+export async function updateDriverPodLocation(
+  driverId: string,
+  podId: string,
+  data: {
+    lat: number;
+    lng: number;
+    progress_pct: number;
+    current_landmark?: string;
+    status?: string;
+    eta_minutes?: number;
+  }
+): Promise<{ status: string; pod_status: string }> {
+  const url = `${getApiBaseUrl()}/api/v1/drivers/${encodeURIComponent(driverId)}/pods/${encodeURIComponent(podId)}/location`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return parseJsonResponse(res);
+}
+
+export async function updateTripLocation(
+  shareToken: string,
+  data: {
+    lat: number;
+    lng: number;
+    progress_pct: number;
+    current_landmark?: string;
+    status?: string;
+    eta_minutes?: number;
+  }
+): Promise<{ status: string; trip_status: string }> {
+  const url = `${getApiBaseUrl()}/api/v1/trips/share/${encodeURIComponent(shareToken)}/location`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
   return parseJsonResponse(res);
 }
 

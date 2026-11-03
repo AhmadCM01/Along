@@ -11,10 +11,62 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/v1/trips", tags=["trips-public"])
 
-PUBLIC_TRIPS_BY_TOKEN: dict[str, dict[str, Any]] = {}
+class TripLocationInput(BaseModel):
+    lat: float
+    lng: float
+    progress_pct: float = Field(default=0.0, ge=0.0, le=100.0)
+    current_landmark: str = "Corridor Segment"
+    status: str | None = None
+    eta_minutes: int | None = None
+
+
+def get_default_demo_trip() -> dict[str, Any]:
+    """Construct authoritative default demo trip for share-bwr-4817."""
+    return {
+        "share_token": "share-bwr-4817",
+        "pod_code": "POD-842A",
+        "corridor": "BWR-DUT-WUS",
+        "corridor_id": "BWR-DUT-WUS",
+        "corridor_name": "Dutse First Gate -> Berger Roundabout Underbridge",
+        "status": "BOARDING",
+        "pickup_anchor": "A.A. Rano Filling Station (Dutse First Gate)",
+        "origin_anchor": "A.A. Rano Filling Station (Dutse First Gate)",
+        "drop_off": "Berger Roundabout Underbridge",
+        "destination_landmark": "Berger Roundabout Underbridge",
+        "seats": 2,
+        "fare": 1800,
+        "fare_kobo": 180000,
+        "fare_naira": 1800,
+        "driver": {
+            "full_name": "Musa Bello",
+            "profile_note": "Demo driver profile",
+            "vehicle_desc": "Volkswagen Golf 4 (Emerald Green)",
+            "plate_number": "ABJ-402-AL",
+            "id_on_file": True,
+            "rating": 4.94,
+        },
+        "telemetry": {
+            "lat": 9.1779,
+            "lng": 7.3736,
+            "current_landmark": "Dutse First Gate Forecourt Bay",
+            "progress_pct": 0,
+            "eta_minutes": 14,
+            "route_deviation_m": 0,
+            "is_on_corridor": True,
+        },
+        "escrow_status": "Locked in Simulated Atomic Escrow",
+        "sos_active": False,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+PUBLIC_TRIPS_BY_TOKEN: dict[str, dict[str, Any]] = {
+    "share-bwr-4817": get_default_demo_trip(),
+}
 
 
 @router.get("/share/{share_token}")
@@ -30,6 +82,44 @@ async def get_public_trip_share(share_token: str) -> dict[str, Any]:
             detail=f"Trip with share token '{share_token}' was not found. Please verify your family link or book a trip first.",
         )
     return trip
+
+
+@router.post("/share/{share_token}/location")
+async def update_public_trip_location(share_token: str, body: TripLocationInput) -> dict[str, Any]:
+    """Update simulated GPS telemetry and progress for a shared trip."""
+    trip = PUBLIC_TRIPS_BY_TOKEN.get(share_token)
+    if not trip:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Trip with share token '{share_token}' was not found. Cannot update location.",
+        )
+    if "telemetry" not in trip or not isinstance(trip["telemetry"], dict):
+        trip["telemetry"] = {}
+
+    trip["telemetry"]["lat"] = body.lat
+    trip["telemetry"]["lng"] = body.lng
+    trip["telemetry"]["progress_pct"] = body.progress_pct
+    trip["telemetry"]["current_landmark"] = body.current_landmark
+    if body.eta_minutes is not None:
+        trip["telemetry"]["eta_minutes"] = body.eta_minutes
+    else:
+        trip["telemetry"]["eta_minutes"] = max(0, int(14 * (1 - body.progress_pct / 100)))
+
+    if body.status:
+        trip["status"] = body.status
+    elif body.progress_pct >= 100:
+        trip["status"] = "COMPLETED"
+    elif body.progress_pct > 0:
+        trip["status"] = "IN_TRANSIT"
+
+    trip["updated_at"] = datetime.now(timezone.utc).isoformat()
+    return {
+        "status": "ok",
+        "share_token": share_token,
+        "trip_status": trip["status"],
+        "telemetry": trip["telemetry"],
+        "updated_at": trip["updated_at"],
+    }
 
 
 @router.post("/share/{share_token}/sos")

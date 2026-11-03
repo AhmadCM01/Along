@@ -33,11 +33,12 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var stored = localStorage.getItem('along-theme');
-                  var theme = stored;
-                  if (!theme) {
-                    theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                  }
+                  localStorage.removeItem('along-theme');
+                  localStorage.removeItem('along-theme-v2');
+                  var params = new URLSearchParams(window.location.search);
+                  var urlTheme = params.get('theme');
+                  var stored = localStorage.getItem('along-theme-v3');
+                  var theme = (urlTheme === 'dark' || urlTheme === 'light') ? urlTheme : (stored === 'dark' ? 'dark' : 'light');
                   document.documentElement.setAttribute('data-theme', theme);
                 } catch (e) {
                   document.documentElement.setAttribute('data-theme', 'light');

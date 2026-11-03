@@ -16,9 +16,19 @@ import {
   getActivePod,
   getCorridorDrivers,
   resetActivePod,
+  updateDriverPodLocation,
   updateDriverStatus,
+  updateTripLocation,
   verifyBoardingOtp,
 } from "@/lib/api";
+
+const DEMO_WAYPOINTS = [
+  { lat: 9.1779, lng: 7.3736, progress_pct: 0, current_landmark: "A.A. Rano Filling Station (Dutse First Gate)", status: "BOARDING" },
+  { lat: 9.1550, lng: 7.3980, progress_pct: 25, current_landmark: "Galadima / Dawaki Junction", status: "IN_TRANSIT" },
+  { lat: 9.1250, lng: 7.4200, progress_pct: 50, current_landmark: "Oando Katampe / Gwarinpa Expressway", status: "IN_TRANSIT" },
+  { lat: 9.0920, lng: 7.4380, progress_pct: 75, current_landmark: "Mabushi Flyover", status: "IN_TRANSIT" },
+  { lat: 9.0750, lng: 7.4520, progress_pct: 100, current_landmark: "Berger Roundabout Underbridge", status: "COMPLETED" },
+];
 
 interface DriverSummary {
   id: string;
@@ -48,6 +58,74 @@ export default function DriverPage() {
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpSuccessMessage, setOtpSuccessMessage] = useState<string | null>(null);
   const [revealCodes, setRevealCodes] = useState<boolean>(false);
+  const [activePod, setActivePod] = useState<ActivePodData | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
+  const [demoDriveActive, setDemoDriveActive] = useState<boolean>(false);
+  const [demoStep, setDemoStep] = useState<number>(0);
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === "false") {
+      setIsDemoMode(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!demoDriveActive) return;
+
+    const interval = setInterval(() => {
+      setDemoStep((prevStep) => {
+        const nextStep = prevStep + 1;
+        if (nextStep >= DEMO_WAYPOINTS.length) {
+          setDemoDriveActive(false);
+          setOtpSuccessMessage("Simulated demo drive completed! Pod arrived at destination.");
+          return prevStep;
+        }
+
+        const point = DEMO_WAYPOINTS[nextStep];
+        const podId = activePod?.pod_id || trip.driverInfo.podCode || "POD-842A";
+        const driverId = activePod?.driver_id || driver.id || "DRV-001";
+        const token = trip.activeShareToken || "share-bwr-4817";
+
+        updateDriverPodLocation(driverId, podId, point).catch(() => {});
+        updateTripLocation(token, point).catch(() => {});
+
+        if (point.progress_pct > 0 && point.progress_pct < 100) {
+          trip.startCorridorTrip();
+        }
+
+        setOtpSuccessMessage(
+          `Simulated driver position posted: ${point.current_landmark} (${point.progress_pct}%)`
+        );
+        return nextStep;
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [demoDriveActive, activePod?.pod_id, activePod?.driver_id, driver.id, trip]);
+
+  function handleToggleDemoDrive() {
+    if (demoDriveActive) {
+      setDemoDriveActive(false);
+      setOtpSuccessMessage("Simulated demo drive paused.");
+    } else {
+      const startIdx = demoStep >= DEMO_WAYPOINTS.length - 1 ? 0 : demoStep;
+      setDemoStep(startIdx);
+      const point = DEMO_WAYPOINTS[startIdx];
+      const podId = activePod?.pod_id || trip.driverInfo.podCode || "POD-842A";
+      const driverId = activePod?.driver_id || driver.id || "DRV-001";
+      const token = trip.activeShareToken || "share-bwr-4817";
+
+      updateDriverPodLocation(driverId, podId, point).catch(() => {});
+      updateTripLocation(token, point).catch(() => {});
+      if (point.progress_pct > 0) {
+        trip.startCorridorTrip();
+      }
+      setDemoDriveActive(true);
+      setOtpSuccessMessage(
+        `Simulated demo drive started from ${point.current_landmark} (${point.progress_pct}%)`
+      );
+    }
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -62,8 +140,6 @@ export default function DriverPage() {
       }
     }
   }, []);
-
-  const [activePod, setActivePod] = useState<ActivePodData | null>(null);
 
   const fetchActivePod = React.useCallback(async () => {
     try {
@@ -334,6 +410,41 @@ export default function DriverPage() {
               <span>Judge shortcut: reveal codes (Demo shortcut)</span>
             </label>
 
+            {isDemoMode && (
+              <button
+                type="button"
+                onClick={handleToggleDemoDrive}
+                title="Simulate driver GPS progression along the corridor every 2 seconds"
+                style={{
+                  background: demoDriveActive ? "var(--brand-primary)" : "var(--bg-paper)",
+                  color: demoDriveActive ? "#FFFFFF" : "var(--brand-primary)",
+                  border: "1.5px solid var(--brand-primary)",
+                  padding: "7px 14px",
+                  borderRadius: "var(--radius-chip)",
+                  fontWeight: 700,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: demoDriveActive ? "#FFFFFF" : "var(--brand-primary)",
+                  }}
+                />
+                <span>
+                  {demoDriveActive
+                    ? `Driving... (${DEMO_WAYPOINTS[demoStep]?.progress_pct ?? 0}% - Stop)`
+                    : "Start demo drive"}
+                </span>
+              </button>
+            )}
+
             <button
               onClick={handleResetPod}
               title="Reset all booked passengers to fresh standby queue"
@@ -394,7 +505,7 @@ export default function DriverPage() {
                   Safe Anchor: <strong style={{ color: "var(--brand-primary)" }}>{trip.currentQuote.anchorName}</strong>
                 </>
               ) : (
-                <span>Standby · Awaiting WhatsApp Forecourt Dispatch</span>
+                <span>Standby · Awaiting Chat Forecourt Dispatch</span>
               )}
             </div>
           </div>
@@ -403,7 +514,7 @@ export default function DriverPage() {
           </DepartureNumeral>
         </section>
 
-        {/* STATE A: Standby Empty Pod when no ride has been initiated on WhatsApp */}
+        {/* STATE A: Standby Empty Pod when no ride has been initiated in the chat */}
         {!hasActiveBooking ? (
           <section
             style={{
@@ -423,7 +534,7 @@ export default function DriverPage() {
                   4-Seat Pod Manifest (0/4 Boarded)
                 </span>
                 <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>
-                  No ride has been dispatched yet. Book a ride on WhatsApp or simulate a live 4-rider corridor pod below.
+                  No ride has been dispatched yet. Book a ride in the chat to see a live trip here, or simulate a live 4-rider corridor pod below.
                 </div>
               </div>
 
@@ -460,7 +571,7 @@ export default function DriverPage() {
               )}
             </div>
 
-            {/* Judge Actions: Book on WhatsApp or Simulate Live Pod */}
+            {/* Judge Actions: Book in Chat or Simulate Live Pod */}
             <div
               style={{
                 display: "flex",
@@ -488,7 +599,7 @@ export default function DriverPage() {
                 }}
               >
                 <PodNavIcon size={16} color="#FFFFFF" />
-                <span>Step 1: Book a Ride on WhatsApp</span>
+                <span>Step 1: Book a Ride in the Chat</span>
               </Link>
 
               <button
@@ -960,7 +1071,7 @@ export default function DriverPage() {
                 }}
               >
                 <span>
-                  Passenger Boarding Code from WhatsApp: <strong>{commuterOtp}</strong>
+                  Passenger Boarding Code from Ride Chat: <strong>{commuterOtp}</strong>
                 </span>
                 <button
                   type="button"

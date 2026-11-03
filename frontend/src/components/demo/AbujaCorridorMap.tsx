@@ -482,6 +482,9 @@ interface AbujaCorridorMapProps {
   originName?: string;
   destName?: string;
   anchorName?: string;
+  journeyStage?: string;
+  progressPct?: number;
+  driverMarkerLabel?: string;
 }
 
 export function AbujaCorridorMap({
@@ -489,15 +492,20 @@ export function AbujaCorridorMap({
   originName,
   destName,
   anchorName,
+  journeyStage,
+  progressPct,
+  driverMarkerLabel,
 }: AbujaCorridorMapProps) {
   const trip = useAlongTrip();
   const currentCorridorId = trip.currentQuote?.corridorId || trip.activeCorridorId || corridorId;
   const corridor = CORRIDOR_DATA[currentCorridorId] || CORRIDOR_DATA["BWR-DUT-WUS"];
 
-  // Strict Lifecycle: Corridor only moves when driver has initiated the trip (IN_TRANSIT)
-  const isTripInitiated = trip.journeyStage === "IN_TRANSIT";
-  const isTripCompleted = trip.journeyStage === "COMPLETED";
+  const effectiveStage = journeyStage || trip.journeyStage;
+  // Strict Lifecycle: Corridor moves when driver has initiated the trip (IN_TRANSIT)
+  const isTripInitiated = effectiveStage === "IN_TRANSIT" || effectiveStage === "IN_TRIP";
+  const isTripCompleted = effectiveStage === "COMPLETED" || effectiveStage === "ARRIVED";
   const hasBookingOrQuote =
+    Boolean(journeyStage) ||
     Boolean(trip.currentQuote) ||
     trip.journeyStage === "PROPOSAL" ||
     trip.journeyStage === "CONFIRMED" ||
@@ -506,11 +514,24 @@ export function AbujaCorridorMap({
 
   // Progress along booked segment [0..1]
   // Starts at 0.0 (at Pickup Forecourt) before trip initiation; progresses to 1.0 when IN_TRANSIT
-  const [segmentProgress, setSegmentProgress] = useState<number>(isTripInitiated ? 0.06 : 0.0);
+  const [segmentProgress, setSegmentProgress] = useState<number>(() => {
+    if (typeof progressPct === "number") return Math.min(1, Math.max(0, progressPct / 100));
+    return isTripInitiated ? 0.06 : 0.0;
+  });
   const [hasArrived, setHasArrived] = useState<boolean>(isTripCompleted);
+
+  // Sync with external progressPct if provided
+  useEffect(() => {
+    if (typeof progressPct === "number") {
+      const p = Math.min(1, Math.max(0, progressPct / 100));
+      setSegmentProgress(p);
+      setHasArrived(p >= 1.0 || isTripCompleted);
+    }
+  }, [progressPct, isTripCompleted]);
 
   // Reset or start progress when journeyStage or route changes
   useEffect(() => {
+    if (typeof progressPct === "number") return;
     if (isTripInitiated) {
       setHasArrived(false);
       setSegmentProgress((prev) => (prev <= 0.02 || prev >= 0.99 ? 0.04 : prev));
@@ -521,7 +542,7 @@ export function AbujaCorridorMap({
       setHasArrived(false);
       setSegmentProgress(0.0);
     }
-  }, [isTripInitiated, isTripCompleted, currentCorridorId, trip.currentQuote?.originName, trip.currentQuote?.destName]);
+  }, [isTripInitiated, isTripCompleted, currentCorridorId, trip.currentQuote?.originName, trip.currentQuote?.destName, progressPct]);
 
   // Identify pickup and drop-off waypoint indices dynamically from the booked route (supports both North->South and South->North)
   const { pickupIdx, dropIdx, displayAnchorName, displayDestName, shortOriginLabel, shortDestLabel } = useMemo(() => {
@@ -1039,9 +1060,9 @@ export function AbujaCorridorMap({
                 strokeWidth="1.5"
               />
               <rect
-                x="-58"
+                x={driverMarkerLabel ? "-86" : "-58"}
                 y="-58"
-                width="116"
+                width={driverMarkerLabel ? "172" : "116"}
                 height="20"
                 rx="10"
                 fill={isTripInitiated || hasArrived ? "var(--brand-primary)" : "#D97706"}
@@ -1051,13 +1072,15 @@ export function AbujaCorridorMap({
                 y="-44.5"
                 textAnchor="middle"
                 style={{
-                  fontSize: 9.2,
+                  fontSize: driverMarkerLabel ? 8.6 : 9.2,
                   fontWeight: 800,
                   fill: "#FFFFFF",
                   fontFamily: "var(--font-mono)",
                 }}
               >
-                {isTripInitiated
+                {driverMarkerLabel
+                  ? `${driverMarkerLabel} · ${vehicleInfo.pct}%`
+                  : isTripInitiated
                   ? `POD-842A · ${vehicleInfo.pct}%`
                   : hasArrived
                   ? "POD-842A · ARRIVED"

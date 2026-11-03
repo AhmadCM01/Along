@@ -21,15 +21,17 @@ export function Header({ activeShareToken }: HeaderProps) {
   const pathname = usePathname();
   const trip = useAlongTrip();
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("along-theme");
-      let activeTheme = stored;
-      if (!activeTheme) {
-        activeTheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      }
-      setTheme(activeTheme === "dark" ? "dark" : "light");
+      localStorage.removeItem("along-theme");
+      localStorage.removeItem("along-theme-v2");
+      const params = new URLSearchParams(window.location.search);
+      const urlTheme = params.get("theme");
+      const stored = localStorage.getItem("along-theme-v3");
+      const activeTheme = (urlTheme === "dark" || urlTheme === "light") ? urlTheme : (stored === "dark" ? "dark" : "light");
+      setTheme(activeTheme);
       document.documentElement.setAttribute("data-theme", activeTheme);
     } catch {
       setTheme("light");
@@ -37,9 +39,10 @@ export function Header({ activeShareToken }: HeaderProps) {
     }
   }, []);
 
-  // Close Multi-Rider Lab drawer automatically on navigation
+  // Close drawers and mobile menu automatically on navigation
   useEffect(() => {
     trip.setMultiRiderDrawerOpen(false);
+    setMobileMenuOpen(false);
   }, [pathname]);
 
   const toggleTheme = () => {
@@ -47,7 +50,7 @@ export function Header({ activeShareToken }: HeaderProps) {
     setTheme(next);
     document.documentElement.setAttribute("data-theme", next);
     try {
-      localStorage.setItem("along-theme", next);
+      localStorage.setItem("along-theme-v3", next);
     } catch {}
   };
 
@@ -60,6 +63,7 @@ export function Header({ activeShareToken }: HeaderProps) {
   return (
     <>
       <header
+        className="along-main-header"
         style={{
           width: "100%",
           background: "var(--bg-surface)",
@@ -70,40 +74,44 @@ export function Header({ activeShareToken }: HeaderProps) {
         }}
       >
         <div
+          className="along-header-inner"
           style={{
             maxWidth: 1280,
             margin: "0 auto",
-            padding: "10px 20px",
+            padding: "0 16px",
+            height: 56,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 12,
           }}
         >
-          {/* Brand Wordmark */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Link href="/" aria-label="Along Home" style={{ textDecoration: "none" }}>
+          {/* Logo on Left */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            <Link href="/" aria-label="Along Home" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
               <Wordmark size="md" />
             </Link>
           </div>
 
-          {/* 3-Step Progressive Journey Navigation (Desktop & Tablet) */}
+          {/* Desktop Navigation: Up to 5 inline links */}
           <nav
-            className="along-nav-segmented"
+            className="along-desktop-nav"
             style={{
               display: "flex",
+              alignItems: "center",
               background: "var(--bg-paper)",
               border: "1px solid var(--border-subtle)",
               borderRadius: "var(--radius-chip)",
               padding: 3,
               gap: 4,
             }}
-            aria-label="Main Journey Navigation"
+            aria-label="Main Navigation"
           >
+            {/* 1. Ride */}
             <Link
               href="/"
               style={{
-                padding: "6px 16px",
+                padding: "6px 14px",
                 borderRadius: "var(--radius-chip)",
                 fontSize: 13,
                 fontWeight: pathname === "/" ? 700 : 600,
@@ -117,16 +125,17 @@ export function Header({ activeShareToken }: HeaderProps) {
               }}
             >
               <PodNavIcon size={15} color={pathname === "/" ? "#FFFFFF" : "currentColor"} />
-              <span>1. Ride</span>
+              <span>Ride</span>
               {isConfirmed && pathname !== "/" && (
                 <span style={{ fontSize: 11, color: "var(--brand-primary)" }}>✓</span>
               )}
             </Link>
 
+            {/* 2. Driver OTP */}
             <Link
               href="/driver"
               style={{
-                padding: "6px 16px",
+                padding: "6px 14px",
                 borderRadius: "var(--radius-chip)",
                 fontSize: 13,
                 fontWeight: pathname === "/driver" ? 700 : 600,
@@ -137,11 +146,10 @@ export function Header({ activeShareToken }: HeaderProps) {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                position: "relative",
               }}
             >
               <SteeringNavIcon size={15} color={pathname === "/driver" ? "#FFFFFF" : "currentColor"} />
-              <span>2. Driver OTP</span>
+              <span>Driver OTP</span>
               {trip.journeyStage === "CONFIRMED" && pathname !== "/driver" && (
                 <span
                   style={{
@@ -157,10 +165,11 @@ export function Header({ activeShareToken }: HeaderProps) {
               )}
             </Link>
 
+            {/* 3. Live corridor */}
             <Link
               href={trackerHref}
               style={{
-                padding: "6px 16px",
+                padding: "6px 14px",
                 borderRadius: "var(--radius-chip)",
                 fontSize: 13,
                 fontWeight: pathname.startsWith("/t/") ? 700 : 600,
@@ -174,7 +183,7 @@ export function Header({ activeShareToken }: HeaderProps) {
               }}
             >
               <RadarNavIcon size={15} color={pathname.startsWith("/t/") ? "#FFFFFF" : "currentColor"} />
-              <span>3. Live Corridor</span>
+              <span>Live corridor</span>
               {isInTransit && !pathname.startsWith("/t/") && (
                 <span
                   style={{
@@ -186,81 +195,73 @@ export function Header({ activeShareToken }: HeaderProps) {
                 />
               )}
             </Link>
-          </nav>
 
-          {/* Right Utilities: Multi-Rider Lab, AI X-Ray Drawer Trigger & Theme Toggle */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* 4. Multi-rider lab */}
             <button
+              type="button"
               onClick={() => trip.setMultiRiderDrawerOpen(!trip.multiRiderDrawerOpen)}
               style={{
-                padding: "6px 12px",
-                minHeight: 36,
+                padding: "6px 14px",
                 borderRadius: "var(--radius-chip)",
-                background: trip.multiRiderDrawerOpen
-                  ? "var(--brand-primary)"
-                  : "linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.2) 100%)",
-                color: trip.multiRiderDrawerOpen ? "#FFFFFF" : "var(--brand-primary)",
-                border: `1px solid ${trip.multiRiderDrawerOpen ? "var(--brand-primary)" : "rgba(16, 185, 129, 0.4)"}`,
-                fontSize: 12.5,
-                fontWeight: 800,
+                fontSize: 13,
+                fontWeight: trip.multiRiderDrawerOpen ? 700 : 600,
+                background: trip.multiRiderDrawerOpen ? "var(--brand-primary)" : "transparent",
+                color: trip.multiRiderDrawerOpen ? "#FFFFFF" : "var(--text-muted)",
+                border: "none",
+                cursor: "pointer",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                cursor: "pointer",
                 transition: "all 150ms ease",
               }}
-              aria-label="Open Multi-Rider Lab Conveyor Simulator"
+              aria-label="Open multi-rider lab simulator"
             >
-              <span>🧪 Multi-Rider Lab</span>
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 800,
-                  padding: "1px 5px",
-                  borderRadius: 6,
-                  background: trip.multiRiderDrawerOpen ? "rgba(255,255,255,0.25)" : "var(--brand-primary)",
-                  color: "#FFFFFF",
-                }}
-              >
-                4/4
-              </span>
+              <span>Multi-rider lab</span>
             </button>
 
+            {/* 5. AI X-ray */}
             <button
+              type="button"
               onClick={() => trip.setAiDrawerOpen(!trip.aiDrawerOpen)}
               style={{
-                padding: "6px 12px",
-                minHeight: 36,
+                padding: "6px 14px",
                 borderRadius: "var(--radius-chip)",
-                background: trip.aiDrawerOpen ? "var(--brand-soft)" : "var(--bg-paper)",
-                color: trip.aiDrawerOpen ? "var(--brand-primary)" : "var(--text-ink)",
-                border: `1px solid ${trip.aiDrawerOpen ? "var(--brand-primary)" : "var(--border-subtle)"}`,
-                fontSize: 12.5,
-                fontWeight: 700,
+                fontSize: 13,
+                fontWeight: trip.aiDrawerOpen ? 700 : 600,
+                background: trip.aiDrawerOpen ? "var(--brand-primary)" : "transparent",
+                color: trip.aiDrawerOpen ? "#FFFFFF" : "var(--text-muted)",
+                border: "none",
+                cursor: "pointer",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                cursor: "pointer",
+                transition: "all 150ms ease",
               }}
-              aria-label="Open Meta AI X-Ray & Telemetry Drawer"
+              aria-label="Open AI X-ray telemetry"
             >
               <span
                 style={{
                   width: 7,
                   height: 7,
                   borderRadius: "50%",
-                  background: "var(--brand-primary)",
+                  background: trip.aiDrawerOpen ? "#FFFFFF" : "var(--brand-primary)",
                 }}
               />
-              <span>AI X-Ray</span>
+              <span>AI X-ray</span>
             </button>
+          </nav>
 
+          {/* Right Area: Theme Toggle (44px) + Mobile Menu Button */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {/* Theme Toggle (44px touch target) */}
             <button
+              type="button"
               onClick={toggleTheme}
               style={{
-                width: 36,
-                height: 36,
-                minHeight: 36,
+                width: 44,
+                height: 44,
+                minWidth: 44,
+                minHeight: 44,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -268,20 +269,155 @@ export function Header({ activeShareToken }: HeaderProps) {
                 border: "1px solid var(--border-subtle)",
                 borderRadius: "50%",
                 color: "var(--text-ink)",
-                fontSize: 15,
+                fontSize: 17,
                 cursor: "pointer",
+                transition: "transform 150ms ease",
               }}
               aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
               title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
             >
               {theme === "light" ? "☾" : "☼"}
             </button>
+
+            {/* Mobile Menu Button (44px, visible <= 767px) */}
+            <button
+              type="button"
+              className="along-mobile-menu-btn"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={{
+                width: 44,
+                height: 44,
+                minWidth: 44,
+                minHeight: 44,
+                display: "none",
+                alignItems: "center",
+                justifyContent: "center",
+                background: mobileMenuOpen ? "var(--brand-primary)" : "var(--bg-paper)",
+                border: `1px solid ${mobileMenuOpen ? "var(--brand-primary)" : "var(--border-subtle)"}`,
+                borderRadius: "var(--radius-chip)",
+                color: mobileMenuOpen ? "#FFFFFF" : "var(--text-ink)",
+                fontSize: 18,
+                cursor: "pointer",
+                padding: 0,
+              }}
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? "✕" : "☰"}
+            </button>
           </div>
         </div>
 
+        {/* Mobile Dropdown Menu (<= 767px) */}
+        {mobileMenuOpen && (
+          <div
+            className="along-mobile-dropdown"
+            style={{
+              position: "absolute",
+              top: 56,
+              left: 0,
+              right: 0,
+              background: "var(--bg-surface)",
+              borderBottom: "1px solid var(--border-subtle)",
+              padding: "12px 16px 16px",
+              boxShadow: "var(--shadow-elevated)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              zIndex: 45,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                trip.setMultiRiderDrawerOpen(true);
+              }}
+              style={{
+                width: "100%",
+                padding: "11px 16px",
+                borderRadius: "var(--radius-chip)",
+                background: "var(--bg-paper)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-ink)",
+                fontSize: 14,
+                fontWeight: 700,
+                textAlign: "left",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>🧪 Multi-rider lab</span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Simulate 4 riders →</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                trip.setAiDrawerOpen(true);
+              }}
+              style={{
+                width: "100%",
+                padding: "11px 16px",
+                borderRadius: "var(--radius-chip)",
+                background: "var(--bg-paper)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-ink)",
+                fontSize: 14,
+                fontWeight: 700,
+                textAlign: "left",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>✨ AI X-ray</span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Model telemetry →</span>
+            </button>
+
+            <Link
+              href="/ops"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{
+                width: "100%",
+                padding: "11px 16px",
+                borderRadius: "var(--radius-chip)",
+                background: "var(--bg-paper)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-ink)",
+                fontSize: 14,
+                fontWeight: 700,
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                boxSizing: "border-box",
+              }}
+            >
+              <span>📊 Operations</span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Command center →</span>
+            </Link>
+          </div>
+        )}
+
         <style jsx>{`
-          @media (max-width: 768px) {
-            .along-nav-segmented {
+          @media (max-width: 767px) {
+            .along-desktop-nav {
+              display: none !important;
+            }
+            .along-mobile-menu-btn {
+              display: inline-flex !important;
+            }
+          }
+          @media (min-width: 768px) {
+            .along-mobile-menu-btn {
+              display: none !important;
+            }
+            .along-mobile-dropdown {
               display: none !important;
             }
           }

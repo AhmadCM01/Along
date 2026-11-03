@@ -132,7 +132,7 @@ export function QuoteCard({
           {isLoading ? (
             <>
               <CorridorNode size={16} variant="loading" />
-              <span>Locking escrow...</span>
+              <span>Locking simulated escrow...</span>
             </>
           ) : (
             <span>Book this ride</span>

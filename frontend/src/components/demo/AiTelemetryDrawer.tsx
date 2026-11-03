@@ -97,7 +97,7 @@ export function AiTelemetryDrawer() {
                 Meta AI Pipeline & Judge X-Ray
               </div>
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                Meta Muse Spark (muse-spark-open-1026) · Meta FAISS Gazetteer · Escrow Audit
+                Meta Muse Spark (muse-spark-open-1026) · Meta FAISS Gazetteer · Simulated Escrow Audit
               </div>
             </div>
           </div>

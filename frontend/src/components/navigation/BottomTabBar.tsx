@@ -55,7 +55,7 @@ export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
         <span>Ride</span>
       </Link>
 
-      {/* 2. Driver (Manifest & Escrow) */}
+      {/* 2. Driver (Manifest & Simulated Escrow) */}
       <Link
         href="/driver"
         style={{

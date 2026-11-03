@@ -105,6 +105,21 @@ export default function RidePage() {
         />
       </main>
 
+      {/* Footer Disclaimer */}
+      <footer
+        style={{
+          textAlign: "center",
+          padding: "6px 16px 8px",
+          fontSize: 11,
+          color: "var(--text-muted)",
+          background: "var(--bg-paper)",
+          borderTop: "1px solid var(--border-subtle)",
+          zIndex: 10,
+        }}
+      >
+        Along is an independent project. It is not affiliated with or endorsed by WhatsApp or Meta.
+      </footer>
+
       {/* Mobile Bottom Navigation */}
       <BottomTabBar activeShareToken={shareToken} />
 

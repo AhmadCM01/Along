@@ -82,7 +82,7 @@ export default function TripTrackerPage({
               route_deviation_m: 4,
               is_on_corridor: true,
             },
-            escrow_status: "Locked in Atomic Escrow",
+            escrow_status: "Locked in Simulated Atomic Escrow",
             sos_active: false,
             updated_at: new Date().toISOString(),
           });
@@ -301,7 +301,7 @@ export default function TripTrackerPage({
                 </div>
 
                 <div>
-                  <div style={{ color: "var(--text-muted)" }}>Escrow Protection</div>
+                  <div style={{ color: "var(--text-muted)" }}>Simulated Escrow Protection</div>
                   <strong
                     style={{
                       color:
@@ -312,9 +312,9 @@ export default function TripTrackerPage({
                   >
                     {trip.currentQuote
                       ? `${trip.currentQuote.totalFare} (${
-                          trip.journeyStage === "IN_TRANSIT" ? "Captured" : "Held in Escrow"
+                          trip.journeyStage === "IN_TRANSIT" ? "Simulated Escrow Captured" : "Held in Simulated Escrow"
                         })`
-                      : "Locked in Escrow"}
+                      : "Locked in Simulated Escrow"}
                   </strong>
                 </div>
               </div>

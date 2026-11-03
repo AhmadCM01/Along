@@ -75,6 +75,9 @@ export function HonestyTable() {
         <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2, marginBottom: 0 }}>
           Full technical honesty for Meta AI Hackathon evaluators.
         </p>
+        <p style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 4, marginBottom: 0, fontStyle: "italic" }}>
+          Data note: Landmarks, local names and fares were compiled from local knowledge and driver input. They are approximate and illustrative.
+        </p>
       </div>
 
       {/* Desktop Table View */}
@@ -184,6 +187,17 @@ export function HonestyTable() {
             </p>
           </div>
         ))}
+      </div>
+
+      {/* How It Works & Affiliation Disclosure */}
+      <div style={{ marginTop: 14, paddingTop: 10, borderTop: "1px solid var(--border-subtle)", fontSize: 11.5, color: "var(--text-muted)" }}>
+        <div style={{ fontWeight: 700, color: "var(--text-ink)", marginBottom: 3 }}>How it works</div>
+        <p style={{ margin: "2px 0 6px", lineHeight: 1.45 }}>
+          Riders request shared corridor trips by voice or text. Along matches riders into 4-seat pods departing from safe private filling station forecourts, secured by simulated double-entry escrow.
+        </p>
+        <p style={{ margin: 0, fontStyle: "italic", fontSize: 11 }}>
+          Along is an independent project. It is not affiliated with or endorsed by WhatsApp or Meta.
+        </p>
       </div>
 
       <style jsx>{`

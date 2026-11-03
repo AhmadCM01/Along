@@ -208,7 +208,7 @@ export function DriverCabinSimulator({
                   }}
                 >
                   <div style={{ fontSize: 10, color: "#006B3F", fontWeight: 700 }}>
-                    NET PAYOUT (90%)
+                    SIMULATED NET PAYOUT (90%)
                   </div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#008751" }}>
                     {calculatedDriverNet}

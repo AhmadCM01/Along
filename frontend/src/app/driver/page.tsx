@@ -218,7 +218,7 @@ export default function DriverPage() {
       await fetchActivePod();
       trip.boardPassengerByOtp(code);
       setOtpSuccessMessage(
-        `Code ${code} verified via HMAC-SHA256. Atomic Escrow captured (90% Driver Net).`
+        `Code ${code} verified via HMAC-SHA256. Atomic Simulated Escrow captured (90% Driver Net).`
       );
       setOtpCode("");
     } catch (err: unknown) {
@@ -563,7 +563,7 @@ export default function DriverPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <LockShieldIcon size={14} color="var(--brand-primary)" />
                 <span>
-                  Escrow Captured:{" "}
+                  Simulated Escrow Captured:{" "}
                   <strong style={{ color: "var(--brand-primary)", fontFamily: "var(--font-mono)" }}>
                     ₦{capturedEscrowNaira.toLocaleString()}
                   </strong>{" "}
@@ -571,7 +571,7 @@ export default function DriverPage() {
                 </span>
               </div>
               <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: 11.5 }}>
-                Driver 90%: <strong>₦{driverNetNaira.toLocaleString()}</strong> · Along 10%:{" "}
+                Driver Net Payout (90% Simulated): <strong>₦{driverNetNaira.toLocaleString()}</strong> · Along 10%:{" "}
                 <strong>₦{platformFeeNaira.toLocaleString()}</strong>
               </div>
             </div>
@@ -762,7 +762,7 @@ export default function DriverPage() {
                             </button>
                           ) : (
                             <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand-primary)" }}>
-                              Escrow Captured ✓
+                              Simulated Escrow Captured ✓
                             </span>
                           )}
                         </div>
@@ -904,7 +904,7 @@ export default function DriverPage() {
                           }}
                         >
                           {commuterSeat.seatLabel}:{" "}
-                          {commuterSeat.isBoarded ? "BOARDED & ESCROW CAPTURED ✓" : "AWAITING BOARDING"}
+                          {commuterSeat.isBoarded ? "BOARDED & SIMULATED ESCROW CAPTURED ✓" : "AWAITING BOARDING"}
                         </span>
                         <DepartureNumeral size="sm" variant={commuterSeat.isBoarded ? "brand" : "amber"}>
                           ₦{commuterSeat.fareNaira.toLocaleString()}
@@ -1068,7 +1068,7 @@ export default function DriverPage() {
                 }}
               >
                 <div style={{ fontSize: 13, fontWeight: 700, color: "var(--brand-primary)" }}>
-                  ✓ {otpSuccessMessage || `Passenger verified (OTP ${commuterOtp}). Atomic Escrow captured & locked.`}
+                  ✓ {otpSuccessMessage || `Passenger verified (OTP ${commuterOtp}). Atomic Simulated Escrow captured & locked.`}
                 </div>
 
                 <Link

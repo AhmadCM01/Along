@@ -472,7 +472,7 @@ export function WhatsAppSimulator({
                 color: "var(--brand-primary)",
               }}
             >
-              WhatsApp Web
+              WhatsApp-style demo chat
             </span>
           </div>
 
@@ -535,20 +535,16 @@ export function WhatsAppSimulator({
                 </span>
                 <span
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 15,
-                    height: 15,
-                    borderRadius: "50%",
-                    background: "#25D366",
-                    color: "#fff",
-                    fontSize: 9.5,
-                    fontWeight: 900,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: "1px 5px",
+                    borderRadius: 4,
+                    background: "var(--bg-paper)",
+                    color: "var(--text-muted)",
+                    border: "1px solid var(--border-subtle)",
                   }}
-                  title="Verified Official WhatsApp Business"
                 >
-                  ✓
+                  Demo
                 </span>
               </div>
               <span style={{ fontSize: 11, color: "var(--brand-primary)", fontWeight: 600 }}>
@@ -661,6 +657,27 @@ export function WhatsAppSimulator({
             </button>
           ))}
         </div>
+
+        {/* How It Works & Affiliation Disclosure */}
+        <div
+          style={{
+            padding: "10px 14px",
+            borderTop: "1px solid var(--border-subtle)",
+            background: "var(--bg-paper)",
+            fontSize: 11.5,
+            color: "var(--text-muted)",
+          }}
+        >
+          <div style={{ fontWeight: 700, color: "var(--text-ink)", marginBottom: 4 }}>
+            How it works
+          </div>
+          <div style={{ lineHeight: 1.45, marginBottom: 6 }}>
+            Shared 4-seat commuter transit pods departing from safe filling-station forecourts across Abuja corridors.
+          </div>
+          <div style={{ fontSize: 10.5, fontStyle: "italic", color: "var(--text-muted)", lineHeight: 1.35 }}>
+            Along is an independent project. It is not affiliated with or endorsed by WhatsApp or Meta.
+          </div>
+        </div>
       </aside>
 
       {/* =====================================================================
@@ -705,20 +722,17 @@ export function WhatsAppSimulator({
                 </span>
                 <span
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 15,
-                    height: 15,
-                    borderRadius: "50%",
-                    background: "#25D366",
-                    color: "#fff",
-                    fontSize: 9.5,
-                    fontWeight: 900,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: "1px 5px",
+                    borderRadius: 4,
+                    background: "var(--bg-paper)",
+                    color: "var(--text-muted)",
+                    border: "1px solid var(--border-subtle)",
                     flexShrink: 0,
                   }}
                 >
-                  ✓
+                  Demo
                 </span>
               </div>
               <div
@@ -796,7 +810,7 @@ export function WhatsAppSimulator({
           >
             <LockShieldIcon size={13} color="var(--brand-primary)" />
             <span>
-              Messages and voice notes are end-to-end encrypted. Fares are held in atomic escrow until boarding OTP verification.
+              Messages and voice notes are simulated in this demo. Fares are held in simulated atomic escrow until boarding OTP verification.
             </span>
           </div>
 
@@ -1071,7 +1085,7 @@ export function WhatsAppSimulator({
                             >
                               <span>
                                 {isUserBoarded
-                                  ? `✓ Boarded (${msgOtp}) · Escrow Captured`
+                                  ? `✓ Boarded (${msgOtp}) · Simulated Escrow Captured`
                                   : "Open driver view with this code"}
                               </span>
                               <span

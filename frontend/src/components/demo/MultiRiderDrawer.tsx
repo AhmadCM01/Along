@@ -162,7 +162,7 @@ const CONVEYOR_STAGES: ConveyorStage[] = [
     id: 4,
     label: "4. Terminus Berger",
     location: "Berger Roundabout Underbridge (Km 19.5)",
-    description: "Rider C, Fatima, and Grace arrive at destinations. Full corridor circuit completed. Escrow disbursed.",
+    description: "Rider C, Fatima, and Grace arrive at destinations. Full corridor circuit completed. Simulated escrow disbursed.",
     podFill: "Trip Complete • ₦2,800 Gross",
     grossEscrow: 2800,
     seats: {
@@ -791,7 +791,7 @@ export function MultiRiderDrawer() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--text-muted)" }}>
-                Atomic Escrow Captured
+                Simulated Atomic Escrow Captured
               </span>
               <span style={{ fontSize: 10, fontWeight: 800, color: "var(--brand-primary)" }}>
                 SECURED IN SMART VAULT ✓
@@ -808,7 +808,7 @@ export function MultiRiderDrawer() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "var(--text-muted)", borderTop: "1px dashed var(--border-subtle)", paddingTop: 6 }}>
-              <span>Driver Payout (90%): <strong>₦{driverPayout.toLocaleString()}</strong></span>
+              <span>Driver Payout (90% Simulated): <strong>₦{driverPayout.toLocaleString()}</strong></span>
               <span>Along Fee (10%): <strong>₦{platformFee.toLocaleString()}</strong></span>
             </div>
 

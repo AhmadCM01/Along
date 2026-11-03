@@ -1107,7 +1107,7 @@ export function AbujaCorridorMap({
               {isTripInitiated
                 ? `Live GPS Telemetry · ${vehicleInfo.pct}% Complete`
                 : hasArrived
-                ? "Trip Completed · Escrow Settled (90/10)"
+                ? "Trip Completed · Simulated Escrow Settled (90/10)"
                 : "Waiting for Driver OTP Initiation"}
             </div>
           </>

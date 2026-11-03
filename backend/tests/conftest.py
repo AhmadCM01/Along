@@ -237,3 +237,73 @@ class InMemoryAsyncRedis:
 def fake_redis() -> InMemoryAsyncRedis:
     """Provide a fresh isolated in-memory async Redis instance per test."""
     return InMemoryAsyncRedis()
+
+
+@pytest.fixture(autouse=True)
+def reset_in_memory_stores() -> Any:
+    """Reset module-level in-memory stores before every test to ensure isolation."""
+    import time
+    from app.api.v1 import drivers, trips_public, webhooks_whatsapp
+    from app.core.ids import generate_boarding_otp
+    from app.core.security import hash_otp_code
+    from app.payments import escrow
+
+    demo_otp = generate_boarding_otp()
+    drivers.ACTIVE_PODS_STORE.clear()
+    drivers.ACTIVE_PODS_STORE["POD-842A"] = {
+        "pod_id": "POD-842A",
+        "driver_id": "DRV-001",
+        "driver_name": "Musa Bello",
+        "plate_number": "ABJ-402-AL",
+        "vehicle_desc": "Volkswagen Golf 4 (Emerald Green)",
+        "corridor_id": "BWR-DUT-WUS",
+        "anchor_lat": 9.1779,
+        "anchor_lng": 7.3736,
+        "seats_occupied": 4,
+        "passengers": [],
+        "boarding_otp_hashes": {
+            "rr-demo-01": hash_otp_code(demo_otp, context_id="rr-demo-01"),
+            demo_otp: hash_otp_code(demo_otp, context_id=""),
+        },
+        "boarding_otps": {demo_otp: "rr-demo-01"},
+        "otp_created_at": {"rr-demo-01": time.time()},
+        "otp_attempts": {"rr-demo-01": 0},
+        "boarded_requests": {"rr-demo-02", "rr-demo-03", "rr-demo-04"},
+        "status": "BOARDING",
+    }
+    drivers.DRIVER_LIVE_STATE.clear()
+
+    trips_public.PUBLIC_TRIPS_BY_TOKEN.clear()
+    trips_public.PUBLIC_TRIPS_BY_TOKEN["tok_demo_family_123"] = {
+        "share_token": "tok_demo_family_123",
+        "pod_code": "POD-842A",
+        "corridor_id": "BWR-DUT-WUS",
+        "corridor_name": "Bwari -> Dutse -> Gwarinpa -> Berger -> Wuse",
+        "status": "IN_TRANSIT",
+        "origin_anchor": "A.A. Rano Filling Station (Dutse First Gate)",
+        "destination_landmark": "Wuse Market Main Gate",
+        "driver": {
+            "full_name": "Musa Danjuma",
+            "profile_note": "Demo driver profile",
+            "vehicle_desc": "Toyota Corolla (Silver)",
+            "plate_number": "ABJ-412K",
+            "id_on_file": True,
+            "rating": 4.92,
+        },
+        "telemetry": {
+            "lat": 9.1105,
+            "lng": 7.4250,
+            "current_landmark": "Katampe Extension Bridge",
+            "progress_pct": 64,
+            "eta_minutes": 8,
+            "route_deviation_m": 12,
+            "is_on_corridor": True,
+        },
+        "escrow_status": "Simulated escrow",
+        "sos_active": False,
+        "updated_at": "2026-11-03T00:00:00Z",
+    }
+
+    webhooks_whatsapp._default_store._kv.clear()
+    escrow._default_escrow_service = None
+    yield

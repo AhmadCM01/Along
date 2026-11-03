@@ -192,7 +192,7 @@ def test_p4_t2_and_t4_drivers_sam_kyc_otp_geofence_ussd_and_trip_share() -> None
     )
     assert far_otp.status_code == 422
 
-    # Inside 150m geofence with valid OTP -> BOARDED + CAPTURED + IN_TRANSIT
+    # Inside 150m geofence with valid OTP -> BOARDED + CAPTURED + BOARDING (awaiting departure / full pod)
     good_otp = client.post(
         "/api/v1/drivers/DRV-001/pods/POD-OTP-1/verify-otp",
         json={
@@ -204,7 +204,12 @@ def test_p4_t2_and_t4_drivers_sam_kyc_otp_geofence_ussd_and_trip_share() -> None
     )
     assert good_otp.status_code == 200
     assert good_otp.json()["escrow_state"] == "CAPTURED"
-    assert good_otp.json()["pod_status"] == "IN_TRANSIT"
+    assert good_otp.json()["pod_status"] == "BOARDING"
+
+    # Explicit dispatch transitions pod to IN_TRANSIT
+    disp_res = client.post("/api/v1/drivers/DRV-001/pods/POD-OTP-1/dispatch")
+    assert disp_res.status_code == 200
+    assert disp_res.json()["status"] == "IN_TRANSIT"
 
     # 4. 2G Feature-Phone USSD (*384*247#) + Voice IVR DTMF '1'
     ussd_menu = client.post(

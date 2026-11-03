@@ -6,10 +6,20 @@ import { BottomTabBar } from "@/components/navigation/BottomTabBar";
 import { WhatsAppSimulator } from "@/components/demo/WhatsAppSimulator";
 import { useAlongChat } from "@/hooks/useAlongChat";
 import { useAlongTrip } from "@/context/AlongTripContext";
+import { pingBackendHealth } from "@/lib/api";
 
 export default function RidePage() {
   const chat = useAlongChat();
   const trip = useAlongTrip();
+  const [wakingUp, setWakingUp] = React.useState(false);
+
+  useEffect(() => {
+    pingBackendHealth().then((health) => {
+      if (health.status === "waking_up") {
+        setWakingUp(true);
+      }
+    });
+  }, []);
 
   // Sync chat quote to global AlongTripContext
   useEffect(() => {
@@ -61,6 +71,22 @@ export default function RidePage() {
     >
       {/* Top Journey Navigation & AI X-Ray Drawer Trigger */}
       <Header activeShareToken={shareToken} />
+
+      {wakingUp && (
+        <div
+          style={{
+            background: "#FEF3C7",
+            color: "#92400E",
+            padding: "6px 16px",
+            fontSize: 12,
+            textAlign: "center",
+            fontWeight: 600,
+            borderBottom: "1px solid #FCD34D",
+          }}
+        >
+          Server is waking up (free tier cold start)... First request may take 15-30s.
+        </div>
+      )}
 
       {/* Main Viewport: Full-Craft WhatsApp Desktop (Split-Pane) & Mobile (Full-Bleed) */}
       <main
@@ -117,7 +143,7 @@ export default function RidePage() {
           zIndex: 10,
         }}
       >
-        Along is an independent project. It is not affiliated with or endorsed by WhatsApp or Meta.
+        Academic prototype for Meta AI Hackathon 2026. Illustrative commuter transit simulation. Along is an independent project and is not affiliated with or endorsed by WhatsApp or Meta.
       </footer>
 
       {/* Mobile Bottom Navigation */}

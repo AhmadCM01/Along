@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     )
 
     ENV: Literal["development", "test", "production"] = "development"
+    DEMO_MODE: bool = False
+    SIMULATE_ESCROW: bool = True
+    PORT: int = 7860
+    CORS_ALLOWED_ORIGINS: str = "https://along.vercel.app,http://localhost:3000,http://localhost:3001"
+    RATE_LIMIT_ENABLED: bool = False
+    RATE_LIMIT_IP_PER_HOUR: int = 20
+    RATE_LIMIT_GLOBAL_PER_DAY: int = 400
     PUBLIC_BASE_URL: str = "http://localhost:3001"
     API_BASE_URL: str = "http://localhost:8000"
     ALLOW_SIMULATED_GPS: bool = True

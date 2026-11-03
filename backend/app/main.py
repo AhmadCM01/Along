@@ -20,6 +20,7 @@ from app.api.v1.webhooks_whatsapp import router as whatsapp_webhook_router
 from app.core.config import get_settings
 from app.core.errors import AlongDomainError
 from app.core.logging import configure_logging, get_logger
+from app.core.rate_limit import rate_limit_middleware
 from app.core.telemetry import metrics
 from scripts.seed import load_abuja_seed_catalog
 
@@ -44,6 +45,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     """Construct and configure the Along FastAPI application."""
+    settings = get_settings()
     app = FastAPI(
         title="Along Corridor Transit API",
         version="1.0.0",
@@ -51,13 +53,27 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    if settings.ENV == "production":
+        origins = [o.strip() for o in settings.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
+        if not origins:
+            origins = ["https://along.vercel.app", "http://localhost:3000", "http://localhost:3001"]
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+    else:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+    app.middleware("http")(rate_limit_middleware)
 
     @app.exception_handler(AlongDomainError)
     async def handle_domain_error(_request: Request, exc: AlongDomainError) -> JSONResponse:
@@ -68,16 +84,11 @@ def create_app() -> FastAPI:
         )
 
     @app.get("/healthz")
-    async def healthz() -> dict[str, Any]:
-        catalog = load_abuja_seed_catalog()
+    async def healthz() -> dict[str, str]:
+        """Fast, lightweight health check probe for load-balancers and Hugging Face Spaces."""
         return {
             "status": "ok",
-            "brand": "Along",
-            "corridors": len(catalog.corridors),
-            "fare_zones": len(catalog.fare_zones),
-            "anchors": len(catalog.anchors),
-            "landmarks": len(catalog.landmarks),
-            "aliases": catalog.total_aliases,
+            "version": "1.0.0",
         }
 
     @app.get("/metrics", response_class=PlainTextResponse)

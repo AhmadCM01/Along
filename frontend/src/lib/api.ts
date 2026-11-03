@@ -182,12 +182,43 @@ export interface LiveReplayDoc {
 
 export function getApiBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
   }
   if (typeof window !== "undefined" && window.location?.hostname) {
     return `http://${window.location.hostname}:8000`;
   }
   return "http://localhost:8000";
+}
+
+export interface HealthStatus {
+  status: "ok" | "waking_up" | "error";
+  message?: string;
+  version?: string;
+}
+
+export async function pingBackendHealth(): Promise<HealthStatus> {
+  const url = `${getApiBaseUrl()}/healthz`;
+  if (typeof window === "undefined") {
+    return { status: "ok" };
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (res.status === 503) {
+      return { status: "waking_up", message: "Server is waking up (free tier cold start)..." };
+    }
+    if (res.ok) {
+      const data = await res.json();
+      return { status: "ok", version: data.version };
+    }
+    return { status: "error", message: `Server error HTTP ${res.status}` };
+  } catch {
+    clearTimeout(timer);
+    return { status: "waking_up", message: "Server is waking up (free tier cold start)..." };
+  }
 }
 
 const API_BASE_URL = getApiBaseUrl();

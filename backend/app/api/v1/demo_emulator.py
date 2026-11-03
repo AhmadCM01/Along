@@ -265,7 +265,26 @@ async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
     content_type = request.headers.get("content-type", "")
     client_transcript = request.headers.get("x-client-transcript") or None
     locale_hint = request.headers.get("x-locale-hint") or None
+    duration_hdr = request.headers.get("x-audio-duration-s") or request.headers.get("x-duration-seconds")
+    if duration_hdr:
+        try:
+            if float(duration_hdr) > 30.0:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Audio duration exceeds 30 seconds limit",
+                )
+        except HTTPException:
+            raise
+        except ValueError:
+            pass
+
     raw_body = await request.body()
+    if len(raw_body) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail="Audio file exceeds 5 MB limit",
+        )
+
     audio_bytes = raw_body
     filename = "voice_note.ogg"
 
@@ -294,6 +313,31 @@ async def demo_asr_transcribe(request: Request) -> dict[str, Any]:
                 fname = part.get_filename()
                 if fname:
                     filename = fname
+
+    if len(audio_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail="Audio file exceeds 5 MB limit",
+        )
+
+    if audio_bytes.startswith(b"RIFF") and len(audio_bytes) >= 44:
+        import struct
+        try:
+            channels = struct.unpack_from("<H", audio_bytes, 22)[0]
+            samplerate = struct.unpack_from("<I", audio_bytes, 24)[0]
+            bitspersample = struct.unpack_from("<H", audio_bytes, 34)[0]
+            bytes_per_sec = samplerate * channels * (bitspersample // 8)
+            if bytes_per_sec > 0:
+                duration_sec = (len(audio_bytes) - 44) / bytes_per_sec
+                if duration_sec > 30.0:
+                    raise HTTPException(
+                        status_code=422,
+                        detail="Audio duration exceeds 30 seconds limit",
+                    )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
 
     res = await transcribe_voice_note(
         audio_bytes,

@@ -738,22 +738,7 @@ export function AbujaCorridorMap({
             >
               ● IN TRANSIT · Next: {vehicleInfo.nextStopName} ({vehicleInfo.etaMins} min · {vehicleInfo.remainingKm} km)
             </div>
-          ) : hasArrived ? (
-            <div
-              style={{
-                fontSize: 11.5,
-                fontWeight: 700,
-                padding: "5px 12px",
-                borderRadius: 999,
-                background: "var(--brand-soft)",
-                color: "var(--brand-primary)",
-                border: "1px solid rgba(5, 150, 105, 0.3)",
-                fontFamily: "var(--font-mono)",
-              }}
-            >
-              ✓ ARRIVED AT {dropWp.name.toUpperCase()} (100%)
-            </div>
-          ) : hasBookingOrQuote ? (
+          ) : hasArrived ? null : hasBookingOrQuote ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <div
                 style={{

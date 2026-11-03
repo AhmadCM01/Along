@@ -273,7 +273,7 @@ export default function TripTrackerPage({
         >
           <div>
             <h1 style={{ fontSize: 23, fontWeight: 800, margin: 0 }}>
-              Live Corridor and Safety Tracker
+              Live Corridor Tracker
             </h1>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2, marginBottom: 0 }}>
               {tripData
@@ -486,7 +486,7 @@ export default function TripTrackerPage({
               {currentStage === "completed"
                 ? `✓ Ride completed safely at ${activeDest}. Escrow released to driver.`
                 : currentStage === "in trip"
-                ? `● Pod en route along corridor: passing ${currentLandmark} (${Math.round(progressPct)}% complete)`
+                ? `● Pod en route along corridor: ${activeOrigin} to ${activeDest} (${Math.round(progressPct)}% complete)`
                 : currentStage === "boarding"
                 ? `● Pod docked at safe forecourt bay. Awaiting passenger 4-digit boarding OTP.`
                 : currentStage === "driver on the way"

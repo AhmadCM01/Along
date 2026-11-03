@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Header } from "@/components/navigation/Header";
 import { BottomTabBar } from "@/components/navigation/BottomTabBar";
@@ -22,13 +22,16 @@ import {
   verifyBoardingOtp,
 } from "@/lib/api";
 
-const DEMO_WAYPOINTS = [
-  { lat: 9.1779, lng: 7.3736, progress_pct: 0, current_landmark: "A.A. Rano Filling Station (Dutse First Gate)", status: "BOARDING" },
-  { lat: 9.1550, lng: 7.3980, progress_pct: 25, current_landmark: "Galadima / Dawaki Junction", status: "IN_TRANSIT" },
-  { lat: 9.1250, lng: 7.4200, progress_pct: 50, current_landmark: "Oando Katampe / Gwarinpa Expressway", status: "IN_TRANSIT" },
-  { lat: 9.0920, lng: 7.4380, progress_pct: 75, current_landmark: "Mabushi Flyover", status: "IN_TRANSIT" },
-  { lat: 9.0750, lng: 7.4520, progress_pct: 100, current_landmark: "Berger Roundabout Underbridge", status: "COMPLETED" },
-];
+function getDynamicDemoWaypoints(origin?: string, dest?: string) {
+  const start = origin || "Pickup Forecourt";
+  const end = dest || "Destination";
+  return [
+    { lat: 9.1779, lng: 7.3736, progress_pct: 0, current_landmark: start, status: "BOARDING" },
+    { lat: 9.1550, lng: 7.3980, progress_pct: 35, current_landmark: `En route to ${end}`, status: "IN_TRANSIT" },
+    { lat: 9.1250, lng: 7.4200, progress_pct: 70, current_landmark: `Approaching ${end}`, status: "IN_TRANSIT" },
+    { lat: 9.0750, lng: 7.4520, progress_pct: 100, current_landmark: end, status: "COMPLETED" },
+  ];
+}
 
 interface DriverSummary {
   id: string;
@@ -63,6 +66,13 @@ export default function DriverPage() {
   const [demoDriveActive, setDemoDriveActive] = useState<boolean>(false);
   const [demoStep, setDemoStep] = useState<number>(0);
 
+  const waypoints = useMemo(() => {
+    return getDynamicDemoWaypoints(
+      trip.currentQuote?.originName || trip.currentQuote?.anchorName || "Pickup Forecourt",
+      trip.currentQuote?.destName || "Destination"
+    );
+  }, [trip.currentQuote?.originName, trip.currentQuote?.anchorName, trip.currentQuote?.destName]);
+
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_DEMO_MODE === "false") {
       setIsDemoMode(false);
@@ -75,13 +85,13 @@ export default function DriverPage() {
     const interval = setInterval(() => {
       setDemoStep((prevStep) => {
         const nextStep = prevStep + 1;
-        if (nextStep >= DEMO_WAYPOINTS.length) {
+        if (nextStep >= waypoints.length) {
           setDemoDriveActive(false);
           setOtpSuccessMessage("Simulated demo drive completed! Pod arrived at destination.");
           return prevStep;
         }
 
-        const point = DEMO_WAYPOINTS[nextStep];
+        const point = waypoints[nextStep];
         const podId = activePod?.pod_id || trip.driverInfo.podCode || "POD-842A";
         const driverId = activePod?.driver_id || driver.id || "DRV-001";
         const token = trip.activeShareToken || "share-bwr-4817";
@@ -101,16 +111,16 @@ export default function DriverPage() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [demoDriveActive, activePod?.pod_id, activePod?.driver_id, driver.id, trip]);
+  }, [demoDriveActive, waypoints, activePod?.pod_id, activePod?.driver_id, driver.id, trip]);
 
   function handleToggleDemoDrive() {
     if (demoDriveActive) {
       setDemoDriveActive(false);
       setOtpSuccessMessage("Simulated demo drive paused.");
     } else {
-      const startIdx = demoStep >= DEMO_WAYPOINTS.length - 1 ? 0 : demoStep;
+      const startIdx = demoStep >= waypoints.length - 1 ? 0 : demoStep;
       setDemoStep(startIdx);
-      const point = DEMO_WAYPOINTS[startIdx];
+      const point = waypoints[startIdx];
       const podId = activePod?.pod_id || trip.driverInfo.podCode || "POD-842A";
       const driverId = activePod?.driver_id || driver.id || "DRV-001";
       const token = trip.activeShareToken || "share-bwr-4817";
@@ -122,7 +132,7 @@ export default function DriverPage() {
       }
       setDemoDriveActive(true);
       setOtpSuccessMessage(
-        `Simulated demo drive started from ${point.current_landmark} (${point.progress_pct}%)`
+        `Simulated driver position started from ${point.current_landmark} (${point.progress_pct}%)`
       );
     }
   }
@@ -448,7 +458,7 @@ export default function DriverPage() {
                 />
                 <span>
                   {demoDriveActive
-                    ? `Driving... (${DEMO_WAYPOINTS[demoStep]?.progress_pct ?? 0}% - Stop)`
+                    ? `Driving... (${waypoints[demoStep]?.progress_pct ?? 0}% - Stop)`
                     : "Start demo drive"}
                 </span>
               </button>

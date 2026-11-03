@@ -452,6 +452,9 @@ export function WhatsAppSimulator({
         className="whatsapp-desktop-sidebar"
         style={{
           width: 330,
+          minWidth: 330,
+          maxWidth: 330,
+          boxSizing: "border-box",
           borderRight: "1px solid var(--border-subtle)",
           display: "flex",
           flexDirection: "column",
@@ -463,13 +466,15 @@ export function WhatsAppSimulator({
         <div
           style={{
             padding: "12px 16px",
+            minHeight: 56,
+            boxSizing: "border-box",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             borderBottom: "1px solid var(--border-subtle)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
             <span style={{ fontSize: 18, fontWeight: 800, color: "var(--text-ink)" }}>
               Chats
             </span>
@@ -481,13 +486,14 @@ export function WhatsAppSimulator({
                 borderRadius: 999,
                 background: "rgba(37, 211, 102, 0.14)",
                 color: "var(--brand-primary)",
+                whiteSpace: "nowrap",
               }}
             >
               WhatsApp-style demo chat
             </span>
           </div>
 
-          {onResetChat && messages.length > 0 && (
+          {onResetChat && (
             <button
               onClick={onResetChat}
               style={{
@@ -498,7 +504,9 @@ export function WhatsAppSimulator({
                 border: "1px solid var(--border-subtle)",
                 borderRadius: 8,
                 padding: "4px 10px",
-                cursor: "pointer",
+                cursor: messages.length > 0 ? "pointer" : "default",
+                visibility: messages.length > 0 ? "visible" : "hidden",
+                flexShrink: 0,
               }}
             >
               Reset
@@ -600,7 +608,9 @@ export function WhatsAppSimulator({
         <div
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: "auto",
+            scrollbarGutter: "stable",
             padding: "4px 10px 12px",
             display: "flex",
             flexDirection: "column",
@@ -623,10 +633,12 @@ export function WhatsAppSimulator({
                 display: "flex",
                 flexDirection: "column",
                 gap: 4,
+                width: "100%",
+                boxSizing: "border-box",
                 transition: "all 150ms ease",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                 <span
                   style={{
                     fontSize: 12.5,
@@ -635,10 +647,16 @@ export function WhatsAppSimulator({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   <ScenarioIcon type={scn.iconType} />
-                  <span>{scn.shortLabel}</span>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {scn.shortLabel}
+                  </span>
                 </span>
                 <span
                   style={{
@@ -649,6 +667,8 @@ export function WhatsAppSimulator({
                     background: "var(--bg-surface)",
                     color: "var(--brand-primary)",
                     border: "1px solid var(--border-subtle)",
+                    flexShrink: 0,
+                    marginLeft: 6,
                   }}
                 >
                   {scn.corridor}
@@ -794,6 +814,7 @@ export function WhatsAppSimulator({
             flex: 1,
             padding: "16px 16px 28px",
             overflowY: "auto",
+            scrollbarGutter: "stable",
             display: "flex",
             flexDirection: "column",
             gap: 12,

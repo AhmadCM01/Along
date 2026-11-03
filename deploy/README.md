@@ -34,18 +34,20 @@ In Space Settings -> **Variables and secrets**, add the following:
 - `CORS_ALLOWED_ORIGINS`: `https://along.vercel.app,http://localhost:3000,http://localhost:3001`
 
 **Secrets (Add your own API keys without sharing them)**:
-- `LLM_BASE_URL`: OpenAI-compatible endpoint URL (e.g. Baseten or NVIDIA NIM)
+- `LLM_BASE_URL`: OpenAI-compatible endpoint URL (e.g. Baseten)
 - `LLM_API_KEY`: API key for primary LLM
-- `LLM_MODEL`: Primary model name (e.g. `meta-models/muse-spark-open-1026`)
-- `LLM_PROVIDER_LABEL`: Label for primary model
-- `LLM_FALLBACK_BASE_URL`: Fallback endpoint URL (e.g. NVIDIA NIM)
-- `LLM_FALLBACK_API_KEY`: API key for fallback LLM
-- `LLM_FALLBACK_MODEL`: Fallback model name (e.g. `meta/llama-3.2-11b-vision-instruct`)
-- `LLM_FALLBACK_PROVIDER_LABEL`: Label for fallback model
+- `LLM_MODEL`: Primary model name (`meta-models/muse-spark-open-1026`)
+- `LLM_PROVIDER_LABEL`: Label for primary model (`baseten_meta_ai`)
+- `LLM_FALLBACK_BASE_URL`: Optional secondary endpoint URL (leave unset for default primary -> rule_based chain)
+- `LLM_FALLBACK_API_KEY`: Optional secondary API key
+- `LLM_FALLBACK_MODEL`: Optional secondary model name
+- `LLM_FALLBACK_PROVIDER_LABEL`: Optional secondary provider label
 - `GROQ_API_KEY`: Groq API key for Whisper audio transcription
 - `WHISPER_MODEL`: `whisper-large-v3-turbo`
 - `JWT_SECRET_KEY`: 64-character hexadecimal signing string
 - `OTP_PEPPER`: 64-character hexadecimal pepper string
+
+> Note: When `LLM_FALLBACK_API_KEY` is not set, the runtime fallback chain automatically runs `primary -> rule_based` using the local deterministic extractor.
 
 ### Step 4: Verify Deployment
 Once built, test your space endpoint:

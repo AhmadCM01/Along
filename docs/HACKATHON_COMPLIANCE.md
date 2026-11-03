@@ -71,16 +71,16 @@ All code listed was created during the hackathon.
 - **Open Source Libraries**: Standard permissive libraries (FastAPI, Uvicorn, Pydantic, RapidFuzz, Next.js, React). See `docs/THIRD_PARTY.md`.
 - **Hosted Models**:
   - `meta-models/muse-spark-open-1026` via Baseten (primary multilingual NLU).
-  - `meta/llama-3.2-11b-vision-instruct` via NVIDIA NIM (secondary fallback).
   - `whisper-large-v3-turbo` via Groq (speech-to-text audio transcription; OpenAI open-source model).
+  - Deterministic rule-based extractor in `backend/app/ai/rule_based.py` (local in-process fallback; runtime chain is `primary -> rule_based`).
 - **Web Fonts**: `Bricolage Grotesque`, `Instrument Sans`, `JetBrains Mono` from Google Fonts under SIL Open Font License 1.1.
 - **Audio Assets**: The 30 evaluation clips (`data/clips/`) and demo voice note were recorded by me and my brother with mutual consent.
 - **AI Tooling Disclosure**:
-  - Owner statement: "Tooling: the code was written with AI coding assistants (Claude and Gemini models inside the Antigravity IDE) directed by the owner. Runtime models: Muse Spark Open via Baseten (primary), Llama 3.2 Vision via NVIDIA NIM (fallback), Whisper via Groq for speech (not a Meta model)."
+  - Owner statement: "Tooling: the code was written with AI coding assistants (Claude and Gemini models inside the Antigravity IDE) directed by the owner. Runtime models: Muse Spark Open via Baseten (primary), rule-based extractor (fallback), Whisper via Groq for speech (not a Meta model)."
 
 ## 7. Owner Statements
 - Owner statement: "MASTER_IMPLEMENTATION_PLAN.md was drafted on 2026-10-23 before the event. It contains no code."
 - Owner statement: "PITCH_DECK.md was created 2026-10-26 10:34 local time. All code and config files were created from 2026-10-26 11:09 local time (WAT, UTC+1)."
 - Owner statement: "Data: the corridor landmarks, local names, aliases and fare levels were compiled mostly from my first-hand knowledge of Abuja commuter routes (I regularly travel Berger, Wuse and Banex) and from informal conversations with a professional driver who is a friend of my father. I did online research (specific sites not recorded) and also used complaints I heard first hand from other riders."
 - Owner statement: "Audio: the 30 evaluation clips and the demo voice sample were recorded by me and my brother, both consenting. The clips are kept locally; the demo sample is in the repository."
-- Owner statement: "Tooling: the code was written with AI coding assistants (Claude and Gemini models inside the Antigravity IDE) directed by me. Runtime models: Muse Spark Open via Baseten (primary), Llama 3.2 Vision via NVIDIA NIM (fallback), Whisper via Groq for speech (not a Meta model)."
+- Owner statement: "Tooling: the code was written with AI coding assistants (Claude and Gemini models inside the Antigravity IDE) directed by me. Runtime models: Muse Spark Open via Baseten (primary), rule-based extractor (fallback), Whisper via Groq for speech (not a Meta model)."

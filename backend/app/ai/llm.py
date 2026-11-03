@@ -377,15 +377,14 @@ class MetaLLMClient:
                     },
                     json=payload,
                 )
-        except httpx.TimeoutException as exc:
-            return _failure(f"timeout after {timeout:.0f}s ({type(exc).__name__})", None, False, is_timeout=True)
-        except httpx.HTTPError as exc:
-            return _failure(f"{type(exc).__name__}: {exc}", None, True)
+        except httpx.TimeoutException:
+            return _failure(f"timeout after {timeout:.0f}s", None, False, is_timeout=True)
+        except httpx.HTTPError:
+            return _failure("unavailable", None, True)
 
         if resp.status_code >= 400:
-            body = resp.text[:300].replace("\n", " ")
             return _failure(
-                f"HTTP {resp.status_code}: {body}",
+                f"http {resp.status_code}",
                 resp.status_code,
                 resp.status_code not in _NON_RETRYABLE_STATUS,
             )
@@ -648,8 +647,13 @@ class MetaLLMClient:
         primary, fallback = await asyncio.gather(
             self._level_status("primary"), self._level_status("fallback")
         )
+        chain = (
+            ["primary", "fallback", "rule_based"]
+            if fallback.get("configured")
+            else ["primary", "rule_based"]
+        )
         return {
-            "chain": ["primary", "fallback", "rule_based"],
+            "chain": chain,
             "timeout_seconds": float(self.settings.LLM_TIMEOUT_SECONDS),
             "retries_per_level": RETRIES_PER_LEVEL,
             "levels": {"primary": primary, "fallback": fallback},

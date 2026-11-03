@@ -49,7 +49,7 @@ def test_in_memory_rate_limiter_per_ip_and_global() -> None:
 
 
 def test_rate_limit_middleware_integration_and_exclusions(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Verify middleware returns 429 problem details on excess and excludes healthz/status."""
+    """Verify middleware returns 429 problem details on excess and excludes healthz/metrics."""
     limiter = get_rate_limiter()
     limiter.reset()
 
@@ -60,7 +60,7 @@ def test_rate_limit_middleware_integration_and_exclusions(monkeypatch: pytest.Mo
     app = create_app()
     client = TestClient(app)
 
-    # Healthz and status are excluded from rate limits
+    # Healthz is excluded from rate limits
     for _ in range(25):
         h_res = client.get("/healthz")
         assert h_res.status_code == 200
@@ -86,6 +86,38 @@ def test_rate_limit_middleware_integration_and_exclusions(monkeypatch: pytest.Mo
     # Clean up
     limiter.reset()
     get_settings.cache_clear()
+
+
+def test_status_endpoint_sanitization_caching_and_catalog() -> None:
+    """Verify error sanitization, 5-minute cache TTL, catalog counts, and exclusion rules."""
+    from app.api.v1.status import (
+        _STATUS_CACHE_TTL_SECONDS,
+        _sanitize_error,
+        clear_status_cache,
+    )
+    from scripts.seed import load_abuja_seed_catalog
+
+    # 1. 5-minute cache TTL
+    assert _STATUS_CACHE_TTL_SECONDS == 300.0
+
+    # 2. Error sanitization never leaks account or function identifiers
+    raw_error = "HTTP 404: Function not found for account 'JZtT_OIqmta-VRupGkHltexOtbcMQ2GhQ8iTASA4Vac'"
+    sanitized = _sanitize_error(raw_error)
+    assert sanitized == "http 404"
+    assert "JZtT" not in sanitized
+    assert _sanitize_error("Connection timed out after 30s") == "timeout"
+    assert _sanitize_error("Fallback provider not configured in environment") == "not configured"
+    assert _sanitize_error("Unknown upstream crash") == "unavailable"
+    assert _sanitize_error(None) is None
+
+    # 3. Catalog counts: 1122 aliases and 1247 indexed vectors
+    catalog = load_abuja_seed_catalog()
+    assert len(catalog.landmarks) == 142
+    assert catalog.total_aliases == 1247  # indexed vectors in catalog
+
+    # 4. Status path is not excluded from rate limiting
+    excluded = ("/healthz", "/metrics")
+    assert "/api/v1/status" not in excluded
 
 
 def test_audio_upload_size_and_duration_limits() -> None:

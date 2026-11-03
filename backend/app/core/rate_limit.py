@@ -4,7 +4,7 @@ Implements:
 - 20 inference requests per IP per hour.
 - 400 total inference requests per day globally.
 - RFC 9457 Problem Details 429 response when limits are exceeded.
-- Excludes /healthz, /api/v1/status, /metrics, and CORS OPTIONS.
+- Excludes /healthz, /metrics, and CORS OPTIONS.
 """
 
 from __future__ import annotations
@@ -88,8 +88,8 @@ async def rate_limit_middleware(request: Request, call_next: Any) -> Any:
         return await call_next(request)
 
     path = request.url.path
-    # Exclude healthz, status, metrics, and OPTIONS from rate limits
-    if request.method == "OPTIONS" or path in ("/healthz", "/api/v1/status", "/metrics"):
+    # Exclude healthz, metrics, and OPTIONS from rate limits
+    if request.method == "OPTIONS" or path in ("/healthz", "/metrics"):
         return await call_next(request)
 
     limiter = get_rate_limiter()

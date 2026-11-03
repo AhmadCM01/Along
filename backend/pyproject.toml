@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "along-backend"
 version = "1.0.0"
 description = "Along: AI-orchestrated shared corridor transit backend for Abuja, Nigeria"
-readme = "../README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

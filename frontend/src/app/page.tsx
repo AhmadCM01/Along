@@ -133,6 +133,7 @@ export default function RidePage() {
 
       {/* Footer Disclaimer */}
       <footer
+        className="ride-desktop-footer"
         style={{
           textAlign: "center",
           padding: "6px 16px 8px",
@@ -152,13 +153,17 @@ export default function RidePage() {
       <style jsx global>{`
         @media (max-width: 768px) {
           .ride-whatsapp-stage {
-            padding: 0 0 60px 0 !important;
+            padding: 0 0 56px 0 !important;
             max-width: 100% !important;
+          }
+          .ride-desktop-footer {
+            display: none !important;
           }
           .ride-whatsapp-stage .whatsapp-shell {
             border-radius: 0 !important;
             border-left: none !important;
             border-right: none !important;
+            border-bottom: none !important;
           }
         }
       `}</style>

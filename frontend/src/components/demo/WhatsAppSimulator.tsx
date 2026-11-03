@@ -243,12 +243,23 @@ export function WhatsAppSimulator({
   useEffect(() => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-      const t = setTimeout(() => {
+      const t1 = setTimeout(() => {
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTo({
+            top: chatScrollRef.current.scrollHeight,
+            behavior: "smooth",
+          });
+        }
+      }, 100);
+      const t2 = setTimeout(() => {
         if (chatScrollRef.current) {
           chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
         }
-      }, 90);
-      return () => clearTimeout(t);
+      }, 350);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
     }
   }, [messages, isRecording, isProcessing]);
 
@@ -714,11 +725,9 @@ export function WhatsAppSimulator({
                     fontSize: 14.5,
                     color: "var(--text-ink)",
                     whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
                   }}
                 >
-                  Along Transit Bot
+                  Along Bot
                 </span>
                 <span
                   style={{
@@ -760,18 +769,19 @@ export function WhatsAppSimulator({
                 color: "#0B141A",
                 border: "none",
                 borderRadius: 999,
-                padding: "7px 14px",
-                fontSize: 12.5,
+                padding: "6px 12px",
+                fontSize: 11.5,
                 fontWeight: 700,
                 cursor: isProcessing ? "not-allowed" : "pointer",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 6,
+                gap: 5,
                 boxShadow: "0 2px 8px rgba(37, 211, 102, 0.28)",
+                whiteSpace: "nowrap",
               }}
             >
               <span>{activeVoicePlayingId === "hero_sample" ? "❚❚" : "▶"}</span>
-              <span>Play Pidgin Voice</span>
+              <span>Pidgin Voice</span>
             </button>
           </div>
         </header>
@@ -782,7 +792,7 @@ export function WhatsAppSimulator({
           className="along-chat-body"
           style={{
             flex: 1,
-            padding: "16px 18px",
+            padding: "16px 16px 28px",
             overflowY: "auto",
             display: "flex",
             flexDirection: "column",
@@ -1171,8 +1181,11 @@ export function WhatsAppSimulator({
           className="whatsapp-mobile-prompts"
           style={{
             display: "none",
-            flexWrap: "wrap",
-            gap: 6,
+            flexWrap: "nowrap",
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            gap: 8,
             padding: "8px 12px",
             background: "var(--bg-surface)",
             borderTop: "1px solid var(--border-subtle)",
@@ -1185,7 +1198,8 @@ export function WhatsAppSimulator({
               onClick={() => handleTriggerScenario(scn)}
               disabled={isProcessing}
               style={{
-                padding: "5px 10px",
+                flexShrink: 0,
+                padding: "5px 12px",
                 borderRadius: 999,
                 background: "var(--bg-paper)",
                 border: "1px solid var(--border-subtle)",
@@ -1196,6 +1210,7 @@ export function WhatsAppSimulator({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 5,
+                whiteSpace: "nowrap",
               }}
             >
               <ScenarioIcon type={scn.iconType} />

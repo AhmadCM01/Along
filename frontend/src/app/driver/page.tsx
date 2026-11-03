@@ -293,8 +293,13 @@ export default function DriverPage() {
 
       await fetchActivePod();
       trip.boardPassengerByOtp(code);
+      trip.startCorridorTrip();
+      if (!demoDriveActive) {
+        setDemoStep(0);
+        setDemoDriveActive(true);
+      }
       setOtpSuccessMessage(
-        `Code ${code} verified via HMAC-SHA256. Atomic Simulated Escrow captured (90% Driver Net).`
+        `Code ${code} verified via HMAC-SHA256. Boarding complete and pod departed into live corridor transit.`
       );
       setOtpCode("");
     } catch (err: unknown) {
@@ -335,6 +340,10 @@ export default function DriverPage() {
       await dispatchPodEarly(driverId, podId);
       await fetchActivePod();
       trip.startCorridorTrip();
+      if (!demoDriveActive) {
+        setDemoStep(0);
+        setDemoDriveActive(true);
+      }
       setOtpSuccessMessage("Pod dispatched into transit!");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

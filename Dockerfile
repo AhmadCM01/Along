@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user (appuser, uid 1000) for Hugging Face Spaces
+# Create non-root user (appuser, uid 1000) for security
 RUN useradd -m -u 1000 appuser
 
 # Copy dependency definition and install packages

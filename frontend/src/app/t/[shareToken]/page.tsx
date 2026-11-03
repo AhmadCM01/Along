@@ -23,10 +23,9 @@ function resolveStage(status?: string, progressPct?: number): TripStage {
   const s = (status || "").toUpperCase();
   if (s === "COMPLETED" || s === "ARRIVED" || (typeof progressPct === "number" && progressPct >= 100)) return "completed";
   if (s === "IN_TRANSIT" || s === "IN_TRIP" || s === "EN_ROUTE") return "in trip";
-  if (s === "BOARDING" || s === "AWAITING_BOARDING" || s === "CONFIRMED" || s === "PROPOSAL") return "boarding";
-  if (s === "DRIVER_EN_ROUTE" || s === "DRIVER_ON_THE_WAY" || s === "ASSIGNED") return "driver on the way";
-  if (s === "WAITING_FOR_DRIVER" || s === "AWAITING_DRIVER" || s === "PENDING") return "waiting for a driver";
-  return "boarding";
+  if (s === "BOARDING" || s === "AWAITING_BOARDING") return "boarding";
+  if (s === "CONFIRMED" || s === "DRIVER_ON_THE_WAY" || s === "DRIVER_EN_ROUTE" || s === "ASSIGNED") return "driver on the way";
+  return "waiting for a driver";
 }
 
 const STAGE_STEPS: { stage: TripStage; label: string; shortLabel: string; desc: string }[] = [

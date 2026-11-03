@@ -32,7 +32,7 @@ def get_default_demo_trip() -> dict[str, Any]:
         "corridor": "BWR-DUT-WUS",
         "corridor_id": "BWR-DUT-WUS",
         "corridor_name": "Dutse First Gate -> Berger Roundabout Underbridge",
-        "status": "BOARDING",
+        "status": "WAITING_FOR_DRIVER",
         "pickup_anchor": "A.A. Rano Filling Station (Dutse First Gate)",
         "origin_anchor": "A.A. Rano Filling Station (Dutse First Gate)",
         "drop_off": "Berger Roundabout Underbridge",

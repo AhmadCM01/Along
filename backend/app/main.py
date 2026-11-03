@@ -85,7 +85,7 @@ def create_app() -> FastAPI:
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
-        """Fast, lightweight health check probe for load-balancers and Hugging Face Spaces."""
+        """Fast, lightweight health check probe for load balancers, Render, and uptime monitors."""
         return {
             "status": "ok",
             "version": "1.0.0",

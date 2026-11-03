@@ -614,7 +614,7 @@ export function WhatsAppSimulator({
             padding: "4px 10px 12px",
             display: "flex",
             flexDirection: "column",
-            gap: 6,
+            gap: 8,
           }}
         >
           {QUICK_SCENARIOS.map((scn) => (
@@ -632,8 +632,10 @@ export function WhatsAppSimulator({
                 cursor: isProcessing ? "not-allowed" : "pointer",
                 display: "flex",
                 flexDirection: "column",
-                gap: 4,
+                justifyContent: "flex-start",
+                gap: 6,
                 width: "100%",
+                flexShrink: 0,
                 boxSizing: "border-box",
                 transition: "all 150ms ease",
               }}
@@ -648,9 +650,6 @@ export function WhatsAppSimulator({
                     alignItems: "center",
                     gap: 6,
                     minWidth: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
                   }}
                 >
                   <ScenarioIcon type={scn.iconType} />
@@ -662,7 +661,7 @@ export function WhatsAppSimulator({
                   style={{
                     fontSize: 10,
                     fontWeight: 700,
-                    padding: "1px 6px",
+                    padding: "2px 7px",
                     borderRadius: 6,
                     background: "var(--bg-surface)",
                     color: "var(--brand-primary)",
@@ -676,11 +675,15 @@ export function WhatsAppSimulator({
               </div>
               <span
                 style={{
+                  display: "block",
+                  width: "100%",
                   fontSize: 11.5,
+                  lineHeight: 1.45,
                   color: "var(--text-muted)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
+                  overflow: "visible",
+                  boxSizing: "border-box",
                 }}
               >
                 &ldquo;{scn.subtitle}&rdquo;

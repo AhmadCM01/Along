@@ -506,16 +506,21 @@ export function AbujaCorridorMap({
   // Strict Lifecycle: Corridor moves when driver has initiated the trip (IN_TRANSIT)
   const isTripInitiated = effectiveStage === "IN_TRANSIT" || effectiveStage === "IN_TRIP";
   const isTripCompleted = effectiveStage === "COMPLETED" || effectiveStage === "ARRIVED";
+  const isStandbyOrIdle =
+    !effectiveStage ||
+    effectiveStage === "IDLE" ||
+    effectiveStage === "WAITING_FOR_DRIVER" ||
+    effectiveStage === "STANDBY";
   const hasBookingOrQuote =
-    Boolean(journeyStage) ||
-    Boolean(trip.currentQuote) ||
-    trip.journeyStage === "PROPOSAL" ||
-    trip.journeyStage === "CONFIRMED" ||
-    isTripInitiated ||
-    isTripCompleted;
+    !isStandbyOrIdle &&
+    (Boolean(trip.currentQuote) ||
+      trip.journeyStage === "PROPOSAL" ||
+      trip.journeyStage === "CONFIRMED" ||
+      isTripInitiated ||
+      isTripCompleted);
 
   // Progress along booked segment [0..1]
-  // Starts at 0.0 (at Pickup Forecourt) before trip initiation; progresses to 1.0 when IN_TRANSIT
+  // Starts at 0.0 before trip initiation; progresses to 1.0 when IN_TRANSIT
   const [segmentProgress, setSegmentProgress] = useState<number>(() => {
     if (typeof progressPct === "number") return Math.min(1, Math.max(0, progressPct / 100));
     return isTripInitiated ? 0.06 : 0.0;
@@ -527,13 +532,13 @@ export function AbujaCorridorMap({
     if (typeof progressPct === "number") {
       const p = Math.min(1, Math.max(0, progressPct / 100));
       setSegmentProgress(p);
-      const arrived = p >= 1.0 || isTripCompleted;
+      const arrived = (p >= 1.0 || isTripCompleted) && !isStandbyOrIdle;
       setHasArrived(arrived);
       if (arrived) {
         onTripCompleted?.();
       }
     }
-  }, [progressPct, isTripCompleted, onTripCompleted]);
+  }, [progressPct, isTripCompleted, isStandbyOrIdle, onTripCompleted]);
 
   // Reset or start progress when journeyStage or route changes
   useEffect(() => {

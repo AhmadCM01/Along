@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { StageTrace, ResolverScores } from "@/lib/api";
+import { StageTrace, ResolverScores, resetActivePod } from "@/lib/api";
 
 export interface PodPassenger {
   seatNumber: 1 | 2 | 3 | 4;
@@ -426,6 +426,7 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
     try {
       sessionStorage.removeItem(STORAGE_KEY);
     } catch {}
+    resetActivePod().catch(() => {});
   }, []);
 
   return (

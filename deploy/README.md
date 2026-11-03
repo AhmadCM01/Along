@@ -1,37 +1,36 @@
 # Along Deployment Guide
 
-This guide describes how to deploy the Along backend and frontend using free-tier cloud platforms for the live Meta AI Hackathon 2026 demonstration.
+This guide describes how to deploy the Along backend and frontend using Render and Vercel cloud platforms for the live Meta AI Hackathon 2026 demonstration.
 
 ## 1. Architecture Overview
 
-- **Backend**: Python FastAPI container deployed to a free Hugging Face Docker Space (port 7860).
-- **Frontend**: Next.js 15 SSR web application deployed to Vercel.
+- **Backend**: Python FastAPI container deployed as a Render Web Service (`https://along-api-i3ne.onrender.com`).
+- **Frontend**: Next.js 15 SSR web application deployed to Vercel (`https://along-dusky.vercel.app/`).
 - **Demo Mode**: The backend boots in `DEMO_MODE=true` with an in-memory double-entry ledger, preloaded Abuja seed catalog, prebuilt local FAISS vector search, and rate limiting to protect model inference credits.
+- **Always Warm Availability**: A 5-minute automated uptime ping targets `/healthz` to prevent free-tier idling and keep the service warm.
 
-## 2. Deploying Backend to Hugging Face Spaces
+## 2. Deploying Backend to Render
 
-Hugging Face Spaces offers free CPU Docker spaces running on port 7860.
+Render hosts the containerized FastAPI service.
 
-### Step 1: Create a Space
-1. Log in to [Hugging Face](https://huggingface.co/).
-2. Click **New Space**.
-3. Set Space name (e.g. `along-backend`).
-4. Select Space SDK: **Docker** (Blank).
-5. Choose Hardware: **Free CPU (2 vCPU, 16 GB RAM)**.
-6. Set Visibility: **Public**.
+### Step 1: Create a Web Service
+1. Log in to [Render](https://render.com/).
+2. Click **New** -> **Web Service**.
+3. Connect your repository (`Along AI`).
+4. Select Environment: **Docker**.
+5. Set Name: `along-api-i3ne`.
+6. Select Instance Type: **Free** (or Starter).
 
-### Step 2: Push Repository
-Clone your space repository and push the Along repository contents, or link your GitHub repository. The root `Dockerfile` will automatically build the container.
-
-### Step 3: Configure Space Secrets and Variables
-In Space Settings -> **Variables and secrets**, add the following:
+### Step 2: Configure Environment Variables
+In Render Dashboard -> **Environment**, add the following:
 
 **Variables (Plain Text)**:
 - `ENV`: `production`
 - `DEMO_MODE`: `true`
 - `SIMULATE_ESCROW`: `true`
 - `PORT`: `7860`
-- `CORS_ALLOWED_ORIGINS`: `https://along.vercel.app,http://localhost:3000,http://localhost:3001`
+- `PUBLIC_BASE_URL`: `https://along-dusky.vercel.app`
+- `CORS_ALLOWED_ORIGINS`: `https://along-dusky.vercel.app,http://localhost:3000,http://localhost:3001`
 
 **Secrets (Add your own API keys without sharing them)**:
 - `LLM_BASE_URL`: OpenAI-compatible endpoint URL (e.g. Baseten)
@@ -49,10 +48,10 @@ In Space Settings -> **Variables and secrets**, add the following:
 
 > Note: When `LLM_FALLBACK_API_KEY` is not set, the runtime fallback chain automatically runs `primary -> rule_based` using the local deterministic extractor.
 
-### Step 4: Verify Deployment
-Once built, test your space endpoint:
-- `GET https://<your-space>.hf.space/healthz` -> returns `{"status": "ok", "version": "1.0.0"}`
-- `GET https://<your-space>.hf.space/api/v1/status` -> reports live model ping and `demo_mode: true`
+### Step 3: Verify Deployment
+Once built, test your Render endpoints:
+- `GET https://along-api-i3ne.onrender.com/healthz` -> returns `{"status": "ok", "version": "1.0.0"}`
+- `GET https://along-api-i3ne.onrender.com/api/v1/status` -> reports live model ping and `demo_mode: true`
 
 ## 3. Deploying Frontend to Vercel
 
@@ -65,20 +64,20 @@ Once built, test your space endpoint:
 
 ### Step 2: Environment Variables
 Add the following environment variable in the Vercel project settings:
-- `NEXT_PUBLIC_API_URL`: Your Hugging Face Space URL (e.g. `https://<your-space>.hf.space`)
+- `NEXT_PUBLIC_API_URL`: `https://along-api-i3ne.onrender.com`
 
 ### Step 3: Deploy
-Click **Deploy**. Vercel will run `npm run build` and publish your site at `https://along.vercel.app` (or your assigned Vercel URL).
+Click **Deploy**. Vercel runs `npm run build` and publishes your site at `https://along-dusky.vercel.app/`.
 
 ## 4. Cold-Start and Operational Expectations
 
-- **Hugging Face Free Tier**: Spaces go to sleep after 48 hours of inactivity. The first visitor will experience a 30-45 second cold start while the container spins up. The frontend automatically detects this and shows: `Server is waking up (free tier cold start)...`.
+- **Uptime Monitoring**: A 5-minute external uptime ping pings `https://along-api-i3ne.onrender.com/healthz` to prevent free-tier sleep cycles and ensure zero cold starts for evaluators.
 - **Rate Limits**: The backend enforces in-memory rate limits (20 requests per IP per hour, 400 global requests per day) to prevent automated scrapers from exhausting hackathon API credits.
 - **Audio Uploads**: Audio voice notes are capped at 5 MB and 30 seconds maximum.
 
 ## 5. Live Demo Checklist for Judges
 
-1. **WhatsApp Ride Booking**: Open the home page. Type a commute request (e.g. `I am at Dutse first gate going to Berger, 2 seats`) or send the demo voice note in Pidgin, English, or Hausa.
+1. **WhatsApp Ride Booking**: Open `https://along-dusky.vercel.app/`. Type a commute request (e.g. `I am at Dutse first gate going to Berger, 2 seats`) or send the demo voice note in Pidgin, English, or Hausa.
 2. **Transparent AI Telemetry**: Open the Behind-the-Scenes drawer to inspect the exact model trace, latency, slot extraction, and hybrid FAISS scores.
 3. **Driver Companion**: Navigate to `/driver` to test 4-digit OTP boarding, 150m geofence verification, and 2G feature-phone USSD mode.
 4. **Operations Command Center**: Navigate to `/ops` to inspect the 6 active Abuja transit corridors, double-entry ledger balance, and Agbero savings proof.

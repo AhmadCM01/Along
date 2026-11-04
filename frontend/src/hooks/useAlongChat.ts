@@ -347,7 +347,8 @@ export function useAlongChat(initialPhone = "+2348031111111") {
 
       let data: DemoChatResponse | null = null;
       let lastErr: unknown = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
+      const delays = [1000, 2500, 4000, 6000];
+      for (let attempt = 0; attempt < 5; attempt++) {
         try {
           data = await sendDemoChat({
             phone,
@@ -356,8 +357,11 @@ export function useAlongChat(initialPhone = "+2348031111111") {
           break;
         } catch (err) {
           lastErr = err;
-          if (attempt < 2) {
-            await new Promise((res) => setTimeout(res, 800));
+          if (attempt === 0) {
+            setFallbackBanner("Connecting to live AI server (free tier waking up)...");
+          }
+          if (attempt < 4) {
+            await new Promise((res) => setTimeout(res, delays[attempt] || 2000));
           }
         }
       }
@@ -427,7 +431,8 @@ export function useAlongChat(initialPhone = "+2348031111111") {
         ]);
 
         let chatRes: DemoChatResponse | null = null;
-        for (let attempt = 0; attempt < 3; attempt++) {
+        const delays = [1000, 2500, 4000, 6000];
+        for (let attempt = 0; attempt < 5; attempt++) {
           try {
             chatRes = await sendDemoChat({
               phone,
@@ -435,8 +440,11 @@ export function useAlongChat(initialPhone = "+2348031111111") {
             });
             break;
           } catch {
-            if (attempt < 2) {
-              await new Promise((res) => setTimeout(res, 800));
+            if (attempt === 0) {
+              setFallbackBanner("Connecting to live AI server (free tier waking up)...");
+            }
+            if (attempt < 4) {
+              await new Promise((res) => setTimeout(res, delays[attempt] || 2000));
             }
           }
         }

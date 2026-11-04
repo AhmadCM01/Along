@@ -42,9 +42,12 @@ export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
         right: 0,
         background: "var(--bg-surface)",
         borderTop: "1px solid var(--border-subtle)",
-        padding: "8px 16px max(8px, env(safe-area-inset-bottom))",
-        justifyContent: "space-around",
-        alignItems: "center",
+        paddingTop: 8,
+        paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",
+        paddingLeft: 8,
+        paddingRight: 8,
+        justifyContent: "space-between",
+        alignItems: "stretch",
         zIndex: 50,
         boxShadow: "0 -2px 10px rgba(0,0,0,0.05)",
       }}
@@ -54,34 +57,40 @@ export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
       <Link
         href="/"
         style={{
+          flex: "1 1 0",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 3,
+          justifyContent: "center",
+          gap: 4,
+          padding: "4px 0",
           color: isRideActive ? "var(--brand-primary)" : "var(--text-muted)",
-          fontWeight: isRideActive ? 700 : 500,
-          fontSize: 11.5,
+          fontWeight: isRideActive ? 600 : 500,
+          fontSize: 11,
+          lineHeight: 1.2,
           textDecoration: "none",
+          minWidth: 0,
         }}
       >
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <PodNavIcon size={22} color={isRideActive ? "var(--brand-primary)" : "var(--text-muted)"} />
           {rideDone && !isRideActive && (
             <span
               style={{
                 position: "absolute",
-                top: -3,
+                top: -2,
                 right: -6,
                 fontSize: 10,
                 color: "var(--brand-primary)",
                 fontWeight: 700,
+                lineHeight: 1,
               }}
             >
               ✓
             </span>
           )}
         </div>
-        <span>Ride</span>
+        <span style={{ whiteSpace: "nowrap" }}>Ride</span>
       </Link>
 
       {/* 2. Driver OTP */}
@@ -89,28 +98,34 @@ export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
         <Link
           href="/driver"
           style={{
+            flex: "1 1 0",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 3,
+            justifyContent: "center",
+            gap: 4,
+            padding: "4px 0",
             color: isDriverActive ? "var(--brand-primary)" : "var(--text-muted)",
-            fontWeight: isDriverActive ? 700 : 500,
-            fontSize: 11.5,
+            fontWeight: isDriverActive ? 600 : 500,
+            fontSize: 11,
+            lineHeight: 1.2,
             textDecoration: "none",
+            minWidth: 0,
             position: "relative",
           }}
         >
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <SteeringNavIcon size={22} color={isDriverActive ? "var(--brand-primary)" : "var(--text-muted)"} />
             {driverOtpDone && !isDriverActive ? (
               <span
                 style={{
                   position: "absolute",
-                  top: -3,
+                  top: -2,
                   right: -6,
                   fontSize: 10,
                   color: "var(--brand-primary)",
                   fontWeight: 700,
+                  lineHeight: 1,
                 }}
               >
                 ✓
@@ -119,36 +134,44 @@ export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
               <span
                 style={{
                   position: "absolute",
-                  top: -2,
-                  right: -4,
-                  width: 7,
-                  height: 7,
+                  top: 0,
+                  right: 0,
+                  width: 8,
+                  height: 8,
                   borderRadius: "50%",
                   background: "var(--signal-amber)",
+                  border: "1.5px solid var(--bg-surface)",
                 }}
               />
             ) : null}
           </div>
-          <span>Driver OTP</span>
+          <span style={{ whiteSpace: "nowrap" }}>Driver OTP</span>
         </Link>
       ) : (
         <div
           aria-disabled="true"
           title="Available after you book"
           style={{
+            flex: "1 1 0",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 3,
+            justifyContent: "center",
+            gap: 4,
+            padding: "4px 0",
             color: "var(--text-muted)",
             opacity: 0.45,
-            fontSize: 11.5,
+            fontSize: 11,
+            lineHeight: 1.2,
             cursor: "not-allowed",
             pointerEvents: "none",
+            minWidth: 0,
           }}
         >
-          <SteeringNavIcon size={22} color="currentColor" />
-          <span>Driver OTP</span>
+          <div style={{ position: "relative", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <SteeringNavIcon size={22} color="currentColor" />
+          </div>
+          <span style={{ whiteSpace: "nowrap" }}>Driver OTP</span>
         </div>
       )}
 
@@ -157,53 +180,66 @@ export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
         <Link
           href={realShareToken ? `/t/${realShareToken}` : "/driver"}
           style={{
+            flex: "1 1 0",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 3,
+            justifyContent: "center",
+            gap: 4,
+            padding: "4px 0",
             color: isCorridorActive ? "var(--brand-primary)" : "var(--text-muted)",
-            fontWeight: isCorridorActive ? 700 : 500,
-            fontSize: 11.5,
+            fontWeight: isCorridorActive ? 600 : 500,
+            fontSize: 11,
+            lineHeight: 1.2,
             textDecoration: "none",
+            minWidth: 0,
           }}
         >
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <RadarNavIcon size={22} color={isCorridorActive ? "var(--brand-primary)" : "var(--text-muted)"} />
             {liveCorridorDone && !isCorridorActive && (
               <span
                 style={{
                   position: "absolute",
-                  top: -3,
+                  top: -2,
                   right: -6,
                   fontSize: 10,
                   color: "var(--brand-primary)",
                   fontWeight: 700,
+                  lineHeight: 1,
                 }}
               >
                 ✓
               </span>
             )}
           </div>
-          <span>Live corridor</span>
+          <span style={{ whiteSpace: "nowrap" }}>Live Corridor</span>
         </Link>
       ) : (
         <div
           aria-disabled="true"
           title="Available after you book"
           style={{
+            flex: "1 1 0",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 3,
+            justifyContent: "center",
+            gap: 4,
+            padding: "4px 0",
             color: "var(--text-muted)",
             opacity: 0.45,
-            fontSize: 11.5,
+            fontSize: 11,
+            lineHeight: 1.2,
             cursor: "not-allowed",
             pointerEvents: "none",
+            minWidth: 0,
           }}
         >
-          <RadarNavIcon size={22} color="currentColor" />
-          <span>Live corridor</span>
+          <div style={{ position: "relative", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <RadarNavIcon size={22} color="currentColor" />
+          </div>
+          <span style={{ whiteSpace: "nowrap" }}>Live Corridor</span>
         </div>
       )}
 

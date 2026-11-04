@@ -256,7 +256,7 @@ export async function pingBackendHealth(): Promise<HealthStatus> {
     return { status: "ok" };
   }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 3000);
+  const timer = setTimeout(() => controller.abort(), 4000);
 
   try {
     const res = await fetch(url, {
@@ -264,17 +264,17 @@ export async function pingBackendHealth(): Promise<HealthStatus> {
       headers: getHeaders(),
     });
     clearTimeout(timer);
-    if (res.status === 503) {
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
       return { status: "waking_up", message: "Server is waking up (free tier cold start)..." };
     }
     if (res.ok) {
       const data = await res.json();
       return { status: "ok", version: data.version };
     }
-    return { status: "error", message: "The live AI server is not answering." };
+    return { status: "waking_up", message: "Server is waking up (free tier cold start)..." };
   } catch {
     clearTimeout(timer);
-    return { status: "error", message: "The live AI server is not answering." };
+    return { status: "waking_up", message: "Server is waking up (free tier cold start)..." };
   }
 }
 

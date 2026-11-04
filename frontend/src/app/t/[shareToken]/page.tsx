@@ -270,20 +270,19 @@ export default function TripTrackerPage({
           gap: 16,
         }}
       >
-        {/* Title, Telemetry Header, and Prominent Share Link */}
+        {/* Title, Telemetry Header, and Aligned Share Link */}
         <section
           className="tracker-header-section"
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: 14,
+            gap: 12,
           }}
         >
-          <div style={{ flex: "1 1 280px" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>
+              <h1 style={{ fontSize: 21, fontWeight: 800, margin: 0, letterSpacing: "-0.01em" }}>
                 Live Corridor Tracker
               </h1>
               {consecutiveErrors >= 2 ? (
@@ -292,7 +291,7 @@ export default function TripTrackerPage({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 5,
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: 700,
                     color: "var(--signal-ink)",
                     background: "var(--signal-soft)",
@@ -302,8 +301,8 @@ export default function TripTrackerPage({
                 >
                   <span
                     style={{
-                      width: 7,
-                      height: 7,
+                      width: 6,
+                      height: 6,
                       borderRadius: "50%",
                       background: "var(--signal-amber)",
                     }}
@@ -316,7 +315,7 @@ export default function TripTrackerPage({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 5,
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: 700,
                     color: "var(--brand-primary)",
                     background: "var(--brand-soft)",
@@ -326,8 +325,8 @@ export default function TripTrackerPage({
                 >
                   <span
                     style={{
-                      width: 7,
-                      height: 7,
+                      width: 6,
+                      height: 6,
                       borderRadius: "50%",
                       background: "var(--brand-primary)",
                     }}
@@ -337,62 +336,50 @@ export default function TripTrackerPage({
               )}
             </div>
 
-            <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4, marginBottom: 0 }}>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4, marginBottom: 0, lineHeight: 1.35 }}>
               {tripData
                 ? `${tripData.pickup} to ${tripData.drop}`
                 : "Connecting to live telemetry..."}
             </p>
 
             {lastUpdatedText && (
-              <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 4 }}>
+              <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 3 }}>
                 Last updated: <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>{lastUpdatedText}</span>
               </div>
             )}
           </div>
 
-          {/* Prominent Copy Share Link Button & Guidance */}
-          <div
-            className="tracker-share-container"
+          {/* Share Link Button: aligned on the right with the header title */}
+          <button
+            type="button"
+            onClick={handleShareLink}
+            title={copiedLink ? "Link copied!" : "Share link with family or loved ones"}
+            aria-label="Share link"
+            className="tracker-share-btn"
             style={{
-              display: "flex",
-              flexDirection: "column",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
               gap: 6,
+              background: copiedLink ? "var(--brand-hover)" : "var(--brand-primary)",
+              color: "#FFFFFF",
+              border: "none",
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow: "var(--shadow-soft)",
+              flexShrink: 0,
+              transition: "all 0.15s ease",
             }}
           >
-            <button
-              type="button"
-              onClick={handleShareLink}
-              className="tracker-share-btn"
-              style={{
-                padding: "10px 18px",
-                borderRadius: "var(--radius-button)",
-                background: "var(--brand-primary)",
-                color: "#FFFFFF",
-                border: "none",
-                fontSize: 13.5,
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                boxShadow: "var(--shadow-soft)",
-              }}
-            >
+            {copiedLink ? (
+              <span style={{ fontSize: 14, fontWeight: 800 }}>✓</span>
+            ) : (
               <LinkChainIcon size={15} color="#FFFFFF" />
-              <span>{copiedLink ? "Link Copied ✓" : "Copy share link"}</span>
-            </button>
-            <span
-              className="tracker-share-hint"
-              style={{
-                fontSize: 11.5,
-                color: "var(--text-muted)",
-                lineHeight: 1.4,
-              }}
-            >
-              Share with family or loved ones to track your live ride in real time.
+            )}
+            <span className="tracker-share-label">
+              {copiedLink ? "Copied ✓" : "Share link"}
             </span>
-          </div>
+          </button>
         </section>
 
         {/* 5-Stage Server Indicator */}
@@ -686,35 +673,21 @@ export default function TripTrackerPage({
       <BottomTabBar activeShareToken={shareToken} />
 
       <style jsx>{`
-        @media (max-width: 640px) {
-          .tracker-header-section {
-            flex-direction: column !important;
-            align-items: stretch !important;
-            gap: 12px !important;
-          }
-          .tracker-share-container {
-            align-items: stretch !important;
-            width: 100% !important;
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-card);
-            padding: 12px 14px;
-            box-shadow: var(--shadow-soft);
-          }
-          .tracker-share-btn {
-            width: 100% !important;
-            padding: 12px 16px !important;
-            font-size: 14px !important;
-          }
-          .tracker-share-hint {
-            text-align: center !important;
-          }
+        .tracker-share-btn {
+          padding: 8px 14px;
+          border-radius: var(--radius-button);
+          font-size: 13px;
+          height: 36px;
         }
-        @media (min-width: 641px) {
-          .tracker-share-container {
-            align-items: flex-end !important;
-            max-width: 280px !important;
-            text-align: right !important;
+        @media (max-width: 600px) {
+          .tracker-share-btn {
+            width: 36px;
+            height: 36px;
+            padding: 0 !important;
+            border-radius: 50% !important;
+          }
+          .tracker-share-label {
+            display: none !important;
           }
         }
         @media (max-width: 720px) {

@@ -854,10 +854,11 @@ export function WhatsAppSimulator({
             </span>
           </div>
 
-          {/* Persistent Offline / Sample Banner with Retry Button */}
-          {(isOfflineSample ||
-            fallbackBanner === "The live AI server is not answering. You are seeing a sample response, not a live result." ||
-            messages.some((m) => (m as { isSampleOffline?: boolean }).isSampleOffline)) && (
+          {/* Offline Banner with Retry Button: Show only if user sent a message and it failed after retries, or sample message displayed */}
+          {Boolean(
+            fallbackBanner ||
+            messages.some((m) => Boolean((m as { isSampleOffline?: boolean }).isSampleOffline))
+          ) && (
             <div
               style={{
                 alignSelf: "center",
@@ -879,7 +880,11 @@ export function WhatsAppSimulator({
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span>⚠️</span>
-                <span>The live AI server is not answering. You are seeing a sample response, not a live result.</span>
+                <span>
+                  {messages.some((m) => Boolean((m as { isSampleOffline?: boolean }).isSampleOffline))
+                    ? "The live AI server is not answering. You are seeing a sample response, not a live result."
+                    : (fallbackBanner || "The live AI server is not answering. Please retry.")}
+                </span>
               </div>
               {onRetry && (
                 <button
@@ -1104,7 +1109,7 @@ export function WhatsAppSimulator({
                             {trip.driverInfo.driverName || "Musa Bello"} · {trip.driverInfo.plateNumber}
                           </div>
                           <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                            {m.quoteData.anchorName} ➔ {m.quoteData.destName}
+                            Safe pickup: <strong>{m.quoteData.anchorName}</strong> ➔ {m.quoteData.destName}
                           </div>
                         </div>
 
@@ -1135,82 +1140,99 @@ export function WhatsAppSimulator({
                         </div>
                       </div>
 
-                      {/* Working Copy Family Link Button & Demo Shortcut Driver Link */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const token = m.quoteData?.shareToken || trip.activeShareToken;
-                            if (!token) return;
-                            const base = typeof window !== "undefined" ? window.location.origin : "";
-                            const url = `${base}/t/${token}`;
-                            if (typeof navigator !== "undefined" && navigator.clipboard) {
-                              navigator.clipboard.writeText(url);
-                              setCopiedShareId(m.id);
-                              setTimeout(() => setCopiedShareId(null), 2500);
+                      {/* Three Actions in Exact Order */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+                        {/* 1. Give this code to the driver */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-ink)" }}>
+                            1. Give this code to the driver
+                          </span>
+                          <Link
+                            href={`/driver?pod=${encodeURIComponent(trip.serverSnapshot?.podId || trip.podId || "active")}&code=${encodeURIComponent(msgOtp)}`}
+                            style={{
+                              textDecoration: "none",
+                              background: "var(--brand-primary)",
+                              color: "#FFFFFF",
+                              borderRadius: 8,
+                              padding: "10px 14px",
+                              fontSize: 13,
+                              fontWeight: 700,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              textAlign: "center",
+                            }}
+                          >
+                            Open driver view (demo shortcut)
+                          </Link>
+                        </div>
+
+                        {/* 2. Share your trip with family */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-ink)" }}>
+                            2. Share your trip with family
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const token = m.quoteData?.shareToken || trip.activeShareToken || trip.shareToken;
+                              if (!token) return;
+                              const base = typeof window !== "undefined" ? window.location.origin : "";
+                              const url = `${base}/t/${token}`;
+                              if (typeof navigator !== "undefined" && navigator.clipboard) {
+                                navigator.clipboard.writeText(url);
+                                setCopiedShareId(m.id);
+                                setTimeout(() => setCopiedShareId(null), 2500);
+                              }
+                            }}
+                            style={{
+                              width: "100%",
+                              background: "var(--bg-paper)",
+                              border: "1px solid var(--border-strong)",
+                              color: "var(--text-ink)",
+                              borderRadius: 8,
+                              padding: "9px 12px",
+                              fontSize: 12.5,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <span>{copiedShareId === m.id ? "✓ Share link copied!" : "Copy share link"}</span>
+                          </button>
+                        </div>
+
+                        {/* 3. Watch the live corridor */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-ink)" }}>
+                            3. Watch the live corridor
+                          </span>
+                          <Link
+                            href={
+                              m.quoteData?.shareToken || trip.activeShareToken || trip.shareToken
+                                ? `/t/${encodeURIComponent(m.quoteData?.shareToken || trip.activeShareToken || trip.shareToken)}`
+                                : "/driver"
                             }
-                          }}
-                          style={{
-                            width: "100%",
-                            background: "var(--bg-paper)",
-                            border: "1px solid var(--border-strong)",
-                            color: "var(--text-ink)",
-                            borderRadius: 10,
-                            padding: "9px 12px",
-                            fontSize: 12.5,
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <span>{copiedShareId === m.id ? "✓ Family link copied!" : "Copy family link"}</span>
-                        </button>
-
-                        {(() => {
-                          const isUserBoarded =
-                            trip.passengers.some((p) => p.isCurrentUser && p.isBoarded) ||
-                            trip.journeyStage === "IN_TRANSIT";
-
-                          return (
-                            <Link
-                              href={`/driver?code=${encodeURIComponent(msgOtp)}`}
-                              style={{
-                                textDecoration: "none",
-                                background: isUserBoarded ? "#059669" : "var(--brand-primary)",
-                                color: "#FFFFFF",
-                                borderRadius: 10,
-                                padding: "10px 14px",
-                                fontSize: 13,
-                                fontWeight: 700,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                gap: 8,
-                                transition: "background 0.2s ease",
-                              }}
-                            >
-                              <span>
-                                {isUserBoarded
-                                  ? `✓ Boarded (${msgOtp}) · Simulated Escrow Captured`
-                                  : "Open driver view with this code"}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                  background: "rgba(255, 255, 255, 0.22)",
-                                  padding: "2px 7px",
-                                  borderRadius: 6,
-                                }}
-                              >
-                                Demo shortcut
-                              </span>
-                            </Link>
-                          );
-                        })()}
+                            style={{
+                              textDecoration: "none",
+                              background: "var(--bg-paper)",
+                              border: "1px solid var(--brand-primary)",
+                              color: "var(--brand-primary)",
+                              borderRadius: 8,
+                              padding: "9px 12px",
+                              fontSize: 12.5,
+                              fontWeight: 700,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              textAlign: "center",
+                            }}
+                          >
+                            Watch the live corridor
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   )}

@@ -3,6 +3,17 @@
  * Encapsulates all backend HTTP calls with typed interfaces and zero styling.
  */
 
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 export interface StageTrace {
   stage: string;
   provider_label: string;
@@ -38,6 +49,7 @@ export interface DemoChatResponse {
     request_code?: string | null;
     boarding_otp?: string | null;
     share_token?: string | null;
+    share_url?: string | null;
   };
   pane2_xray_and_ledger: {
     xray: {
@@ -107,13 +119,18 @@ export interface ASRResponse {
 }
 
 export interface PublicTripShareResponse {
-  share_token: string;
-  pod_code: string;
-  corridor_id: string;
-  corridor_name: string;
-  status: string;
-  origin_anchor: string;
-  destination_landmark: string;
+  stage: "WAITING_FOR_DRIVER" | "DRIVER_ON_THE_WAY" | "BOARDING" | "IN_TRANSIT" | "COMPLETED" | string;
+  stage_label: string;
+  progress: number;
+  position: { lat: number; lon: number };
+  previous_waypoint: string;
+  next_waypoint: string;
+  eta_seconds: number;
+  pickup: string;
+  drop: string;
+  seats: number;
+  boarded_count: number;
+  pod_seats_total: number;
   driver: {
     full_name: string;
     profile_note: string;
@@ -122,7 +139,18 @@ export interface PublicTripShareResponse {
     id_on_file: boolean;
     rating: number;
   };
-  telemetry: {
+  plate: string;
+  escrow_status: string;
+  sos_active: boolean;
+  server_time: number;
+  departed_at: number | null;
+  // Legacy fields for backward compatibility
+  share_token?: string;
+  pod_code?: string;
+  corridor_id?: string;
+  corridor_name?: string;
+  status?: string;
+  telemetry?: {
     lat: number;
     lng: number;
     current_landmark: string;
@@ -131,10 +159,8 @@ export interface PublicTripShareResponse {
     route_deviation_m: number;
     is_on_corridor: boolean;
   };
-  escrow_status: string;
-  sos_active: boolean;
   fare_naira?: number;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface ReplayRunItem {
@@ -181,6 +207,32 @@ export interface LiveReplayDoc {
   runs: ReplayRunItem[];
 }
 
+const SESSION_STORAGE_KEY = "along_session_id";
+
+export function getOrCreateSessionId(): string {
+  if (typeof window === "undefined") {
+    return "session-node-ssr-default-01";
+  }
+  let id = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!id || !/^[A-Za-z0-9-]{16,64}$/.test(id)) {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      id = crypto.randomUUID();
+    } else {
+      id = "session-" + Math.random().toString(36).substring(2, 12) + "-" + Date.now().toString(36);
+    }
+    localStorage.setItem(SESSION_STORAGE_KEY, id);
+  }
+  return id;
+}
+
+function getHeaders(customHeaders?: Record<string, string>): Record<string, string> {
+  const sessionId = getOrCreateSessionId();
+  return {
+    "X-Along-Session": sessionId,
+    ...(customHeaders || {}),
+  };
+}
+
 export function getApiBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
@@ -206,7 +258,10 @@ export async function pingBackendHealth(): Promise<HealthStatus> {
   const timer = setTimeout(() => controller.abort(), 3000);
 
   try {
-    const res = await fetch(url, { signal: controller.signal });
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: getHeaders(),
+    });
     clearTimeout(timer);
     if (res.status === 503) {
       return { status: "waking_up", message: "Server is waking up (free tier cold start)..." };
@@ -222,18 +277,18 @@ export async function pingBackendHealth(): Promise<HealthStatus> {
   }
 }
 
-const API_BASE_URL = getApiBaseUrl();
-
 async function parseJsonResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let detail = `Server responded with HTTP ${res.status}`;
+    let code: string | undefined = undefined;
     try {
       const errJson = await res.json();
-      detail = errJson.detail || errJson.title || errJson.message || detail;
+      detail = errJson.message || errJson.detail || errJson.title || detail;
+      code = errJson.code;
     } catch {
       // Body not json
     }
-    throw new Error(detail);
+    throw new ApiError(detail, res.status, code);
   }
   return (await res.json()) as T;
 }
@@ -248,7 +303,7 @@ export async function sendDemoChat(input: {
   const url = `${getApiBaseUrl()}/api/v1/demo/chat`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       phone: input.phone || "+2348031234567",
       message_text: input.message_text ?? null,
@@ -278,6 +333,7 @@ export async function transcribeAudio(
 
   const res = await fetch(url, {
     method: "POST",
+    headers: getHeaders(),
     body: formData,
   });
   return parseJsonResponse<ASRResponse>(res);
@@ -285,7 +341,9 @@ export async function transcribeAudio(
 
 export async function getPublicTripShare(shareToken: string): Promise<PublicTripShareResponse> {
   const url = `${getApiBaseUrl()}/api/v1/trips/share/${encodeURIComponent(shareToken)}`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: getHeaders(),
+  });
   return parseJsonResponse<PublicTripShareResponse>(res);
 }
 
@@ -295,9 +353,14 @@ export async function triggerPublicTripSos(shareToken: string): Promise<{
   pod_code: string;
   driver_plate: string;
   message: string;
+  text?: string;
+  sos_active?: boolean;
 }> {
   const url = `${getApiBaseUrl()}/api/v1/trips/share/${encodeURIComponent(shareToken)}/sos`;
-  const res = await fetch(url, { method: "POST" });
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+  });
   return parseJsonResponse(res);
 }
 
@@ -316,7 +379,7 @@ export async function updateDriverPodLocation(
   const url = `${getApiBaseUrl()}/api/v1/drivers/${encodeURIComponent(driverId)}/pods/${encodeURIComponent(podId)}/location`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(data),
   });
   return parseJsonResponse(res);
@@ -336,7 +399,7 @@ export async function updateTripLocation(
   const url = `${getApiBaseUrl()}/api/v1/trips/share/${encodeURIComponent(shareToken)}/location`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(data),
   });
   return parseJsonResponse(res);
@@ -358,7 +421,9 @@ export async function getCorridorDrivers(): Promise<{
   }>;
 }> {
   const url = `${getApiBaseUrl()}/api/v1/drivers`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: getHeaders(),
+  });
   return parseJsonResponse(res);
 }
 
@@ -370,7 +435,7 @@ export async function updateDriverStatus(
   const url = `${getApiBaseUrl()}/api/v1/drivers/${encodeURIComponent(driverId)}/status`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       status,
       corridor_id: details?.corridor_id || "BWR-DUT-WUS",
@@ -388,7 +453,7 @@ export async function verifyBoardingOtp(
   driverId: string,
   podId: string,
   otpCode: string,
-  rideRequestId = "rr-demo-01",
+  rideRequestId = "auto",
   driverLat = 9.1779,
   driverLng = 7.3736
 ): Promise<{
@@ -399,11 +464,12 @@ export async function verifyBoardingOtp(
   ride_request_id?: string;
   escrow_state?: string;
   pod_status?: string;
+  message?: string;
 }> {
   const url = `${getApiBaseUrl()}/api/v1/drivers/${encodeURIComponent(driverId)}/pods/${encodeURIComponent(podId)}/verify-otp`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       ride_request_id: rideRequestId,
       otp_code: otpCode,
@@ -417,7 +483,7 @@ export async function verifyBoardingOtp(
 export interface ActivePodPassenger {
   request_id: string;
   first_name?: string;
-  phone: string;
+  phone?: string;
   display_name: string;
   simulated?: boolean;
   origin: string;
@@ -427,7 +493,9 @@ export interface ActivePodPassenger {
   fare_naira: number;
   otp_code: string;
   is_boarded: boolean;
-  is_confirmed: boolean;
+  is_alighted?: boolean;
+  is_confirmed?: boolean;
+  status: string;
 }
 
 export interface ActivePodData {
@@ -435,17 +503,21 @@ export interface ActivePodData {
   corridor_id: string;
   driver_id: string;
   driver_name: string;
-  driver_phone: string;
+  driver_phone?: string;
   plate_number: string;
   vehicle_desc: string;
-  anchor_name: string;
-  anchor_lat: number;
-  anchor_lng: number;
-  seats_total: number;
+  anchor_name?: string;
+  anchor_lat?: number;
+  anchor_lng?: number;
+  seats_total?: number;
   seats_occupied: number;
   passengers: ActivePodPassenger[];
   status: string;
-  boarded_requests: string[];
+  stage?: string;
+  stage_label?: string;
+  progress?: number;
+  departed_at?: number | null;
+  boarded_requests?: string[];
 }
 
 export async function getActivePod(
@@ -458,7 +530,10 @@ export async function getActivePod(
   const params = new URLSearchParams({ corridor_id: corridorId });
   if (podId) params.set("pod_id", podId);
   const url = `${getApiBaseUrl()}/api/v1/drivers/active-pod?${params.toString()}`;
-  const res = await fetch(url, { method: "GET" });
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
   return parseJsonResponse(res);
 }
 
@@ -473,26 +548,33 @@ export async function resetActivePod(
   const params = new URLSearchParams({ corridor_id: corridorId });
   if (podId) params.set("pod_id", podId);
   const url = `${getApiBaseUrl()}/api/v1/drivers/active-pod/reset?${params.toString()}`;
-  const res = await fetch(url, { method: "POST" });
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+  });
   return parseJsonResponse(res);
 }
 
 export async function dispatchPodEarly(
   driverId = "DRV-001",
-  podId = "POD-842A"
+  podId = "active"
 ): Promise<{
   status: string;
   pod_id: string;
+  departed_at?: number;
   message: string;
 }> {
   const url = `${getApiBaseUrl()}/api/v1/drivers/${encodeURIComponent(driverId)}/pods/${encodeURIComponent(podId)}/dispatch`;
-  const res = await fetch(url, { method: "POST" });
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+  });
   return parseJsonResponse(res);
 }
 
 export async function fillPodCoRiders(
   driverId = "DRV-001",
-  podId = "POD-842A"
+  podId = "active"
 ): Promise<{
   status: string;
   pod_id: string;
@@ -501,7 +583,10 @@ export async function fillPodCoRiders(
   pod_status: string;
 }> {
   const url = `${getApiBaseUrl()}/api/v1/drivers/${encodeURIComponent(driverId)}/pods/${encodeURIComponent(podId)}/fill-coriders`;
-  const res = await fetch(url, { method: "POST" });
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+  });
   return parseJsonResponse(res);
 }
 
@@ -526,7 +611,9 @@ export async function getOpsOverview(): Promise<{
   sos_alerts: Array<Record<string, unknown>>;
 }> {
   const url = `${getApiBaseUrl()}/api/v1/ops/overview`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: getHeaders(),
+  });
   return parseJsonResponse(res);
 }
 
@@ -537,7 +624,9 @@ export async function getLiveReplayFile(): Promise<{
   isOfflineSample?: boolean;
 }> {
   try {
-    const backendRes = await fetch(`${getApiBaseUrl()}/api/v1/demo/replay/live`);
+    const backendRes = await fetch(`${getApiBaseUrl()}/api/v1/demo/replay/live`, {
+      headers: getHeaders(),
+    });
     if (backendRes.ok) {
       const data = await backendRes.json();
       if (data.available && data.replay) {

@@ -5,9 +5,11 @@ import { CorridorNode } from "@/components/brand/CorridorNode";
 
 export interface RideCardProps {
   step?: "ASK" | "CONFIRM" | "BOARD" | "SHARE";
-  fareNaira: number;
+  fareNaira?: number;
   boardingOtp?: string;
   shareToken?: string;
+  podId?: string;
+  anchorName?: string;
   vehicleMakeModel?: string;
   plateNumber?: string;
   onConfirmBoarding?: () => void;
@@ -16,15 +18,14 @@ export interface RideCardProps {
 }
 
 export function RideCard({
-  step = "BOARD",
   fareNaira = 1800,
   boardingOtp = "4817",
   shareToken = "tok_demo_family_123",
-  vehicleMakeModel = "Volkswagen Golf",
+  podId = "POD-842A",
+  anchorName = "A.A. Rano Filling Station (Dutse First Gate)",
+  vehicleMakeModel = "Volkswagen Golf 4",
   plateNumber = "ABJ-402-AL",
-  onConfirmBoarding,
   onTriggerSos,
-  isLoading = false,
 }: RideCardProps) {
   const [copied, setCopied] = useState(false);
   const [sosFired, setSosFired] = useState(false);
@@ -32,7 +33,13 @@ export function RideCard({
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
       const url = `${window.location.origin}/t/${shareToken}`;
-      navigator.clipboard.writeText(url);
+      if (typeof navigator !== "undefined" && navigator.share) {
+        navigator.share({ title: "Along Live Trip", url }).catch(() => {
+          navigator.clipboard.writeText(url);
+        });
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        navigator.clipboard.writeText(url);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -42,13 +49,6 @@ export function RideCard({
     setSosFired(true);
     if (onTriggerSos) onTriggerSos();
   };
-
-  const steps = [
-    { id: "ASK", label: "Ask" },
-    { id: "CONFIRM", label: "Confirm" },
-    { id: "BOARD", label: "Board" },
-    { id: "SHARE", label: "Share" },
-  ];
 
   return (
     <div
@@ -63,72 +63,7 @@ export function RideCard({
         gap: 16,
       }}
     >
-      {/* 4-Step Stepper */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingBottom: 14,
-          borderBottom: "1px solid var(--border-subtle)",
-        }}
-      >
-        {steps.map((s, idx) => {
-          const isCurrent = s.id === step;
-          const isDone = idx < steps.findIndex((x) => x.id === step);
-          return (
-            <div
-              key={s.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: 13,
-                fontWeight: isCurrent ? 700 : 500,
-                color: isCurrent
-                  ? "var(--brand-primary)"
-                  : isDone
-                  ? "var(--text-ink)"
-                  : "var(--text-faint)",
-              }}
-            >
-              {isCurrent ? (
-                <CorridorNode size={14} variant="stepper" />
-              ) : isDone ? (
-                <span style={{ color: "var(--brand-primary)" }}>✓</span>
-              ) : (
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: "var(--border-strong)",
-                    display: "inline-block",
-                  }}
-                />
-              )}
-              <span>{s.label}</span>
-              {idx < steps.length - 1 && (
-                <span style={{ color: "var(--border-strong)", margin: "0 2px" }}>›</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Escrow Badge (Amber: strictly one per screen) */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <DepartureNumeral size="sm" variant="amber">
-            Simulated escrow ₦{fareNaira.toLocaleString()}
-          </DepartureNumeral>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-            Held until forecourt OTP scan
-          </span>
-        </div>
-      </div>
-
-      {/* Vehicle Info */}
+      {/* Safe Pickup Anchor Forecourt */}
       <div
         style={{
           display: "flex",
@@ -140,17 +75,20 @@ export function RideCard({
         }}
       >
         <div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Assigned Pod</div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Safe Pickup Forecourt</div>
           <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-ink)" }}>
-            {vehicleMakeModel}
+            {anchorName}
           </div>
         </div>
-        <DepartureNumeral size="md" variant="neutral">
-          {plateNumber}
-        </DepartureNumeral>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Simulated Fare</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--brand-primary)" }}>
+            ₦{fareNaira.toLocaleString()}
+          </div>
+        </div>
       </div>
 
-      {/* Boarding Code & Actions */}
+      {/* Boarding Code */}
       <div
         style={{
           display: "flex",
@@ -164,118 +102,148 @@ export function RideCard({
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: 12, color: "var(--brand-primary)", fontWeight: 600 }}>
-              Boarding Verification Code
+            <div style={{ fontSize: 12, color: "var(--brand-primary)", fontWeight: 700 }}>
+              Boarding Code
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              Show this to driver on entry
+              Show this code to the driver upon entry
             </div>
           </div>
           <DepartureNumeral size="lg" variant="amber" ariaLabel={`Boarding code ${boardingOtp}`}>
             {boardingOtp.split("").join(" ")}
           </DepartureNumeral>
         </div>
+      </div>
 
-        {onConfirmBoarding && (
-          <button
-            onClick={onConfirmBoarding}
-            disabled={isLoading}
+      {/* Three Actions in Exact Order */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* 1. Give this code to the driver */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-ink)" }}>
+            1. Give this code to the driver
+          </span>
+          <Link
+            href={`/driver?pod=${encodeURIComponent(podId)}&code=${encodeURIComponent(boardingOtp)}`}
             style={{
-              width: "100%",
+              textDecoration: "none",
               background: "var(--brand-primary)",
-              color: "var(--brand-ink)",
+              color: "#FFFFFF",
               borderRadius: "var(--radius-button)",
-              padding: "12px 18px",
-              fontSize: 14,
+              padding: "10px 16px",
+              fontSize: 13,
               fontWeight: 700,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 8,
+              textAlign: "center",
             }}
           >
-            {isLoading ? (
-              <>
-                <CorridorNode size={16} variant="loading" />
-                <span>Checking boarding code...</span>
-              </>
-            ) : (
-              <span>I have entered (demo shortcut)</span>
-            )}
+            Open driver view (demo shortcut)
+          </Link>
+        </div>
+
+        {/* 2. Share your trip with family */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-ink)" }}>
+            2. Share your trip with family
+          </span>
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            style={{
+              width: "100%",
+              background: "var(--bg-paper)",
+              border: "1px solid var(--border-strong)",
+              color: "var(--text-ink)",
+              borderRadius: "var(--radius-button)",
+              padding: "10px 16px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {copied ? "✓ Share link copied!" : "Copy share link"}
           </button>
-        )}
+        </div>
+
+        {/* 3. Watch the live corridor */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-ink)" }}>
+            3. Watch the live corridor
+          </span>
+          <Link
+            href={`/t/${encodeURIComponent(shareToken)}`}
+            style={{
+              textDecoration: "none",
+              background: "var(--bg-paper)",
+              border: "1px solid var(--brand-primary)",
+              color: "var(--brand-primary)",
+              borderRadius: "var(--radius-button)",
+              padding: "10px 16px",
+              fontSize: 13,
+              fontWeight: 700,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+            }}
+          >
+            Watch the live corridor
+          </Link>
+        </div>
       </div>
 
-      {/* Secondary Destination Links & SOS */}
+      {/* Driver info & SOS */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           paddingTop: 8,
+          borderTop: "1px solid var(--border-subtle)",
           flexWrap: "wrap",
           gap: 8,
         }}
       >
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button
-            onClick={handleCopyLink}
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--brand-primary)",
-              minHeight: 36,
-            }}
-          >
-            {copied ? "Link copied" : "Copy family link"}
-          </button>
-
-          <Link
-            href={`/driver?code=${boardingOtp}`}
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--brand-primary)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              minHeight: 36,
-              textDecoration: "none",
-            }}
-          >
-            <span>Open driver view with this code</span>
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                background: "var(--brand-soft)",
-                color: "var(--brand-primary)",
-                padding: "2px 6px",
-                borderRadius: 4,
-              }}
-            >
-              Demo shortcut
-            </span>
-          </Link>
+        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          Demo driver profile · {plateNumber} ({vehicleMakeModel})
         </div>
-
         <button
           onClick={handleSos}
           style={{
-            minHeight: 36,
+            minHeight: 32,
             padding: "4px 10px",
             borderRadius: "var(--radius-chip)",
             background: sosFired ? "var(--danger-red)" : "transparent",
-            color: sosFired ? "var(--danger-ink)" : "var(--danger-red)",
+            color: sosFired ? "#FFFFFF" : "var(--danger-red)",
             border: "1px solid var(--danger-red)",
             fontSize: 12,
             fontWeight: 700,
+            cursor: "pointer",
           }}
           aria-label="Trigger SOS emergency"
         >
           {sosFired ? "SOS Active" : "SOS"}
         </button>
       </div>
+
+      {sosFired && (
+        <div
+          style={{
+            fontSize: 11.5,
+            color: "var(--danger-red)",
+            background: "var(--danger-soft)",
+            padding: "8px 12px",
+            borderRadius: 6,
+            lineHeight: 1.4,
+          }}
+        >
+          Demo only. This marks the trip as an emergency in this demo. It does not contact any emergency service. In a real emergency call 112.
+        </div>
+      )}
     </div>
   );
 }

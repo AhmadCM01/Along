@@ -51,9 +51,9 @@ export function HonestyTable() {
       details: "Driver and vehicle telemetry simulated along real Abuja road coordinates",
     },
     {
-      capability: "Vehicle KYC & NIN",
+      capability: "Demo driver profile",
       status: "Roadmap",
-      details: "Meta SAM 3.1 vehicle segmentation & NIN identity verification (on Roadmap; simulated in prototype)",
+      details: "Demo driver profile (on Roadmap; simulated in prototype)",
     },
     {
       capability: "WhatsApp channel",

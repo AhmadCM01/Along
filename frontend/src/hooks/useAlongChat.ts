@@ -345,19 +345,39 @@ export function useAlongChat(initialPhone = "+2348031111111") {
       setErrorMessage(null);
       startTimer();
 
+      let data: DemoChatResponse | null = null;
+      let lastErr: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          data = await sendDemoChat({
+            phone,
+            message_text: trimmed,
+          });
+          break;
+        } catch (err) {
+          lastErr = err;
+          if (attempt < 2) {
+            await new Promise((res) => setTimeout(res, 800));
+          }
+        }
+      }
+
       try {
-        const data = await sendDemoChat({
-          phone,
-          message_text: trimmed,
-        });
-        applyBotResponse(data, trimmed);
-        return data;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "The live AI server is not answering.";
-        setErrorMessage(msg);
-        setFallback(true);
-        setFallbackBanner("The live AI server is not answering. You are seeing a sample response, not a live result.");
-        return null;
+        if (data) {
+          setErrorMessage(null);
+          setFallbackBanner(null);
+          applyBotResponse(data, trimmed);
+          return data;
+        } else {
+          const hasSampleDisplayed = trip.persistedMessages.some((m) => Boolean(m.isSampleOffline));
+          const msg = hasSampleDisplayed
+            ? "The live AI server is not answering. You are seeing a sample response, not a live result."
+            : "The live AI server is not answering. Please retry.";
+          setErrorMessage(msg);
+          setFallback(true);
+          setFallbackBanner(msg);
+          return null;
+        }
       } finally {
         stopTimer();
         setIsLoading(false);
@@ -406,12 +426,34 @@ export function useAlongChat(initialPhone = "+2348031111111") {
           },
         ]);
 
-        const chatRes = await sendDemoChat({
-          phone,
-          message_text: transcript,
-        });
+        let chatRes: DemoChatResponse | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            chatRes = await sendDemoChat({
+              phone,
+              message_text: transcript,
+            });
+            break;
+          } catch {
+            if (attempt < 2) {
+              await new Promise((res) => setTimeout(res, 800));
+            }
+          }
+        }
 
-        applyBotResponse(chatRes, transcript);
+        if (chatRes) {
+          setErrorMessage(null);
+          setFallbackBanner(null);
+          applyBotResponse(chatRes, transcript);
+        } else {
+          const hasSampleDisplayed = trip.persistedMessages.some((m) => Boolean(m.isSampleOffline));
+          const msg = hasSampleDisplayed
+            ? "The live AI server is not answering. You are seeing a sample response, not a live result."
+            : "The live AI server is not answering. Please retry.";
+          setErrorMessage(msg);
+          setFallback(true);
+          setFallbackBanner(msg);
+        }
         return asrRes;
       } catch (err) {
         const msg = err instanceof Error ? err.message : "ASR speech recognition failed";

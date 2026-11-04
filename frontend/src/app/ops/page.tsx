@@ -336,7 +336,7 @@ export default function OpsPage() {
                 {ops.active_sos_count}
               </div>
               <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
-                Rapid response ready
+                Emergency telemetry standby
               </div>
             </div>
           </section>

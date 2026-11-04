@@ -13,11 +13,23 @@ export interface BottomTabBarProps {
 export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
   const pathname = usePathname();
   const trip = useAlongTrip();
-  const realShareToken = activeShareToken || trip.activeShareToken || trip.currentQuote?.shareToken;
-  const isConfirmed = trip.journeyStage === "CONFIRMED" || trip.journeyStage === "IN_TRANSIT";
-  const hasBooking = Boolean(realShareToken && (isConfirmed || pathname.startsWith("/t/")));
+  const realShareToken = activeShareToken || trip.activeShareToken || trip.currentQuote?.shareToken || "";
+  const serverStage = trip.serverSnapshot?.stage || trip.journeyStage;
+  const isBooked = Boolean(trip.currentQuote || realShareToken || (trip.serverSnapshot?.passengers && trip.serverSnapshot.passengers.length > 0));
+  const isRiderBoarded = Boolean(
+    trip.serverSnapshot?.passengers?.some((p) => (!p.simulated || p.display_name.includes("(you)")) && p.is_boarded) ||
+    serverStage === "IN_TRANSIT" ||
+    serverStage === "COMPLETED"
+  );
+  const isCompleted = serverStage === "COMPLETED";
 
-  const hasUnboardedCommuter = trip.passengers.some((p) => p.isCurrentUser && !p.isBoarded) && trip.journeyStage === "CONFIRMED";
+  const rideDone = isBooked;
+  const driverOtpDone = isRiderBoarded;
+  const liveCorridorDone = isCompleted;
+
+  const isRideActive = pathname === "/";
+  const isDriverActive = pathname === "/driver";
+  const isCorridorActive = pathname.startsWith("/t/");
 
   return (
     <nav
@@ -38,7 +50,7 @@ export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
       }}
       aria-label="Mobile Navigation"
     >
-      {/* 1. Ride (Commuter Booking) */}
+      {/* 1. Ride */}
       <Link
         href="/"
         style={{
@@ -46,87 +58,152 @@ export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
           flexDirection: "column",
           alignItems: "center",
           gap: 3,
-          color: pathname === "/" ? "var(--brand-primary)" : "var(--text-muted)",
-          fontWeight: pathname === "/" ? 700 : 500,
+          color: isRideActive ? "var(--brand-primary)" : "var(--text-muted)",
+          fontWeight: isRideActive ? 700 : 500,
           fontSize: 11.5,
           textDecoration: "none",
-        }}
-      >
-        <PodNavIcon size={22} color={pathname === "/" ? "var(--brand-primary)" : "var(--text-muted)"} />
-        <span>Ride</span>
-      </Link>
-
-      {/* 2. Driver (Manifest & Simulated Escrow) */}
-      <Link
-        href="/driver"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 3,
-          color: pathname === "/driver" ? "var(--brand-primary)" : "var(--text-muted)",
-          fontWeight: pathname === "/driver" ? 700 : 500,
-          fontSize: 11.5,
-          textDecoration: "none",
-          position: "relative",
         }}
       >
         <div style={{ position: "relative" }}>
-          <SteeringNavIcon size={22} color={pathname === "/driver" ? "var(--brand-primary)" : "var(--text-muted)"} />
-          {hasUnboardedCommuter && (
+          <PodNavIcon size={22} color={isRideActive ? "var(--brand-primary)" : "var(--text-muted)"} />
+          {rideDone && !isRideActive && (
             <span
               style={{
                 position: "absolute",
-                top: -2,
-                right: -4,
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: "var(--signal-amber)",
-                border: "1.5px solid var(--bg-surface)",
+                top: -3,
+                right: -6,
+                fontSize: 10,
+                color: "var(--brand-primary)",
+                fontWeight: 700,
               }}
-            />
+            >
+              ✓
+            </span>
           )}
         </div>
-        <span>Driver</span>
+        <span>Ride</span>
       </Link>
 
-      {/* 3. Live corridor (Tracker) */}
-      {hasBooking && realShareToken ? (
+      {/* 2. Driver OTP */}
+      {isBooked ? (
         <Link
-          href={`/t/${realShareToken}`}
+          href="/driver"
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: 3,
-            color: pathname.startsWith("/t/") ? "var(--brand-primary)" : "var(--text-muted)",
-            fontWeight: pathname.startsWith("/t/") ? 700 : 500,
+            color: isDriverActive ? "var(--brand-primary)" : "var(--text-muted)",
+            fontWeight: isDriverActive ? 700 : 500,
             fontSize: 11.5,
             textDecoration: "none",
+            position: "relative",
           }}
         >
-          <RadarNavIcon size={22} color={pathname.startsWith("/t/") ? "var(--brand-primary)" : "var(--text-muted)"} />
-          <span>Live corridor</span>
+          <div style={{ position: "relative" }}>
+            <SteeringNavIcon size={22} color={isDriverActive ? "var(--brand-primary)" : "var(--text-muted)"} />
+            {driverOtpDone && !isDriverActive ? (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -3,
+                  right: -6,
+                  fontSize: 10,
+                  color: "var(--brand-primary)",
+                  fontWeight: 700,
+                }}
+              >
+                ✓
+              </span>
+            ) : !driverOtpDone && !isDriverActive ? (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -2,
+                  right: -4,
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: "var(--signal-amber)",
+                }}
+              />
+            ) : null}
+          </div>
+          <span>Driver OTP</span>
         </Link>
       ) : (
         <div
+          aria-disabled="true"
+          title="Available after you book"
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: 3,
             color: "var(--text-muted)",
-            opacity: 0.6,
-            fontSize: 10,
-            textAlign: "center",
+            opacity: 0.45,
+            fontSize: 11.5,
             cursor: "not-allowed",
-            maxWidth: 90,
+            pointerEvents: "none",
           }}
-          title="Book a ride to get your tracking link"
         >
-          <RadarNavIcon size={18} color="currentColor" />
-          <span>Book a ride to get your tracking link</span>
+          <SteeringNavIcon size={22} color="currentColor" />
+          <span>Driver OTP</span>
+        </div>
+      )}
+
+      {/* 3. Live corridor */}
+      {isBooked ? (
+        <Link
+          href={realShareToken ? `/t/${realShareToken}` : "/driver"}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 3,
+            color: isCorridorActive ? "var(--brand-primary)" : "var(--text-muted)",
+            fontWeight: isCorridorActive ? 700 : 500,
+            fontSize: 11.5,
+            textDecoration: "none",
+          }}
+        >
+          <div style={{ position: "relative" }}>
+            <RadarNavIcon size={22} color={isCorridorActive ? "var(--brand-primary)" : "var(--text-muted)"} />
+            {liveCorridorDone && !isCorridorActive && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -3,
+                  right: -6,
+                  fontSize: 10,
+                  color: "var(--brand-primary)",
+                  fontWeight: 700,
+                }}
+              >
+                ✓
+              </span>
+            )}
+          </div>
+          <span>Live corridor</span>
+        </Link>
+      ) : (
+        <div
+          aria-disabled="true"
+          title="Available after you book"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 3,
+            color: "var(--text-muted)",
+            opacity: 0.45,
+            fontSize: 11.5,
+            cursor: "not-allowed",
+            pointerEvents: "none",
+          }}
+        >
+          <RadarNavIcon size={22} color="currentColor" />
+          <span>Live corridor</span>
         </div>
       )}
 

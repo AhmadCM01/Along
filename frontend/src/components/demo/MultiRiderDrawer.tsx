@@ -86,8 +86,8 @@ const CONVEYOR_STAGES: ConveyorStage[] = [
     id: 2,
     label: "2. Feeder Sokale",
     location: "Sokale Roundabout (Km 2.1)",
-    description: "Ibrahim boards Seat 4 for short feeder hop to Dutse Market. Pod is 100% full (4/4)!",
-    podFill: "4/4 Seats FULL (100% Load)",
+    description: "Ibrahim boards Seat 4 for short feeder hop to Dutse Market. Pod is fully boarded (4/4)!",
+    podFill: "4/4 Seats FULL (Full Load)",
     grossEscrow: 2200,
     seats: {
       seat1: {
@@ -830,7 +830,7 @@ export function MultiRiderDrawer() {
             }}
           >
             <strong style={{ color: "var(--brand-primary)" }}>Architecture Stack:</strong>{" "}
-            Topological anchor assignment powered by <strong>Meta FAISS</strong> vector lookup with character n-gram hashing and Jaro-Winkler reranking. Multilingual entity extraction via <strong>Muse Spark Open via Baseten</strong> with Llama 3.2 Vision via NVIDIA NIM fallback. Pod seat states guaranteed atomic via Redis state locks.
+            Topological anchor assignment powered by <strong>Meta FAISS</strong> vector lookup with character n-gram hashing and Jaro-Winkler reranking. Multilingual entity extraction via <strong>Muse Spark Open via Baseten</strong> with Llama 3.2 Vision via NVIDIA NIM fallback. Pod seat states managed atomically via Redis state locks.
           </div>
         </div>
       </aside>

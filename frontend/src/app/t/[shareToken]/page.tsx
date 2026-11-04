@@ -1,39 +1,25 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Header } from "@/components/navigation/Header";
 import { BottomTabBar } from "@/components/navigation/BottomTabBar";
 import { DepartureNumeral } from "@/components/ui/DepartureNumeral";
 import { AbujaCorridorMap } from "@/components/demo/AbujaCorridorMap";
 import { LinkChainIcon, SosBeaconIcon, PodNavIcon } from "@/components/icons/AlongIcons";
-import { useAlongTrip } from "@/context/AlongTripContext";
 import {
   getPublicTripShare,
   triggerPublicTripSos,
-  updateTripLocation,
   PublicTripShareResponse,
+  ApiError,
 } from "@/lib/api";
 
-type TripStage = "waiting for a driver" | "driver on the way" | "boarding" | "in trip" | "completed";
-
-const STAGE_ORDER: TripStage[] = ["waiting for a driver", "driver on the way", "boarding", "in trip", "completed"];
-
-function resolveStage(status?: string, progressPct?: number): TripStage {
-  const s = (status || "").toUpperCase();
-  if (s === "COMPLETED" || s === "ARRIVED" || (typeof progressPct === "number" && progressPct >= 100)) return "completed";
-  if (s === "IN_TRANSIT" || s === "IN_TRIP" || s === "EN_ROUTE") return "in trip";
-  if (s === "BOARDING" || s === "AWAITING_BOARDING") return "boarding";
-  if (s === "CONFIRMED" || s === "DRIVER_ON_THE_WAY" || s === "DRIVER_EN_ROUTE" || s === "ASSIGNED") return "driver on the way";
-  return "waiting for a driver";
-}
-
-const STAGE_STEPS: { stage: TripStage; label: string; shortLabel: string; desc: string }[] = [
-  { stage: "waiting for a driver", label: "Waiting for driver", shortLabel: "Waiting", desc: "Matching registered corridor driver at forecourt" },
-  { stage: "driver on the way", label: "Driver on the way", shortLabel: "On way", desc: "Driver pod is navigating to pickup forecourt" },
-  { stage: "boarding", label: "Boarding", shortLabel: "Boarding", desc: "Pod docked at safe forecourt bay, awaiting OTP check" },
-  { stage: "in trip", label: "In trip", shortLabel: "In trip", desc: "Pod en route along corridor with live GPS progression" },
-  { stage: "completed", label: "Completed", shortLabel: "Completed", desc: "Ride completed safely at designated drop off point" },
+const STAGES = [
+  { key: "WAITING_FOR_DRIVER", label: "Waiting for driver", shortLabel: "Waiting" },
+  { key: "DRIVER_ON_THE_WAY", label: "Driver on the way", shortLabel: "On way" },
+  { key: "BOARDING", label: "Boarding", shortLabel: "Boarding" },
+  { key: "IN_TRANSIT", label: "In transit", shortLabel: "In transit" },
+  { key: "COMPLETED", label: "Completed", shortLabel: "Completed" },
 ];
 
 export default function TripTrackerPage({
@@ -43,104 +29,123 @@ export default function TripTrackerPage({
 }) {
   const unwrappedParams = React.use(params);
   const shareToken = unwrappedParams.shareToken;
-  const trip = useAlongTrip();
 
   const [tripData, setTripData] = useState<PublicTripShareResponse | null>(null);
-  const [notFound, setNotFound] = useState<boolean>(false);
+  const [notFoundMessage, setNotFoundMessage] = useState<string | null>(null);
   const [initialLoading, setInitialLoading] = useState<boolean>(true);
-  const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [consecutiveErrors, setConsecutiveErrors] = useState<number>(0);
   const [sosActive, setSosActive] = useState<boolean>(false);
   const [sosLoading, setSosLoading] = useState<boolean>(false);
   const [sosFeedback, setSosFeedback] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
-  const fetchTrip = useCallback(async (isInitial = false) => {
+  const pollIntervalRef = useRef<number>(2000);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchTrip = useCallback(async () => {
     if (!shareToken) {
-      setNotFound(true);
+      setNotFoundMessage("This trip is no longer available. The demo server may have restarted. Book a new ride.");
       setInitialLoading(false);
       return;
     }
     try {
       const res = await getPublicTripShare(shareToken);
       setTripData(res);
-      setNotFound(false);
-      setSosActive(Boolean(res.sos_active));
-      const now = new Date();
-      setLastUpdated(now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-    } catch {
-      // If server does not have this token
-      if (isInitial) {
-        setNotFound(true);
-        setTripData(null);
+      setNotFoundMessage(null);
+      setConsecutiveErrors(0);
+      pollIntervalRef.current = 2000;
+      if (res.sos_active) {
+        setSosActive(true);
       }
+    } catch (err: unknown) {
+      if (err instanceof ApiError && (err.status === 404 || err.code === "TRIP_NOT_FOUND")) {
+        setNotFoundMessage(
+          err.message || "This trip is no longer available. The demo server may have restarted. Book a new ride."
+        );
+        return;
+      }
+      setConsecutiveErrors((prev) => prev + 1);
+      // Exponential backoff up to 16 seconds on network errors
+      pollIntervalRef.current = Math.min(16000, pollIntervalRef.current * 2);
     } finally {
-      if (isInitial) {
-        setInitialLoading(false);
-      }
+      setInitialLoading(false);
     }
-  }, [shareToken, trip.currentQuote, trip.activeShareToken]);
+  }, [shareToken]);
 
-  // Initial fetch and automatic polling every 2 seconds
+  // Polling loop with visibility pause and error backoff
   useEffect(() => {
-    fetchTrip(true);
-    const interval = setInterval(() => {
-      fetchTrip(false);
-    }, 2000);
-    return () => clearInterval(interval);
+    let active = true;
+
+    const scheduleNext = () => {
+      if (!active) return;
+      if (document.hidden) {
+        // Paused while hidden, wait for visibilitychange
+        return;
+      }
+      timerRef.current = setTimeout(async () => {
+        if (!active) return;
+        await fetchTrip();
+        scheduleNext();
+      }, pollIntervalRef.current);
+    };
+
+    fetchTrip().then(() => {
+      scheduleNext();
+    });
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        fetchTrip().then(() => scheduleNext());
+      } else {
+        if (timerRef.current) clearTimeout(timerRef.current);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      active = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [fetchTrip]);
 
   async function handleSosClick() {
-    if (sosLoading) return;
+    if (sosLoading || sosActive) return;
     setSosLoading(true);
     setSosFeedback(null);
     try {
       const res = await triggerPublicTripSos(shareToken);
       setSosActive(true);
-      setSosFeedback(res.message || "Operations Center and FCT Dispatch notified");
+      setSosFeedback(res.message);
     } catch {
       setSosActive(true);
-      setSosFeedback("Along Operations Command Center alerted with live GPS coordinates.");
+      setSosFeedback(
+        "Demo only. This marks the trip as an emergency in this demo. It does not contact any emergency service. In a real emergency call 112."
+      );
     } finally {
       setSosLoading(false);
     }
   }
 
-  function handleCopyShareLink() {
+  function handleShareLink() {
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
+      const url = `${window.location.origin}/t/${encodeURIComponent(shareToken)}`;
+      if (typeof navigator !== "undefined" && navigator.share) {
+        navigator.share({ title: "Along Live Trip", url }).catch(() => {
+          navigator.clipboard.writeText(url);
+        });
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        navigator.clipboard.writeText(url);
+      }
       setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
+      setTimeout(() => setCopiedLink(false), 2500);
     }
   }
 
-  const handleTripCompleted = useCallback(async () => {
-    setTripData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        status: "COMPLETED",
-        telemetry: {
-          ...prev.telemetry,
-          progress_pct: 100,
-          eta_minutes: 0,
-        },
-      };
-    });
-    try {
-      await updateTripLocation(shareToken, {
-        lat: 9.0765,
-        lng: 7.3986,
-        progress_pct: 100,
-        status: "COMPLETED",
-        eta_minutes: 0,
-      });
-    } catch {
-      // Ignore network errors in fallback update
-    }
-  }, [shareToken]);
-
-  // Handle Unknown or Expired Token screen
-  if (notFound && !tripData && !initialLoading) {
+  // Calm page for TRIP_NOT_FOUND
+  if (notFoundMessage && !tripData && !initialLoading) {
     return (
       <div
         style={{
@@ -157,9 +162,9 @@ export default function TripTrackerPage({
           style={{
             flex: 1,
             width: "100%",
-            maxWidth: 640,
+            maxWidth: 600,
             margin: "0 auto",
-            padding: "48px 20px 90px",
+            padding: "60px 20px 90px",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -170,8 +175,8 @@ export default function TripTrackerPage({
         >
           <div
             style={{
-              width: 64,
-              height: 64,
+              width: 56,
+              height: 56,
               borderRadius: "50%",
               background: "var(--signal-soft)",
               border: "1px solid var(--signal-amber)",
@@ -181,23 +186,22 @@ export default function TripTrackerPage({
               color: "var(--signal-amber)",
             }}
           >
-            <PodNavIcon size={32} color="var(--signal-amber)" />
+            <PodNavIcon size={28} color="var(--signal-amber)" />
           </div>
 
           <div>
-            <h1 style={{ fontSize: 21, fontWeight: 800, margin: "0 0 10px" }}>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 10px" }}>
               Trip Not Found
             </h1>
             <p
               style={{
-                fontSize: 14.5,
-                lineHeight: 1.6,
+                fontSize: 14,
+                lineHeight: 1.5,
                 color: "var(--text-muted)",
-                maxWidth: 480,
                 margin: "0 auto",
               }}
             >
-              This demo trip is not available. Demo data resets when the server restarts. Start a new ride.
+              {notFoundMessage}
             </p>
           </div>
 
@@ -207,18 +211,16 @@ export default function TripTrackerPage({
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
-              padding: "12px 24px",
+              padding: "10px 20px",
               borderRadius: "var(--radius-button)",
               background: "var(--brand-primary)",
               color: "#FFFFFF",
               textDecoration: "none",
-              fontSize: 14,
+              fontSize: 13.5,
               fontWeight: 700,
-              boxShadow: "var(--shadow-soft)",
             }}
           >
-            <PodNavIcon size={16} color="#FFFFFF" />
-            <span>Start a new ride</span>
+            Book a new ride
           </Link>
         </main>
 
@@ -227,15 +229,40 @@ export default function TripTrackerPage({
     );
   }
 
-  const currentStage = resolveStage(tripData?.status, tripData?.telemetry?.progress_pct);
-  const activeOrigin = tripData?.origin_anchor || "Safe Forecourt Anchor";
-  const activeDest = tripData?.destination_landmark || "Destination";
-  const driverName = tripData?.driver?.full_name || "Musa Bello";
-  const plateNumber = tripData?.driver?.plate_number || "ABJ-402-AL";
-  const vehicleDesc = tripData?.driver?.vehicle_desc || "Volkswagen Golf 4";
-  const podCode = tripData?.pod_code || "POD-842A";
-  const progressPct = tripData?.telemetry?.progress_pct ?? 0;
-  const currentLandmark = tripData?.telemetry?.current_landmark || activeOrigin;
+  const currentStage = (tripData?.stage || "WAITING_FOR_DRIVER").toUpperCase();
+  const currentStageIdx = Math.max(0, STAGES.findIndex((s) => s.key === currentStage));
+  const progressClamped = Math.min(1.0, Math.max(0.0, tripData?.progress ?? 0.0));
+  const progressPct = Math.round(progressClamped * 100);
+
+  // Formatted ETA from eta_seconds using server_time
+  const etaMinutes = tripData ? Math.floor(tripData.eta_seconds / 60) : 0;
+  const etaSeconds = tripData ? tripData.eta_seconds % 60 : 0;
+
+  // Last updated formatted strictly from server_time
+  const lastUpdatedText = tripData?.server_time
+    ? new Date(tripData.server_time * 1000).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : "";
+
+  // Dynamic context banner copy per contract
+  const renderStageCopy = () => {
+    if (currentStage === "BOARDING") {
+      return "Your driver is at the pickup point. Waiting for the driver to check your boarding code.";
+    }
+    if (currentStage === "IN_TRANSIT") {
+      return `On the way. Next stop: ${tripData?.next_waypoint || "Upcoming stop"}.`;
+    }
+    if (currentStage === "COMPLETED") {
+      return "Arrived. Trip complete.";
+    }
+    if (currentStage === "DRIVER_ON_THE_WAY") {
+      return "Driver is en route to your pickup point.";
+    }
+    return "Waiting for driver assignment.";
+  };
 
   return (
     <div
@@ -254,93 +281,133 @@ export default function TripTrackerPage({
           width: "100%",
           maxWidth: 880,
           margin: "0 auto",
-          padding: "22px 20px 90px",
+          padding: "20px 20px 90px",
           display: "flex",
           flexDirection: "column",
-          gap: 18,
+          gap: 16,
         }}
       >
-        {/* Title, Last Updated & Action Buttons */}
+        {/* Title, Telemetry Header, and Prominent Share Link */}
         <section
           style={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
+            alignItems: "flex-start",
             flexWrap: "wrap",
             gap: 12,
           }}
         >
           <div>
-            <h1 style={{ fontSize: 23, fontWeight: 800, margin: 0 }}>
-              Live Corridor Tracker
-            </h1>
-            <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2, marginBottom: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>
+                Live Corridor Tracker
+              </h1>
+              {consecutiveErrors >= 2 ? (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "var(--signal-ink)",
+                    background: "var(--signal-soft)",
+                    padding: "2px 8px",
+                    borderRadius: 12,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: "var(--signal-amber)",
+                    }}
+                  />
+                  Reconnecting...
+                </span>
+              ) : (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "var(--brand-primary)",
+                    background: "var(--brand-soft)",
+                    padding: "2px 8px",
+                    borderRadius: 12,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: "var(--brand-primary)",
+                    }}
+                  />
+                  Live
+                </span>
+              )}
+            </div>
+
+            <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4, marginBottom: 0 }}>
               {tripData
-                ? `Real-time corridor telemetry from ${activeOrigin} to ${activeDest}`
-                : "Connecting to live pod telemetry stream..."}
+                ? `${tripData.pickup} to ${tripData.drop}`
+                : "Connecting to live telemetry..."}
             </p>
-            {lastUpdated && (
+
+            {lastUpdatedText && (
               <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 4 }}>
-                Last updated: <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>{lastUpdated}</span> (auto-refreshing every 2s)
+                Last updated: <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>{lastUpdatedText}</span>
               </div>
             )}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {tripData && (
-              <button
-                type="button"
-                onClick={handleCopyShareLink}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "var(--radius-chip)",
-                  background: "var(--bg-surface)",
-                  border: "1px solid var(--border-subtle)",
-                  color: "var(--text-ink)",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <LinkChainIcon size={13} color="var(--brand-primary)" />
-                <span>{copiedLink ? "Link Copied ✓" : "Copy share link"}</span>
-              </button>
-            )}
-
-            <DepartureNumeral
-              size="sm"
-              variant={
-                sosActive
-                  ? "danger"
-                  : currentStage === "in trip" || currentStage === "completed"
-                  ? "brand"
-                  : "amber"
-              }
+          {/* Prominent Copy Share Link Button & Guidance */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            <button
+              type="button"
+              onClick={handleShareLink}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "var(--radius-button)",
+                background: "var(--brand-primary)",
+                color: "#FFFFFF",
+                border: "none",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                boxShadow: "var(--shadow-soft)",
+              }}
             >
-              {sosActive
-                ? "SOS ACTIVE"
-                : currentStage.toUpperCase()}
-            </DepartureNumeral>
+              <LinkChainIcon size={14} color="#FFFFFF" />
+              <span>{copiedLink ? "Link Copied ✓" : "Copy share link"}</span>
+            </button>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              Open this link on another phone to see the same live trip.
+            </span>
           </div>
         </section>
 
-        {/* Sleek Connected 5-Stage Journey Stepper */}
+        {/* 5-Stage Server Indicator */}
         <section
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--border-subtle)",
             borderRadius: "var(--radius-card)",
-            padding: "12px 14px",
+            padding: "14px 16px",
             boxShadow: "var(--shadow-soft)",
             display: "flex",
             flexDirection: "column",
-            gap: 10,
+            gap: 12,
           }}
         >
-          {/* Header row: title and status chip */}
           <div
             style={{
               display: "flex",
@@ -352,23 +419,12 @@ export default function TripTrackerPage({
               letterSpacing: "0.04em",
             }}
           >
-            <span>TRIP STAGE</span>
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: currentStage === "completed" ? "var(--brand-primary)" : "var(--text-ink)",
-              }}
-            >
-              {currentStage === "completed"
-                ? "Safe Arrival Confirmed"
-                : currentStage === "in trip"
-                ? `In Transit (${Math.round(progressPct)}%)`
-                : STAGE_STEPS.find((s) => s.stage === currentStage)?.label || "Active"}
+            <span>CORRIDOR LIFECYCLE</span>
+            <span style={{ color: "var(--brand-primary)", fontWeight: 700, fontSize: 12 }}>
+              {tripData?.stage_label || currentStage}
             </span>
           </div>
 
-          {/* Connected progress track */}
           <div
             style={{
               display: "flex",
@@ -378,25 +434,24 @@ export default function TripTrackerPage({
               width: "100%",
             }}
           >
-            {/* Background connecting bar */}
+            {/* Connecting line */}
             <div
               style={{
                 position: "absolute",
                 top: 11,
-                left: "8%",
-                right: "8%",
+                left: "10%",
+                right: "10%",
                 height: 2,
                 background: "var(--border-subtle)",
                 zIndex: 0,
               }}
             />
-            {/* Active filled connecting bar */}
             <div
               style={{
                 position: "absolute",
                 top: 11,
-                left: "8%",
-                width: `${Math.min(100, Math.max(0, (STAGE_ORDER.indexOf(currentStage) / 4) * 84))}%`,
+                left: "10%",
+                width: `${Math.min(100, Math.max(0, (currentStageIdx / 4) * 80))}%`,
                 height: 2,
                 background: "var(--brand-primary)",
                 zIndex: 0,
@@ -404,14 +459,13 @@ export default function TripTrackerPage({
               }}
             />
 
-            {STAGE_STEPS.map((step, idx) => {
-              const currentIdx = STAGE_ORDER.indexOf(currentStage);
-              const isPast = idx < currentIdx;
-              const isCurrent = idx === currentIdx;
+            {STAGES.map((s, idx) => {
+              const isPast = idx < currentStageIdx;
+              const isCurrent = idx === currentStageIdx;
 
               return (
                 <div
-                  key={step.stage}
+                  key={s.key}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -427,7 +481,7 @@ export default function TripTrackerPage({
                       width: 22,
                       height: 22,
                       borderRadius: "50%",
-                      fontSize: 10.5,
+                      fontSize: 11,
                       fontWeight: 800,
                       display: "inline-flex",
                       alignItems: "center",
@@ -436,7 +490,6 @@ export default function TripTrackerPage({
                       border: `1.5px solid ${isCurrent || isPast ? "var(--brand-primary)" : "var(--border-subtle)"}`,
                       color: isCurrent || isPast ? "#FFFFFF" : "var(--text-muted)",
                       boxShadow: isCurrent ? "0 0 0 3px var(--brand-soft)" : "none",
-                      transition: "all 0.2s ease",
                     }}
                   >
                     {isPast ? "✓" : idx + 1}
@@ -453,202 +506,194 @@ export default function TripTrackerPage({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {step.shortLabel}
+                    {s.shortLabel}
                   </span>
                 </div>
               );
             })}
           </div>
 
-          {/* 1-Line Contextual Status Banner */}
+          {/* Dynamic contextual copy */}
           <div
             style={{
-              fontSize: 12,
-              lineHeight: 1.35,
-              padding: "6px 10px",
+              fontSize: 12.5,
+              padding: "8px 12px",
               borderRadius: 6,
-              background:
-                currentStage === "completed" || currentStage === "in trip"
-                  ? "var(--brand-soft)"
-                  : "var(--bg-paper)",
-              color:
-                currentStage === "completed" || currentStage === "in trip"
-                  ? "var(--brand-primary)"
-                  : "var(--text-ink)",
+              background: "var(--brand-soft)",
+              color: "var(--brand-ink)",
               fontWeight: 600,
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 8,
             }}
           >
-            <span>
-              {currentStage === "completed"
-                ? `✓ Ride completed safely at ${activeDest}. Escrow released to driver.`
-                : currentStage === "in trip"
-                ? `● Pod en route along corridor: ${activeOrigin} to ${activeDest} (${Math.round(progressPct)}% complete)`
-                : currentStage === "boarding"
-                ? `● Pod docked at safe forecourt bay. Awaiting passenger 4-digit boarding OTP.`
-                : currentStage === "driver on the way"
-                ? `● Driver pod is navigating to pickup forecourt at ${activeOrigin}.`
-                : `● Matching registered corridor driver at forecourt.`}
-            </span>
+            <span>●</span>
+            <span>{renderStageCopy()}</span>
           </div>
         </section>
 
-        {/* Abuja Corridor Map with Moving Marker */}
+        {/* Corridor Map and Live Marker */}
         <section>
           <AbujaCorridorMap
-            corridorId={tripData?.corridor_id || "BWR-DUT-WUS"}
-            originName={activeOrigin}
-            destName={activeDest}
-            anchorName={activeOrigin}
-            journeyStage={tripData?.status || "BOARDING"}
+            corridorId="BWR-DUT-WUS"
+            originName={tripData?.pickup || "Pickup"}
+            destName={tripData?.drop || "Destination"}
+            anchorName={tripData?.pickup || "Pickup Anchor"}
+            journeyStage={currentStage}
             progressPct={progressPct}
-            driverMarkerLabel="Simulated driver position"
-            onTripCompleted={handleTripCompleted}
           />
         </section>
 
-        {/* 2-Column Bottom Cards: Vehicle Telemetry + Anti-One-Chance SOS */}
+        {/* Server Waypoint & ETA Strip */}
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 12,
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "var(--radius-card)",
+            padding: "14px 16px",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Previous Waypoint</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-ink)", marginTop: 2 }}>
+              {tripData?.previous_waypoint || "Origin anchor forecourt"}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Next Waypoint</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--brand-primary)", marginTop: 2 }}>
+              {tripData?.next_waypoint || "Approaching stop"}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Estimated Time Remaining</div>
+            <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "var(--font-mono)", marginTop: 2 }}>
+              {currentStage === "COMPLETED" ? "0m 0s (Arrived)" : `${etaMinutes}m ${etaSeconds}s`}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Route Progress</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "var(--brand-primary)", marginTop: 2 }}>
+              {progressPct}% ({tripData?.boarded_count ?? 0}/{tripData?.pod_seats_total ?? 4} Boarded)
+            </div>
+          </div>
+        </section>
+
+        {/* Driver Profile & Honest SOS Card */}
         <section
           className="tracker-cards-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
-            gap: 16,
+            gap: 14,
           }}
         >
-          {/* Vehicle and Pilot Card */}
+          {/* Driver Profile */}
           <div
             style={{
               background: "var(--bg-surface)",
               border: "1px solid var(--border-subtle)",
               borderRadius: "var(--radius-card)",
-              padding: "18px 20px",
-              boxShadow: "var(--shadow-soft)",
+              padding: "16px 18px",
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
-              gap: 14,
+              gap: 10,
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800 }}>
-                  {driverName}
+                <div style={{ fontSize: 15, fontWeight: 800 }}>
+                  {tripData?.driver?.full_name || "Musa Bello"}
                 </div>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>
-                  {vehicleDesc} · {podCode}
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                  {tripData?.driver?.vehicle_desc || "Volkswagen Golf 4 (Emerald Green)"}
                 </div>
-                <div style={{ fontSize: 11.5, color: "var(--brand-primary)", marginTop: 3, fontWeight: 600 }}>
-                  Registered commercial driver · Verified on file
+                <div style={{ fontSize: 11.5, color: "var(--brand-primary)", marginTop: 2, fontWeight: 600 }}>
+                  Demo driver profile
                 </div>
               </div>
-
               <DepartureNumeral size="md" variant="neutral">
-                {plateNumber}
+                {tripData?.plate || "ABJ-402-AL"}
               </DepartureNumeral>
             </div>
 
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 10,
-                paddingTop: 12,
                 borderTop: "1px solid var(--border-subtle)",
+                paddingTop: 8,
                 fontSize: 12,
+                color: "var(--text-muted)",
               }}
             >
-              <div>
-                <div style={{ color: "var(--text-muted)" }}>Current Location (Simulated)</div>
-                <strong style={{ color: "var(--text-ink)" }}>
-                  {currentLandmark}
-                </strong>
-                <div style={{ color: "var(--brand-primary)", fontWeight: 700, marginTop: 2 }}>
-                  Progress: {Math.round(progressPct)}%
-                </div>
-              </div>
-
-              <div>
-                <div style={{ color: "var(--text-muted)" }}>Simulated Escrow Protection</div>
-                <strong
-                  style={{
-                    color: "var(--brand-primary)",
-                  }}
-                >
-                  {tripData?.fare_naira ? `₦${tripData.fare_naira.toLocaleString()}` : "₦1,800"} (Locked in Simulated Escrow)
-                </strong>
-              </div>
+              Simulated Escrow: <strong style={{ color: "var(--brand-primary)" }}>{tripData?.escrow_status || "Simulated"}</strong>
             </div>
           </div>
 
-          {/* Emergency Anti-One-Chance SOS Card */}
+          {/* Honest SOS Emergency Card */}
           <div
             style={{
               background: sosActive ? "var(--danger-soft)" : "var(--bg-surface)",
               border: `1px solid ${sosActive ? "var(--danger-red)" : "var(--border-subtle)"}`,
               borderRadius: "var(--radius-card)",
-              padding: "18px 20px",
-              boxShadow: "var(--shadow-soft)",
+              padding: "16px 18px",
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
-              gap: 12,
+              gap: 10,
             }}
           >
             <div>
               <div
                 style={{
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: 800,
                   color: sosActive ? "var(--danger-red)" : "var(--text-ink)",
                   display: "flex",
                   alignItems: "center",
-                  gap: 7,
+                  gap: 6,
                 }}
               >
                 <SosBeaconIcon size={16} color="var(--danger-red)" />
-                <span>
-                  {sosActive ? "EMERGENCY SOS BROADCAST ACTIVE" : "Anti-'One-Chance' Safety Beacon"}
-                </span>
+                <span>{sosActive ? "EMERGENCY MARKED IN DEMO" : "Emergency SOS"}</span>
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 3 }}>
-                1-tap panic alert broadcasts live GPS coordinates and vehicle plate to FCT Rapid Response
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.4 }}>
+                Demo only. This marks the trip as an emergency in this demo. It does not contact any emergency service. In a real emergency call 112.
               </div>
             </div>
 
             <button
+              type="button"
               onClick={handleSosClick}
               disabled={sosLoading || sosActive}
               style={{
                 background: sosActive ? "var(--danger-red)" : "var(--danger-soft)",
-                color: sosActive ? "#fff" : "var(--danger-red)",
+                color: sosActive ? "#FFFFFF" : "var(--danger-red)",
                 border: "1px solid var(--danger-red)",
                 borderRadius: "var(--radius-button)",
-                padding: "11px 16px",
-                fontSize: 13.5,
-                fontWeight: 800,
+                padding: "8px 14px",
+                fontSize: 13,
+                fontWeight: 700,
                 cursor: sosActive ? "default" : "pointer",
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8,
+                gap: 6,
               }}
             >
-              <SosBeaconIcon size={16} color={sosActive ? "#fff" : "var(--danger-red)"} />
-              <span>{sosActive ? "SOS Broadcasted to Command Center" : "Trigger Emergency SOS"}</span>
+              <SosBeaconIcon size={14} color={sosActive ? "#FFFFFF" : "var(--danger-red)"} />
+              <span>{sosActive ? "Emergency Marked in Demo" : "Trigger Emergency SOS"}</span>
             </button>
 
             {sosFeedback && (
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--danger-red)",
-                }}
-              >
-                ✓ {sosFeedback}
+              <div style={{ fontSize: 11.5, color: "var(--danger-red)", fontWeight: 600 }}>
+                {sosFeedback}
               </div>
             )}
           </div>

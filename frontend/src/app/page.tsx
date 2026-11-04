@@ -11,14 +11,54 @@ import { pingBackendHealth } from "@/lib/api";
 export default function RidePage() {
   const chat = useAlongChat();
   const trip = useAlongTrip();
-  const [wakingUp, setWakingUp] = React.useState(false);
+  const [wakingSeconds, setWakingSeconds] = React.useState<number | null>(null);
 
   useEffect(() => {
-    pingBackendHealth().then((health) => {
-      if (health.status === "waking_up") {
-        setWakingUp(true);
+    let mounted = true;
+    const startMs = Date.now();
+    let timerId: NodeJS.Timeout | null = null;
+    let intervalId: NodeJS.Timeout | null = null;
+
+    const checkHealth = async () => {
+      const elapsed = Math.floor((Date.now() - startMs) / 1000);
+      if (elapsed > 90) {
+        if (intervalId) clearInterval(intervalId);
+        return;
       }
-    });
+      try {
+        const health = await pingBackendHealth();
+        if (!mounted) return;
+        if (health.status === "ok") {
+          setWakingSeconds(null);
+          if (intervalId) clearInterval(intervalId);
+          if (timerId) clearTimeout(timerId);
+          return;
+        }
+      } catch {
+        // Continue retrying
+      }
+
+      const realSec = Math.max(1, Math.floor((Date.now() - startMs) / 1000));
+      if (mounted) {
+        setWakingSeconds(realSec);
+      }
+    };
+
+    // If healthz takes longer than 1.5s, display neutral waking line
+    timerId = setTimeout(() => {
+      if (mounted) {
+        setWakingSeconds(Math.max(1, Math.floor((Date.now() - startMs) / 1000)));
+      }
+    }, 1500);
+
+    checkHealth();
+    intervalId = setInterval(checkHealth, 3000);
+
+    return () => {
+      mounted = false;
+      if (timerId) clearTimeout(timerId);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
   // Sync chat quote to global AlongTripContext
@@ -72,19 +112,19 @@ export default function RidePage() {
       {/* Top Journey Navigation & AI X-Ray Drawer Trigger */}
       <Header activeShareToken={shareToken} />
 
-      {wakingUp && (
+      {wakingSeconds !== null && (
         <div
           style={{
-            background: "#FEF3C7",
-            color: "#92400E",
+            background: "var(--bg-paper)",
+            color: "var(--text-muted)",
             padding: "6px 16px",
             fontSize: 12,
             textAlign: "center",
-            fontWeight: 600,
-            borderBottom: "1px solid #FCD34D",
+            fontWeight: 500,
+            borderBottom: "1px solid var(--border-subtle)",
           }}
         >
-          Server is waking up (free tier cold start)... First request may take 15-30s.
+          Waking the demo server... {wakingSeconds}s
         </div>
       )}
 

@@ -519,41 +519,26 @@ export function AbujaCorridorMap({
       isTripInitiated ||
       isTripCompleted);
 
-  // Progress along booked segment [0..1]
-  // Starts at 0.0 before trip initiation; progresses to 1.0 when IN_TRANSIT
-  const [segmentProgress, setSegmentProgress] = useState<number>(() => {
+  // Server-authoritative progress along booked segment [0..1]
+  const effectiveProgress = useMemo(() => {
     if (typeof progressPct === "number") return Math.min(1, Math.max(0, progressPct / 100));
-    return isTripInitiated ? 0.06 : 0.0;
-  });
-  const [hasArrived, setHasArrived] = useState<boolean>(isTripCompleted);
+    if (trip.serverSnapshot?.progress !== undefined) return Math.min(1, Math.max(0, trip.serverSnapshot.progress));
+    if (isTripCompleted) return 1.0;
+    return 0.0;
+  }, [progressPct, trip.serverSnapshot?.progress, isTripCompleted]);
 
-  // Sync with external progressPct if provided
-  useEffect(() => {
-    if (typeof progressPct === "number") {
-      const p = Math.min(1, Math.max(0, progressPct / 100));
-      setSegmentProgress(p);
-      const arrived = (p >= 1.0 || isTripCompleted) && !isStandbyOrIdle;
-      setHasArrived(arrived);
-      if (arrived) {
-        onTripCompleted?.();
-      }
-    }
-  }, [progressPct, isTripCompleted, isStandbyOrIdle, onTripCompleted]);
+  const [segmentProgress, setSegmentProgress] = useState<number>(effectiveProgress);
+  const [hasArrived, setHasArrived] = useState<boolean>(isTripCompleted || effectiveProgress >= 1.0);
 
-  // Reset or start progress when journeyStage or route changes
+  // Synchronize state with authoritative server progress
   useEffect(() => {
-    if (typeof progressPct === "number") return;
-    if (isTripInitiated) {
-      setHasArrived(false);
-      setSegmentProgress((prev) => (prev <= 0.02 || prev >= 0.99 ? 0.04 : prev));
-    } else if (isTripCompleted) {
-      setHasArrived(true);
-      setSegmentProgress(1.0);
-    } else {
-      setHasArrived(false);
-      setSegmentProgress(0.0);
+    setSegmentProgress(effectiveProgress);
+    const arrived = (effectiveProgress >= 1.0 || isTripCompleted) && !isStandbyOrIdle;
+    setHasArrived(arrived);
+    if (arrived) {
+      onTripCompleted?.();
     }
-  }, [isTripInitiated, isTripCompleted, currentCorridorId, trip.currentQuote?.originName, trip.currentQuote?.destName, progressPct]);
+  }, [effectiveProgress, isTripCompleted, isStandbyOrIdle, onTripCompleted]);
 
   // Identify pickup and drop-off waypoint indices dynamically from the booked route (supports both North->South and South->North)
   const { pickupIdx, dropIdx, displayAnchorName, displayDestName, shortOriginLabel, shortDestLabel } = useMemo(() => {
@@ -619,22 +604,6 @@ export function AbujaCorridorMap({
   const pickupWp = corridor.waypoints[pickupIdx];
   const dropWp = corridor.waypoints[dropIdx];
 
-  // Animate vehicle ONLY when trip is initiated (IN_TRANSIT) and until it reaches destination (1.0)
-  useEffect(() => {
-    if (typeof progressPct === "number" || !isTripInitiated || hasArrived) return;
-    const interval = setInterval(() => {
-      setSegmentProgress((prev) => {
-        const next = prev + 0.008;
-        if (next >= 1.0) {
-          setHasArrived(true);
-          onTripCompleted?.();
-          return 1.0;
-        }
-        return next;
-      });
-    }, 180);
-    return () => clearInterval(interval);
-  }, [isTripInitiated, hasArrived, progressPct, onTripCompleted]);
 
   // All 6 corridors for background Abuja transit network rendering
   const otherCorridors = useMemo(

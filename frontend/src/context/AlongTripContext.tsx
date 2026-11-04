@@ -1,7 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { StageTrace, ResolverScores, resetActivePod } from "@/lib/api";
+import {
+  StageTrace,
+  ResolverScores,
+  ActivePodPassenger,
+  getActivePod,
+  resetActivePod,
+  getOrCreateSessionId,
+  verifyBoardingOtp,
+} from "@/lib/api";
 
 export interface PodPassenger {
   seatNumber: 1 | 2 | 3 | 4;
@@ -14,6 +22,7 @@ export interface PodPassenger {
   isCurrentUser?: boolean;
   simulated?: boolean;
   seatsOccupied?: number;
+  request_id?: string;
 }
 
 export interface TripQuote {
@@ -65,9 +74,39 @@ export interface PersistedChatMessage {
   isSos?: boolean;
 }
 
-export type PodJourneyStage = "IDLE" | "PROPOSAL" | "CONFIRMED" | "IN_TRANSIT" | "COMPLETED";
+export type PodJourneyStage =
+  | "IDLE"
+  | "PROPOSAL"
+  | "CONFIRMED"
+  | "WAITING_FOR_DRIVER"
+  | "DRIVER_ON_THE_WAY"
+  | "BOARDING"
+  | "IN_TRANSIT"
+  | "COMPLETED";
+
+export interface ServerTripSnapshot {
+  podId: string;
+  stage: string;
+  stageLabel: string;
+  progress: number;
+  position: { lat: number; lon: number } | null;
+  previousWaypoint: string;
+  nextWaypoint: string;
+  etaSeconds: number;
+  boardedCount: number;
+  passengers: ActivePodPassenger[];
+  driver: DriverInfo;
+  serverTime: number;
+  departedAt: number | null;
+  sosActive: boolean;
+}
 
 interface AlongTripContextType {
+  sessionId: string;
+  shareToken: string;
+  podId: string;
+  serverSnapshot: ServerTripSnapshot | null;
+  setServerSnapshot: React.Dispatch<React.SetStateAction<ServerTripSnapshot | null>>;
   activeCorridorId: string;
   setActiveCorridorId: (id: string) => void;
   activeLocale: "en" | "pcm" | "ha";
@@ -78,11 +117,11 @@ interface AlongTripContextType {
   setJourneyStage: (stage: PodJourneyStage) => void;
   driverInfo: DriverInfo;
   passengers: PodPassenger[];
-  boardPassengerByOtp: (otp: string) => boolean;
+  boardPassengerByOtp: (otp: string) => Promise<boolean>;
   boardPassengerBySeat: (seatNumber: 1 | 2 | 3 | 4, boarded: boolean) => void;
   confirmBooking: () => void;
   startCorridorTrip: () => void;
-  resetAll: () => void;
+  resetAll: () => Promise<void>;
   activeShareToken: string;
   traces: StageTrace[];
   setTraces: (t: StageTrace[]) => void;
@@ -101,317 +140,232 @@ interface AlongTripContextType {
   setMultiRiderDrawerOpen: (open: boolean) => void;
   persistedMessages: PersistedChatMessage[];
   setPersistedMessages: React.Dispatch<React.SetStateAction<PersistedChatMessage[]>>;
+  refreshServerPod: (podIdOverride?: string) => Promise<void>;
 }
 
-const CORRIDOR_CO_RIDERS: Record<
-  string,
-  Array<{ name: string; drop: string; fare: number; otp: string }>
-> = {
-  "BWR-DUT-WUS": [
-    { name: "Rider B", drop: "Katampe Bridge (Oando)", fare: 900, otp: "8241" },
-    { name: "Rider C", drop: "Berger Underbridge", fare: 900, otp: "5190" },
-    { name: "Rider D", drop: "Wuse Market Main Gate", fare: 1200, otp: "3764" },
-  ],
-  "ZUB-KUB-WUS": [
-    { name: "Hauwa Sani", drop: "Kubwa NNPC Junction", fare: 700, otp: "6412" },
-    { name: "Tunde Bakare", drop: "Gwarinpa 3rd Avenue", fare: 900, otp: "2908" },
-    { name: "Ngozi Eze", drop: "Wuse Market", fare: 900, otp: "7531" },
-  ],
-  "ZUB-DEI-DUT": [
-    { name: "Suleiman Bello", drop: "Dei-Dei Market", fare: 500, otp: "4182" },
-    { name: "Grace Okafor", drop: "Kubwa Arab Road", fare: 700, otp: "9045" },
-    { name: "Yusuf Garba", drop: "Dutse Sokale", fare: 700, otp: "6329" },
-  ],
-  "ZUB-KRM-JAB": [
-    { name: "Fatima Aliyu", drop: "Karimo Market", fare: 600, otp: "5821" },
-    { name: "David Ojo", drop: "Life Camp Junction", fare: 700, otp: "3194" },
-    { name: "Zainab Lawal", drop: "Jabi Lake Mall", fare: 700, otp: "8470" },
-  ],
-  "GWL-LUG-AR1": [
-    { name: "Blessing Nwachukwu", drop: "Airport Junction", fare: 700, otp: "7124" },
-    { name: "Abdullahi Shehu", drop: "City Gate Abuja", fare: 900, otp: "3958" },
-    { name: "Samuel Adeyemi", drop: "Area 1 Roundabout", fare: 1000, otp: "6204" },
-  ],
-  "MRB-NYA-CEN": [
-    { name: "Ezekiel Audu", drop: "Nyanya Underbridge", fare: 500, otp: "5309" },
-    { name: "Halima Usman", drop: "AYA Asokoro", fare: 600, otp: "8146" },
-    { name: "Patience Udoh", drop: "Federal Secretariat", fare: 600, otp: "2793" },
-  ],
+const DEFAULT_DRIVER: DriverInfo = {
+  podCode: "POD-842A",
+  driverName: "Musa Bello",
+  plateNumber: "ABJ-402-AL",
+  vehicleDesc: "Volkswagen Golf 4 (Emerald Green)",
+  phoneMode: "SMARTPHONE_AND_2G_USSD",
+  ussdShortcode: "*384*247#",
 };
-
-function buildCorridorPassengers(quote: TripQuote | null, corridorId: string): PodPassenger[] {
-  if (!quote) {
-    return [];
-  }
-
-  const coRiders = CORRIDOR_CO_RIDERS[quote.corridorId || corridorId] || CORRIDOR_CO_RIDERS["BWR-DUT-WUS"];
-  const userSeats = Math.min(4, Math.max(1, quote.seats || 1));
-  const unitFareNum = parseInt((quote.unitFare || "900").replace(/[^0-9]/g, ""), 10) || 900;
-  const totalFareNum = parseInt((quote.totalFare || "1800").replace(/[^0-9]/g, ""), 10) || unitFareNum * userSeats;
-  const seatLabels = ["FRONT SEAT", "BACK LEFT", "BACK MIDDLE", "BACK RIGHT"];
-
-  const coRiderCount = Math.max(0, 4 - userSeats);
-  const list: PodPassenger[] = [];
-
-  for (let i = 0; i < coRiderCount; i++) {
-    const cr = coRiders[i % coRiders.length];
-    list.push({
-      seatNumber: (i + 1) as 1 | 2 | 3 | 4,
-      seatLabel: seatLabels[i],
-      passengerName: cr.name,
-      dropLocation: cr.drop,
-      fareNaira: unitFareNum,
-      otpCode: cr.otp,
-      // First co-rider(s) already boarded at forecourt; last co-rider if 3 co-riders can be toggled/verified
-      isBoarded: i < coRiderCount - 1 || coRiderCount === 1,
-      isCurrentUser: false,
-      simulated: true,
-      seatsOccupied: 1,
-    });
-  }
-
-  const userSeatLabel =
-    userSeats === 1
-      ? seatLabels[coRiderCount] || "BACK RIGHT"
-      : `SEATS ${coRiderCount + 1}-${4} (${userSeats} SEATS BOOKED)`;
-
-  list.push({
-    seatNumber: 4,
-    seatLabel: userSeatLabel,
-    passengerName: `You (${userSeats} ${userSeats === 1 ? "Seat" : "Seats"} via WhatsApp)`,
-    dropLocation: quote.destName,
-    fareNaira: totalFareNum,
-    otpCode: quote.otp || "4817",
-    isBoarded: false,
-    isCurrentUser: true,
-    seatsOccupied: userSeats,
-  });
-
-  return list;
-}
-
-const CORRIDOR_DRIVERS: Record<string, DriverInfo> = {
-  "BWR-DUT-WUS": {
-    podCode: "POD-842A",
-    driverName: "Musa Bello",
-    plateNumber: "ABJ-402-AL",
-    vehicleDesc: "Volkswagen Golf 4 (Emerald Green)",
-    phoneMode: "SMARTPHONE_AND_2G_USSD",
-    ussdShortcode: "*384*247#",
-  },
-  "ZUB-KUB-WUS": {
-    podCode: "POD-519K",
-    driverName: "Chukwudi Nwosu",
-    plateNumber: "ABJ-106-AL",
-    vehicleDesc: "Toyota Camry (Black)",
-    phoneMode: "SMARTPHONE_AND_2G_USSD",
-    ussdShortcode: "*384*247#",
-  },
-  "ZUB-DEI-DUT": {
-    podCode: "POD-208D",
-    driverName: "Tunde Adeyemi",
-    plateNumber: "ABJ-108-AL",
-    vehicleDesc: "Toyota Corolla (Wine Red)",
-    phoneMode: "SMARTPHONE_AND_2G_USSD",
-    ussdShortcode: "*384*247#",
-  },
-  "ZUB-KRM-JAB": {
-    podCode: "POD-612J",
-    driverName: "Bala Mohammed",
-    plateNumber: "ABJ-110-AL",
-    vehicleDesc: "Volkswagen Golf 4 (Silver)",
-    phoneMode: "SMARTPHONE_AND_2G_USSD",
-    ussdShortcode: "*384*247#",
-  },
-  "GWL-LUG-AR1": {
-    podCode: "POD-304L",
-    driverName: "Peter Okon",
-    plateNumber: "ABJ-112-AL",
-    vehicleDesc: "Toyota Corolla (Gold)",
-    phoneMode: "SMARTPHONE_AND_2G_USSD",
-    ussdShortcode: "*384*247#",
-  },
-  "MRB-NYA-CEN": {
-    podCode: "POD-721M",
-    driverName: "Kingsley Nnamdi",
-    plateNumber: "ABJ-116-AL",
-    vehicleDesc: "Toyota Corolla (Blue)",
-    phoneMode: "SMARTPHONE_AND_2G_USSD",
-    ussdShortcode: "*384*247#",
-  },
-};
-
-const DEFAULT_DRIVER: DriverInfo = CORRIDOR_DRIVERS["BWR-DUT-WUS"];
 
 const AlongTripContext = createContext<AlongTripContextType | undefined>(undefined);
 
-const STORAGE_KEY = "along_trip_session_v6";
+const STORAGE_KEY = "along_trip_session_v7";
 
 export function AlongTripProvider({ children }: { children: React.ReactNode }) {
+  const [sessionId, setSessionId] = useState<string>("");
   const [activeCorridorId, setActiveCorridorId] = useState<string>("BWR-DUT-WUS");
   const [activeLocale, setActiveLocale] = useState<"en" | "pcm" | "ha">("pcm");
   const [currentQuote, setCurrentQuote] = useState<TripQuote | null>(null);
-  const [journeyStage, setJourneyStage] = useState<PodJourneyStage>("IDLE");
-  const [driverInfo, setDriverInfo] = useState<DriverInfo>(DEFAULT_DRIVER);
-  const [passengers, setPassengers] = useState<PodPassenger[]>([]);
   const [activeShareToken, setActiveShareToken] = useState<string>("");
+  const [podId, setPodId] = useState<string>("POD-842A");
+  const [serverSnapshot, setServerSnapshot] = useState<ServerTripSnapshot | null>(null);
+
   const [traces, setTraces] = useState<StageTrace[]>([]);
   const [resolverScores, setResolverScores] = useState<any>(null);
   const [audioPlaying, setAudioPlaying] = useState<boolean>(false);
   const [aiDrawerOpen, setAiDrawerOpen] = useState<boolean>(false);
   const [multiRiderDrawerOpen, setMultiRiderDrawerOpen] = useState<boolean>(false);
   const [persistedMessages, setPersistedMessages] = useState<PersistedChatMessage[]>([]);
+  const [isBooked, setIsBooked] = useState<boolean>(false);
 
-  // Keep driver profile dynamically aligned with active corridor
+  // Initialize session ID from localStorage on mount
   useEffect(() => {
-    const cid = currentQuote?.corridorId || activeCorridorId;
-    if (cid && CORRIDOR_DRIVERS[cid]) {
-      setDriverInfo(CORRIDOR_DRIVERS[cid]);
-    }
-  }, [currentQuote?.corridorId, activeCorridorId]);
+    const sid = getOrCreateSessionId();
+    setSessionId(sid);
+  }, []);
 
-  // Restore from sessionStorage on client mount
+  // Restore cached user messages & quote
   useEffect(() => {
     try {
-      sessionStorage.removeItem("along_trip_session_v5");
       const stored = sessionStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.activeCorridorId) setActiveCorridorId(parsed.activeCorridorId);
         if (parsed.activeLocale) setActiveLocale(parsed.activeLocale);
         if (parsed.currentQuote) setCurrentQuote(parsed.currentQuote);
-        if (parsed.journeyStage) setJourneyStage(parsed.journeyStage);
-        if (Array.isArray(parsed.passengers)) setPassengers(parsed.passengers);
         if (parsed.activeShareToken) setActiveShareToken(parsed.activeShareToken);
+        if (parsed.podId) setPodId(parsed.podId);
+        if (parsed.isBooked) setIsBooked(Boolean(parsed.isBooked));
         if (Array.isArray(parsed.persistedMessages)) setPersistedMessages(parsed.persistedMessages);
-        if (Array.isArray(parsed.traces)) setTraces(parsed.traces);
-        if (parsed.resolverScores) setResolverScores(parsed.resolverScores);
       }
     } catch {}
   }, []);
 
-  // Save to sessionStorage when key fields change
+  // Save session info
   useEffect(() => {
     try {
       const payload = {
         activeCorridorId,
         activeLocale,
         currentQuote,
-        journeyStage,
-        passengers,
         activeShareToken,
+        podId,
+        isBooked,
         persistedMessages,
-        traces,
-        resolverScores,
       };
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {}
-  }, [
-    activeCorridorId,
-    activeLocale,
-    currentQuote,
-    journeyStage,
-    passengers,
-    activeShareToken,
-    persistedMessages,
-    traces,
-    resolverScores,
-  ]);
+  }, [activeCorridorId, activeLocale, currentQuote, activeShareToken, podId, isBooked, persistedMessages]);
 
-  // Synchronize dynamic corridor pod manifest whenever currentQuote changes
+  // Sync share token & corridor from quote
   useEffect(() => {
     if (currentQuote) {
-      if (currentQuote.corridorId) {
-        setActiveCorridorId(currentQuote.corridorId);
-      }
-      setPassengers((prev) => {
-        const existingUser = prev.find((p) => p.isCurrentUser);
-        const sameQuote =
-          existingUser &&
-          existingUser.otpCode === currentQuote.otp &&
-          existingUser.dropLocation === currentQuote.destName &&
-          existingUser.seatsOccupied === currentQuote.seats;
-        if (sameQuote) {
-          return prev;
-        }
-        return buildCorridorPassengers(currentQuote, currentQuote.corridorId || activeCorridorId);
-      });
       if (currentQuote.shareToken) {
         setActiveShareToken(currentQuote.shareToken);
       }
-    } else {
-      setPassengers([]);
-    }
-  }, [currentQuote, activeCorridorId]);
-
-  const confirmBooking = useCallback(() => {
-    setJourneyStage("CONFIRMED");
-  }, []);
-
-  const startCorridorTrip = useCallback(() => {
-    setJourneyStage("IN_TRANSIT");
-  }, []);
-
-  const boardPassengerByOtp = useCallback((otp: string): boolean => {
-    const cleanOtp = otp.trim();
-    let matched = false;
-    setPassengers((prev) => {
-      const updated = prev.map((p) => {
-        if (p.otpCode === cleanOtp || (p.isCurrentUser && cleanOtp === p.otpCode)) {
-          matched = true;
-          return { ...p, isBoarded: true };
-        }
-        return p;
-      });
-
-      const userSeat = updated.find((p) => p.isCurrentUser);
-      if (matched && userSeat?.isBoarded) {
-        const totalBoardedSeats = updated.reduce(
-          (acc, p) => acc + (p.isBoarded ? p.seatsOccupied || 1 : 0),
-          0
-        );
-        if (totalBoardedSeats >= 4 && updated.every((p) => p.isBoarded)) {
-          setJourneyStage("IN_TRANSIT");
-        }
+      if (currentQuote.corridorId) {
+        setActiveCorridorId(currentQuote.corridorId);
       }
-      return updated;
-    });
-    return matched;
+    }
+  }, [currentQuote]);
+
+  // Derive driver info from server snapshot or quote
+  const driverInfo: DriverInfo = serverSnapshot?.driver || {
+    ...DEFAULT_DRIVER,
+    podCode: serverSnapshot?.podId || podId,
+  };
+
+  // Derive journey stage from server snapshot (authoritative)
+  const journeyStage: PodJourneyStage = (() => {
+    if (serverSnapshot?.stage) {
+      const s = serverSnapshot.stage.toUpperCase();
+      if (s === "COMPLETED") return "COMPLETED";
+      if (s === "IN_TRANSIT") return "IN_TRANSIT";
+      if (s === "BOARDING") return "BOARDING";
+      if (s === "DRIVER_ON_THE_WAY") return "DRIVER_ON_THE_WAY";
+      if (s === "WAITING_FOR_DRIVER") return "WAITING_FOR_DRIVER";
+      return s as PodJourneyStage;
+    }
+    if (isBooked) return "CONFIRMED";
+    if (currentQuote) return "PROPOSAL";
+    return "IDLE";
+  })();
+
+  const setJourneyStage = useCallback((stage: PodJourneyStage) => {
+    if (stage === "CONFIRMED") setIsBooked(true);
+    else if (stage === "IDLE") setIsBooked(false);
   }, []);
 
-  const boardPassengerBySeat = useCallback(
-    (seatNumber: 1 | 2 | 3 | 4, boarded: boolean) => {
-      setPassengers((prev) => {
-        const updated = prev.map((p) => (p.seatNumber === seatNumber ? { ...p, isBoarded: boarded } : p));
-        const allBoarded = updated.length > 0 && updated.every((p) => p.isBoarded);
-        if (allBoarded) {
-          setJourneyStage("IN_TRANSIT");
-        } else if (!boarded && journeyStage === "IN_TRANSIT") {
-          setJourneyStage("CONFIRMED");
+  // Poll server pod state
+  const refreshServerPod = useCallback(
+    async (podIdOverride?: string) => {
+      try {
+        const targetPod = podIdOverride || podId;
+        const res = await getActivePod(activeCorridorId, targetPod !== "POD-842A" ? targetPod : undefined);
+        if (res && res.pod) {
+          const p = res.pod;
+          if (p.pod_id) setPodId(p.pod_id);
+          setServerSnapshot({
+            podId: p.pod_id,
+            stage: p.stage || p.status || "WAITING_FOR_DRIVER",
+            stageLabel: p.stage_label || p.status || "Standing by",
+            progress: p.progress ?? 0.0,
+            position: p.anchor_lat && p.anchor_lng ? { lat: p.anchor_lat, lon: p.anchor_lng } : null,
+            previousWaypoint: "",
+            nextWaypoint: "",
+            etaSeconds: 0,
+            boardedCount: p.passengers.filter((x) => x.is_boarded).reduce((acc, x) => acc + (x.seats || 1), 0),
+            passengers: p.passengers,
+            driver: {
+              podCode: p.pod_id,
+              driverName: p.driver_name || "Musa Bello",
+              plateNumber: p.plate_number || "ABJ-402-AL",
+              vehicleDesc: p.vehicle_desc || "Volkswagen Golf 4 (Emerald Green)",
+              phoneMode: "SMARTPHONE_AND_2G_USSD",
+              ussdShortcode: "*384*247#",
+            },
+            serverTime: Date.now() / 1000,
+            departedAt: p.departed_at || null,
+            sosActive: false,
+          });
         }
-        return updated;
-      });
+      } catch {
+        // Ignore network polling failure
+      }
     },
-    [journeyStage]
+    [activeCorridorId, podId]
   );
 
-  const resetAll = useCallback(() => {
+  // Derive passengers strictly from server snapshot
+  const passengers: PodPassenger[] = (serverSnapshot?.passengers || []).map((p, idx) => {
+    const seatNum = (idx + 1) as 1 | 2 | 3 | 4;
+    const isUser = !p.simulated || p.display_name.includes("(you)");
+    return {
+      seatNumber: seatNum,
+      seatLabel: `SEAT ${seatNum}`,
+      passengerName: p.display_name,
+      dropLocation: p.destination,
+      fareNaira: p.fare_naira,
+      otpCode: p.otp_code,
+      isBoarded: p.is_boarded,
+      isCurrentUser: isUser,
+      simulated: p.simulated,
+      seatsOccupied: p.seats,
+      request_id: p.request_id,
+    };
+  });
+
+  const confirmBooking = useCallback(() => {
+    setIsBooked(true);
+    refreshServerPod().catch(() => {});
+  }, [refreshServerPod]);
+
+  const startCorridorTrip = useCallback(() => {
+    // Stage advances only via server dispatch
+    refreshServerPod().catch(() => {});
+  }, [refreshServerPod]);
+
+  const boardPassengerByOtp = useCallback(
+    async (otp: string): Promise<boolean> => {
+      try {
+        const targetPod = serverSnapshot?.podId || podId;
+        const res = await verifyBoardingOtp("DRV-001", targetPod, otp.trim(), "auto");
+        await refreshServerPod();
+        return res.status === "BOARDED";
+      } catch {
+        return false;
+      }
+    },
+    [serverSnapshot?.podId, podId, refreshServerPod]
+  );
+
+  const boardPassengerBySeat = useCallback(
+    (_seatNumber: 1 | 2 | 3 | 4, _boarded: boolean) => {
+      // Direct seat toggles without server are disabled; triggers pod refresh
+      refreshServerPod().catch(() => {});
+    },
+    [refreshServerPod]
+  );
+
+  const resetAll = useCallback(async () => {
     setCurrentQuote(null);
-    setJourneyStage("IDLE");
-    setPassengers([]);
+    setIsBooked(false);
     setActiveShareToken("");
+    setServerSnapshot(null);
     setTraces([]);
     setResolverScores(null);
     setPersistedMessages([]);
     try {
       sessionStorage.removeItem(STORAGE_KEY);
     } catch {}
-    resetActivePod().catch(() => {});
-  }, []);
+    try {
+      await resetActivePod(activeCorridorId);
+    } catch {}
+  }, [activeCorridorId]);
 
   return (
     <AlongTripContext.Provider
       value={{
+        sessionId,
+        shareToken: activeShareToken,
+        podId,
+        serverSnapshot,
+        setServerSnapshot,
         activeCorridorId,
         setActiveCorridorId,
         activeLocale,
@@ -440,6 +394,7 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
         setMultiRiderDrawerOpen,
         persistedMessages,
         setPersistedMessages,
+        refreshServerPod,
       }}
     >
       {children}

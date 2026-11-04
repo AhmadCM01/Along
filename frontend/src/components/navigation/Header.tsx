@@ -54,10 +54,25 @@ export function Header({ activeShareToken }: HeaderProps) {
     } catch {}
   };
 
-  const realShareToken = activeShareToken || trip.activeShareToken || trip.currentQuote?.shareToken;
-  const isConfirmed = trip.journeyStage === "CONFIRMED" || trip.journeyStage === "IN_TRANSIT";
-  const isInTransit = trip.journeyStage === "IN_TRANSIT";
-  const hasBooking = Boolean(realShareToken && (isConfirmed || pathname.startsWith("/t/")));
+  const realShareToken = activeShareToken || trip.activeShareToken || trip.currentQuote?.shareToken || "";
+  const serverStage = trip.serverSnapshot?.stage || trip.journeyStage;
+  const isBooked = Boolean(trip.currentQuote || realShareToken || (trip.serverSnapshot?.passengers && trip.serverSnapshot.passengers.length > 0));
+  const isRiderBoarded = Boolean(
+    trip.serverSnapshot?.passengers?.some((p) => (!p.simulated || p.display_name.includes("(you)")) && p.is_boarded) ||
+    serverStage === "IN_TRANSIT" ||
+    serverStage === "COMPLETED"
+  );
+  const isInTransit = serverStage === "IN_TRANSIT";
+  const isCompleted = serverStage === "COMPLETED";
+
+  const rideDone = isBooked;
+  const driverOtpDone = isRiderBoarded;
+  const liveCorridorActive = isInTransit;
+  const liveCorridorDone = isCompleted;
+
+  const isRideActive = pathname === "/";
+  const isDriverActive = pathname === "/driver";
+  const isCorridorActive = pathname.startsWith("/t/");
 
   return (
     <>
@@ -113,9 +128,9 @@ export function Header({ activeShareToken }: HeaderProps) {
                 padding: "6px 14px",
                 borderRadius: "var(--radius-chip)",
                 fontSize: 13,
-                fontWeight: pathname === "/" ? 700 : 600,
-                background: pathname === "/" ? "var(--brand-primary)" : "transparent",
-                color: pathname === "/" ? "#FFFFFF" : "var(--text-muted)",
+                fontWeight: isRideActive ? 700 : 600,
+                background: isRideActive ? "var(--brand-primary)" : "transparent",
+                color: isRideActive ? "#FFFFFF" : "var(--text-muted)",
                 transition: "all 150ms ease",
                 textDecoration: "none",
                 display: "inline-flex",
@@ -123,58 +138,24 @@ export function Header({ activeShareToken }: HeaderProps) {
                 gap: 6,
               }}
             >
-              <PodNavIcon size={15} color={pathname === "/" ? "#FFFFFF" : "currentColor"} />
+              <PodNavIcon size={15} color={isRideActive ? "#FFFFFF" : "currentColor"} />
               <span>Ride</span>
-              {isConfirmed && pathname !== "/" && (
+              {rideDone && !isRideActive && (
                 <span style={{ fontSize: 11, color: "var(--brand-primary)" }}>✓</span>
               )}
             </Link>
 
             {/* 2. Driver OTP */}
-            <Link
-              href="/driver"
-              style={{
-                padding: "6px 14px",
-                borderRadius: "var(--radius-chip)",
-                fontSize: 13,
-                fontWeight: pathname === "/driver" ? 700 : 600,
-                background: pathname === "/driver" ? "var(--brand-primary)" : "transparent",
-                color: pathname === "/driver" ? "#FFFFFF" : "var(--text-muted)",
-                transition: "all 150ms ease",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <SteeringNavIcon size={15} color={pathname === "/driver" ? "#FFFFFF" : "currentColor"} />
-              <span>Driver OTP</span>
-              {trip.journeyStage === "CONFIRMED" && pathname !== "/driver" && (
-                <span
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: "var(--signal-amber)",
-                  }}
-                />
-              )}
-              {isInTransit && pathname !== "/driver" && (
-                <span style={{ fontSize: 11, color: "var(--brand-primary)" }}>✓</span>
-              )}
-            </Link>
-
-            {/* 3. Live corridor */}
-            {hasBooking && realShareToken ? (
+            {isBooked ? (
               <Link
-                href={`/t/${realShareToken}`}
+                href="/driver"
                 style={{
                   padding: "6px 14px",
                   borderRadius: "var(--radius-chip)",
                   fontSize: 13,
-                  fontWeight: pathname.startsWith("/t/") ? 700 : 600,
-                  background: pathname.startsWith("/t/") ? "var(--brand-primary)" : "transparent",
-                  color: pathname.startsWith("/t/") ? "#FFFFFF" : "var(--text-muted)",
+                  fontWeight: isDriverActive ? 700 : 600,
+                  background: isDriverActive ? "var(--brand-primary)" : "transparent",
+                  color: isDriverActive ? "#FFFFFF" : "var(--text-muted)",
                   transition: "all 150ms ease",
                   textDecoration: "none",
                   display: "inline-flex",
@@ -182,9 +163,59 @@ export function Header({ activeShareToken }: HeaderProps) {
                   gap: 6,
                 }}
               >
-                <RadarNavIcon size={15} color={pathname.startsWith("/t/") ? "#FFFFFF" : "currentColor"} />
+                <SteeringNavIcon size={15} color={isDriverActive ? "#FFFFFF" : "currentColor"} />
+                <span>Driver OTP</span>
+                {driverOtpDone && !isDriverActive && (
+                  <span style={{ fontSize: 11, color: "var(--brand-primary)" }}>✓</span>
+                )}
+              </Link>
+            ) : (
+              <span
+                aria-disabled="true"
+                title="Available after you book"
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "var(--radius-chip)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "var(--text-muted)",
+                  opacity: 0.45,
+                  cursor: "not-allowed",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  pointerEvents: "none",
+                }}
+              >
+                <SteeringNavIcon size={15} color="currentColor" />
+                <span>Driver OTP</span>
+              </span>
+            )}
+
+            {/* 3. Live corridor */}
+            {isBooked ? (
+              <Link
+                href={realShareToken ? `/t/${realShareToken}` : "/driver"}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "var(--radius-chip)",
+                  fontSize: 13,
+                  fontWeight: isCorridorActive ? 700 : 600,
+                  background: isCorridorActive ? "var(--brand-primary)" : "transparent",
+                  color: isCorridorActive ? "#FFFFFF" : "var(--text-muted)",
+                  transition: "all 150ms ease",
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <RadarNavIcon size={15} color={isCorridorActive ? "#FFFFFF" : "currentColor"} />
                 <span>Live corridor</span>
-                {isInTransit && !pathname.startsWith("/t/") && (
+                {liveCorridorDone && !isCorridorActive && (
+                  <span style={{ fontSize: 11, color: "var(--brand-primary)" }}>✓</span>
+                )}
+                {liveCorridorActive && !liveCorridorDone && !isCorridorActive && (
                   <span
                     style={{
                       width: 7,
@@ -197,23 +228,36 @@ export function Header({ activeShareToken }: HeaderProps) {
               </Link>
             ) : (
               <span
+                aria-disabled="true"
+                title="Available after you book"
                 style={{
                   padding: "6px 14px",
                   borderRadius: "var(--radius-chip)",
-                  fontSize: 12,
+                  fontSize: 13,
+                  fontWeight: 500,
                   color: "var(--text-muted)",
-                  opacity: 0.7,
+                  opacity: 0.45,
                   cursor: "not-allowed",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 6,
+                  pointerEvents: "none",
                 }}
-                title="Book a ride to get your tracking link"
               >
                 <RadarNavIcon size={15} color="currentColor" />
-                <span>Book a ride to get your tracking link</span>
+                <span>Live corridor</span>
               </span>
             )}
+
+            {/* Visual separator separating Stepper from Multi-rider lab and AI X-ray */}
+            <div
+              style={{
+                width: 1,
+                height: 18,
+                background: "var(--border-subtle)",
+                margin: "0 4px",
+              }}
+            />
 
             {/* 4. Multi-rider lab */}
             <button

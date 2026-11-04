@@ -28,7 +28,7 @@ export interface CorridorDefinition {
 export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
   "BWR-DUT-WUS": {
     id: "BWR-DUT-WUS",
-    name: "Bwari to Wuse",
+    name: "Bwari - Dutse - Oando - Berger - Wuse / Central Area",
     highway: "Bwari-Dutse-Murtala Mohammed Expwy (ONEX)",
     unitFare: "₦900",
     waypoints: [
@@ -113,7 +113,7 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
   },
   "ZUB-KUB-WUS": {
     id: "ZUB-KUB-WUS",
-    name: "Zuba to Wuse",
+    name: "Zuba - Dei-Dei - Kubwa - Gwarinpa - Oando - Berger - Wuse / Central Area",
     highway: "Kubwa Expressway (Murtala Mohammed Way)",
     unitFare: "₦900",
     waypoints: [
@@ -187,7 +187,7 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
   },
   "ZUB-DEI-DUT": {
     id: "ZUB-DEI-DUT",
-    name: "Zuba to Dutse",
+    name: "Zuba - Dei-Dei - Kubwa - Dutse - Sokale - Bwari Connector",
     highway: "Outer Northern Expressway -> Dutse Arterial",
     unitFare: "₦700",
     waypoints: [
@@ -250,7 +250,7 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
   },
   "ZUB-KRM-JAB": {
     id: "ZUB-KRM-JAB",
-    name: "Zuba to Jabi",
+    name: "Zuba - Dei-Dei - Gwagwa - Karmo - Jabi - Utako - Wuse",
     highway: "Karimo-Life Camp Arterial",
     unitFare: "₦700",
     waypoints: [
@@ -313,7 +313,7 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
   },
   "GWL-LUG-AR1": {
     id: "GWL-LUG-AR1",
-    name: "Gwagwalada to Area 1",
+    name: "Gwagwalada - Airport Rd - Lugbe - Area 1 - Central Area",
     highway: "Umaru Musa Yar'Adua Airport Expressway",
     unitFare: "₦1,000",
     waypoints: [
@@ -376,7 +376,7 @@ export const CORRIDOR_DATA: Record<string, CorridorDefinition> = {
   },
   "MRB-NYA-CEN": {
     id: "MRB-NYA-CEN",
-    name: "Mararaba to Central",
+    name: "Mararaba - Nyanya - Kugbo - AYA - Central Area - Wuse",
     highway: "Abuja-Keffi Expressway",
     unitFare: "₦600",
     waypoints: [

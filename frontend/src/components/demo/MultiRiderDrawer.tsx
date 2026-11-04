@@ -830,7 +830,7 @@ export function MultiRiderDrawer() {
             }}
           >
             <strong style={{ color: "var(--brand-primary)" }}>Architecture Stack:</strong>{" "}
-            Topological anchor assignment powered by <strong>Meta FAISS</strong> vector lookup with character n-gram hashing and Jaro-Winkler reranking. Multi-lingual entity extraction via <strong>Meta Muse Spark</strong> with Llama fallback. Pod seat states guaranteed atomic via Redis state locks.
+            Topological anchor assignment powered by <strong>Meta FAISS</strong> vector lookup with character n-gram hashing and Jaro-Winkler reranking. Multilingual entity extraction via <strong>Muse Spark Open via Baseten</strong> with Llama 3.2 Vision via NVIDIA NIM fallback. Pod seat states guaranteed atomic via Redis state locks.
           </div>
         </div>
       </aside>

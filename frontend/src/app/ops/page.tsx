@@ -15,6 +15,7 @@ interface OpsData {
     fare_zones: number;
     private_filling_station_anchors: number;
     indexed_landmarks: number;
+    indexed_vectors?: number;
     seeded_drivers: number;
     live_online_drivers: number;
   };
@@ -48,6 +49,7 @@ const FALLBACK_OPS_DATA: OpsData = {
     fare_zones: 18,
     private_filling_station_anchors: 24,
     indexed_landmarks: 142,
+    indexed_vectors: 1247,
     seeded_drivers: 6,
     live_online_drivers: 6,
   },
@@ -102,7 +104,7 @@ const FALLBACK_DRIVERS: DriverRow[] = [
     full_name: "Abdullahi Garba",
     phone_e164: "+2348031112204",
     phone_mode: "FEATURE_USSD",
-    corridor_id: "ZUB-GWZ-JAB",
+    corridor_id: "ZUB-KRM-JAB",
     vehicle_make_model: "Peugeot 406",
     vehicle_color: "Ash",
     plate_number: "ABC-904-FM",
@@ -114,7 +116,7 @@ const FALLBACK_DRIVERS: DriverRow[] = [
     full_name: "Sunday Eze",
     phone_e164: "+2348031112205",
     phone_mode: "SMARTPHONE",
-    corridor_id: "GWA-LUG-AR1",
+    corridor_id: "GWL-LUG-AR1",
     vehicle_make_model: "Toyota Camry",
     vehicle_color: "Black",
     plate_number: "GWA-228-TR",
@@ -126,7 +128,7 @@ const FALLBACK_DRIVERS: DriverRow[] = [
     full_name: "Yakubu Mohammed",
     phone_e164: "+2348031112206",
     phone_mode: "SMARTPHONE",
-    corridor_id: "MAR-NYA-CBD",
+    corridor_id: "MRB-NYA-CEN",
     vehicle_make_model: "Volkswagen Golf 4",
     vehicle_color: "Green",
     plate_number: "RSH-741-NG",
@@ -139,31 +141,32 @@ export default function OpsPage() {
   const [ops, setOps] = useState<OpsData | null>(FALLBACK_OPS_DATA);
   const [drivers, setDrivers] = useState<DriverRow[]>(FALLBACK_DRIVERS);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
 
-  useEffect(() => {
-    let cancelled = false;
-
+  const fetchData = React.useCallback(() => {
+    setLoading(true);
+    setError(null);
     Promise.all([getOpsOverview(), getCorridorDrivers()])
       .then(([opsRes, driversRes]) => {
-        if (!cancelled) {
-          setOps(opsRes as OpsData);
-          if (driversRes.drivers && driversRes.drivers.length > 0) {
-            setDrivers(driversRes.drivers);
-          }
+        setOps(opsRes as OpsData);
+        if (driversRes.drivers && driversRes.drivers.length > 0) {
+          setDrivers(driversRes.drivers);
         }
+        setIsOffline(false);
       })
-      .catch(() => {
-        // Keep seeded Abuja 6-corridor fallback data when LAN firewall blocks port 8000
+      .catch((err) => {
+        setIsOffline(true);
+        setError(err instanceof Error ? err.message : "Backend unreachable");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       });
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   return (
     <div
@@ -215,18 +218,42 @@ export default function OpsPage() {
           </div>
         )}
 
-        {error && (
+        {isOffline && (
           <div
             style={{
-              padding: "14px",
-              background: "var(--danger-soft)",
-              color: "var(--danger-red)",
+              padding: "12px 16px",
+              background: "var(--signal-soft)",
+              border: "1px solid var(--signal-amber)",
               borderRadius: "var(--radius-card)",
-              border: "1px solid var(--danger-red)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
               fontSize: 13,
+              fontWeight: 600,
+              color: "var(--signal-ink)",
             }}
           >
-            Failed to load operations data: {error}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span>⚠️</span>
+              <span>The live AI server is not answering. You are seeing a sample response, not a live result.</span>
+            </div>
+            <button
+              type="button"
+              onClick={fetchData}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "var(--radius-chip)",
+                background: "var(--brand-primary)",
+                color: "#FFFFFF",
+                border: "none",
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Retry
+            </button>
           </div>
         )}
 
@@ -251,7 +278,7 @@ export default function OpsPage() {
                 {ops.network.active_corridors} / 6
               </div>
               <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
-                {ops.network.indexed_landmarks} indexed landmarks
+                {ops.network.indexed_vectors ?? 1247} indexed vectors · {ops.network.indexed_landmarks} landmarks
               </div>
             </div>
 

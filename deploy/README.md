@@ -7,7 +7,7 @@ This guide describes how to deploy the Along backend and frontend using Render a
 - **Backend**: Python FastAPI container deployed as a Render Web Service (`https://along-api-i3ne.onrender.com`).
 - **Frontend**: Next.js 15 SSR web application deployed to Vercel (`https://along-dusky.vercel.app/`).
 - **Demo Mode**: The backend boots in `DEMO_MODE=true` with an in-memory double-entry ledger, preloaded Abuja seed catalog, prebuilt local FAISS vector search, and rate limiting to protect model inference credits.
-- **Always Warm Availability**: A 5-minute automated uptime ping targets `/healthz` to prevent free-tier idling and keep the service warm.
+- **Hosting**: The backend runs on a free Render instance that sleeps after inactivity. An external UptimeRobot monitor, set up by the owner, pings /healthz every 5 minutes to keep it awake. The first request after a long pause can still take up to a minute.
 
 ## 2. Deploying Backend to Render
 
@@ -35,18 +35,18 @@ In Render Dashboard -> **Environment**, add the following:
 **Secrets (Add your own API keys without sharing them)**:
 - `LLM_BASE_URL`: OpenAI-compatible endpoint URL (e.g. Baseten)
 - `LLM_API_KEY`: API key for primary LLM
-- `LLM_MODEL`: Primary model name (`meta-models/muse-spark-open-1026`)
+- `LLM_MODEL`: Primary model name (`meta-models/muse-spark-open-1026` via Baseten)
 - `LLM_PROVIDER_LABEL`: Label for primary model (`baseten_meta_ai`)
 - `LLM_FALLBACK_BASE_URL`: Optional secondary endpoint URL (leave unset for default primary -> rule_based chain)
 - `LLM_FALLBACK_API_KEY`: Optional secondary API key
-- `LLM_FALLBACK_MODEL`: Optional secondary model name
-- `LLM_FALLBACK_PROVIDER_LABEL`: Optional secondary provider label
-- `GROQ_API_KEY`: Groq API key for Whisper audio transcription
+- `LLM_FALLBACK_MODEL`: Optional secondary model name (`meta/llama-3.2-11b-vision-instruct` via NVIDIA NIM)
+- `LLM_FALLBACK_PROVIDER_LABEL`: Optional secondary provider label (`nvidia_nim_fallback`)
+- `GROQ_API_KEY`: Groq API key for Whisper audio transcription (Groq is used only for Whisper speech to text)
 - `WHISPER_MODEL`: `whisper-large-v3-turbo`
 - `JWT_SECRET_KEY`: 64-character hexadecimal signing string
 - `OTP_PEPPER`: 64-character hexadecimal pepper string
 
-> Note: When `LLM_FALLBACK_API_KEY` is not set, the runtime fallback chain automatically runs `primary -> rule_based` using the local deterministic extractor.
+> Note: Primary model is Muse Spark Open (`meta-models/muse-spark-open-1026`) via Baseten; fallback is Llama 3.2 Vision (`meta/llama-3.2-11b-vision-instruct`) via NVIDIA NIM; Groq is used only for Whisper speech to text (`whisper-large-v3-turbo`). When `LLM_FALLBACK_API_KEY` is not set, the runtime fallback chain automatically runs `primary -> rule_based` using the local deterministic extractor.
 
 ### Step 3: Verify Deployment
 Once built, test your Render endpoints:
@@ -71,14 +71,14 @@ Click **Deploy**. Vercel runs `npm run build` and publishes your site at `https:
 
 ## 4. Cold-Start and Operational Expectations
 
-- **Uptime Monitoring**: A 5-minute external uptime ping pings `https://along-api-i3ne.onrender.com/healthz` to prevent free-tier sleep cycles and ensure zero cold starts for evaluators.
+- **Hosting and Uptime**: The backend runs on a free Render instance that sleeps after inactivity. An external UptimeRobot monitor, set up by the owner, pings /healthz every 5 minutes to keep it awake. The first request after a long pause can still take up to a minute.
 - **Rate Limits**: The backend enforces in-memory rate limits (20 requests per IP per hour, 400 global requests per day) to prevent automated scrapers from exhausting hackathon API credits.
 - **Audio Uploads**: Audio voice notes are capped at 5 MB and 30 seconds maximum.
 
 ## 5. Live Demo Checklist for Judges
 
-1. **WhatsApp Ride Booking**: Open `https://along-dusky.vercel.app/`. Type a commute request (e.g. `I am at Dutse first gate going to Berger, 2 seats`) or send the demo voice note in Pidgin, English, or Hausa.
+1. **WhatsApp Ride Booking**: The WhatsApp webhook handler exists but is not connected to a verified Meta Business account. Open `https://along-dusky.vercel.app/`. Type a commute request (e.g. `I am at Dutse first gate going to Berger, 2 seats`) or send the demo voice note in Pidgin, English, or Hausa.
 2. **Transparent AI Telemetry**: Open the Behind-the-Scenes drawer to inspect the exact model trace, latency, slot extraction, and hybrid FAISS scores.
-3. **Driver Companion**: Navigate to `/driver` to test 4-digit OTP boarding, 150m geofence verification, and 2G feature-phone USSD mode.
+3. **Driver Companion**: Navigate to `/driver` to test 4-digit OTP boarding and 150m geofence verification. (For USSD: the backend endpoint and tests exist but the simulator was removed from the UI.)
 4. **Operations Command Center**: Navigate to `/ops` to inspect the 6 active Abuja transit corridors, double-entry ledger balance, and Agbero savings proof.
 5. **Zero Secret Leaks**: Verify that `/healthz` and `/api/v1/status` never return secret keys or authentication tokens.

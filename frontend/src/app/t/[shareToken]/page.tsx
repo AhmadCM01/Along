@@ -69,7 +69,7 @@ export default function TripTrackerPage({
       setLastUpdated(now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     } catch {
       // If server does not have this token
-      if (isInitial && (!trip.currentQuote || trip.activeShareToken !== shareToken)) {
+      if (isInitial) {
         setNotFound(true);
         setTripData(null);
       }

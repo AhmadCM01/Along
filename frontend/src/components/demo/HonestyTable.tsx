@@ -28,12 +28,12 @@ export function HonestyTable() {
     {
       capability: "Speech to text",
       status: "Live",
-      details: "OpenAI Whisper (whisper-large-v3-turbo via Groq) & Web Audio API (sub-500ms)",
+      details: "Whisper (whisper-large-v3-turbo via Groq) & Web Audio API (sub-500ms; Groq is used only for Whisper speech to text)",
     },
     {
       capability: "Landmark & corridor resolution",
       status: "Live",
-      details: "Character n-gram hashing + Jaro-Winkler reranking over FAISS index (142 landmarks, 1,122 aliases)",
+      details: "Character n-gram hashing + Jaro-Winkler reranking over FAISS index (142 landmarks, 1,122 aliases; 1247 indexed vectors)",
     },
     {
       capability: "Boarding code verification",
@@ -54,6 +54,16 @@ export function HonestyTable() {
       capability: "Vehicle KYC & NIN",
       status: "Roadmap",
       details: "Meta SAM 3.1 vehicle segmentation & NIN identity verification (on Roadmap; simulated in prototype)",
+    },
+    {
+      capability: "WhatsApp channel",
+      status: "Prototype",
+      details: "The WhatsApp webhook handler exists but is not connected to a verified Meta Business account",
+    },
+    {
+      capability: "USSD channel",
+      status: "Backend only",
+      details: "the backend endpoint and tests exist but the simulator was removed from the UI",
     },
   ];
 

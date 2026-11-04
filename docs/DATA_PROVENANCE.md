@@ -38,7 +38,7 @@ We audited the repository for OpenStreetMap usage and checked `backend/scripts/f
 ## 5. Other Project Assets
 
 - **Evaluation Audio (`data/clips/c01.ogg` to `c30.ogg`)**: 30 spoken audio clips recorded by me and my brother with mutual consent to benchmark slot extraction and ASR accuracy across English, Pidgin, and Hausa. Audio files are kept locally in `data/clips/` and ignored by git.
-- **Demo Voice Note (`frontend/public/audio/pidgin_voice_note.ogg`)**: A sample voice note recorded by me and my brother for the simulated WhatsApp interface.
+- **Demo Voice Note (`frontend/public/audio/pidgin_voice_note.ogg`)**: A sample voice note recorded by me and my brother for the simulated WhatsApp interface. The WhatsApp webhook handler exists but is not connected to a verified Meta Business account.
 - **Replay Data (`data/replays/real_replay.json`)**: A captured interactive session exported via `backend/scripts/save_live_replay.py` for testing and offline demo review. It is labeled as a sample trace (illustrative estimate, source not recorded as a live street run).
 
 ## 6. Limitations and Disclaimers

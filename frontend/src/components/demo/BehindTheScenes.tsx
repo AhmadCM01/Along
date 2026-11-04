@@ -17,6 +17,8 @@ export interface BehindTheScenesProps {
   isLoading?: boolean;
   elapsedSeconds?: number;
   errorMessage?: string | null;
+  onRetry?: () => void;
+  isOfflineSample?: boolean;
 }
 
 /**
@@ -34,6 +36,8 @@ export function BehindTheScenes({
   isLoading = false,
   elapsedSeconds = 0,
   errorMessage,
+  onRetry,
+  isOfflineSample = false,
 }: BehindTheScenesProps) {
   return (
     <div
@@ -108,11 +112,33 @@ export function BehindTheScenes({
             fontWeight: 600,
             display: "flex",
             alignItems: "center",
+            justifyContent: "space-between",
             gap: 8,
           }}
         >
-          <span>⚠️</span>
-          <span>{fallbackBanner || "The AI model did not answer, so a simpler rule-based answer was used"}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>⚠️</span>
+            <span>{fallbackBanner || "The live AI server is not answering. You are seeing a sample response, not a live result."}</span>
+          </div>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              style={{
+                padding: "4px 10px",
+                borderRadius: 6,
+                background: "var(--brand-primary)",
+                color: "#FFFFFF",
+                border: "none",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
 
@@ -169,7 +195,11 @@ export function BehindTheScenes({
           Inference Pipeline Stages ({traces.length})
         </div>
 
-        {traces.length === 0 ? (
+        {isOfflineSample || fallbackBanner?.includes("sample response") ? (
+          <div style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>
+            Sample response (offline): live inference pipeline trace is hidden while offline.
+          </div>
+        ) : traces.length === 0 ? (
           <div style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>
             Awaiting first chat or voice interaction to capture live trace.
           </div>

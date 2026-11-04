@@ -13,6 +13,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.core.ids import generate_share_token
+
 router = APIRouter(prefix="/api/v1/trips", tags=["trips-public"])
 
 class TripLocationInput(BaseModel):
@@ -24,14 +26,15 @@ class TripLocationInput(BaseModel):
     eta_minutes: int | None = None
 
 
-def get_default_demo_trip() -> dict[str, Any]:
-    """Construct authoritative default demo trip for share-bwr-4817."""
+def get_default_demo_trip(token: str | None = None) -> dict[str, Any]:
+    """Construct authoritative default demo trip with a random or requested share token."""
+    assigned_token = token or generate_share_token()
     return {
-        "share_token": "share-bwr-4817",
+        "share_token": assigned_token,
         "pod_code": "POD-842A",
         "corridor": "BWR-DUT-WUS",
         "corridor_id": "BWR-DUT-WUS",
-        "corridor_name": "Dutse First Gate -> Berger Roundabout Underbridge",
+        "corridor_name": "Bwari - Dutse - Oando - Berger - Wuse / Central Area",
         "status": "WAITING_FOR_DRIVER",
         "pickup_anchor": "A.A. Rano Filling Station (Dutse First Gate)",
         "origin_anchor": "A.A. Rano Filling Station (Dutse First Gate)",
@@ -64,9 +67,7 @@ def get_default_demo_trip() -> dict[str, Any]:
     }
 
 
-PUBLIC_TRIPS_BY_TOKEN: dict[str, dict[str, Any]] = {
-    "share-bwr-4817": get_default_demo_trip(),
-}
+PUBLIC_TRIPS_BY_TOKEN: dict[str, dict[str, Any]] = {}
 
 
 @router.get("/share/{share_token}")

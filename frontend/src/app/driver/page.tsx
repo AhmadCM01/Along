@@ -94,10 +94,12 @@ export default function DriverPage() {
         const point = waypoints[nextStep];
         const podId = activePod?.pod_id || trip.driverInfo.podCode || "POD-842A";
         const driverId = activePod?.driver_id || driver.id || "DRV-001";
-        const token = trip.activeShareToken || "share-bwr-4817";
+        const token = trip.activeShareToken;
 
         updateDriverPodLocation(driverId, podId, point).catch(() => {});
-        updateTripLocation(token, point).catch(() => {});
+        if (token) {
+          updateTripLocation(token, point).catch(() => {});
+        }
 
         if (point.progress_pct > 0 && point.progress_pct < 100) {
           trip.startCorridorTrip();
@@ -123,10 +125,12 @@ export default function DriverPage() {
       const point = waypoints[startIdx];
       const podId = activePod?.pod_id || trip.driverInfo.podCode || "POD-842A";
       const driverId = activePod?.driver_id || driver.id || "DRV-001";
-      const token = trip.activeShareToken || "share-bwr-4817";
+      const token = trip.activeShareToken;
 
       updateDriverPodLocation(driverId, podId, point).catch(() => {});
-      updateTripLocation(token, point).catch(() => {});
+      if (token) {
+        updateTripLocation(token, point).catch(() => {});
+      }
       if (point.progress_pct > 0) {
         trip.startCorridorTrip();
       }
@@ -264,8 +268,9 @@ export default function DriverPage() {
         corridor_id: driver.corridor_id,
       });
       setIsOnline(!isOnline);
+      setOtpError(null);
     } catch {
-      setIsOnline(!isOnline);
+      setOtpError("Failed to update driver status: backend unreachable. Please retry.");
     } finally {
       setStatusLoading(false);
     }
@@ -624,9 +629,7 @@ export default function DriverPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setOtpError(null);
-                  setOtpSuccessMessage(null);
-                  trip.simulatePodDispatch();
+                  fetchActivePod();
                 }}
                 style={{
                   padding: "12px 16px",
@@ -639,7 +642,7 @@ export default function DriverPage() {
                   cursor: "pointer",
                 }}
               >
-                Simulate 4-Rider Pod Dispatch
+                Refresh Active Pod
               </button>
             </div>
           </section>

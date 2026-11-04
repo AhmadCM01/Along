@@ -33,11 +33,7 @@ export function AiTelemetryDrawer() {
             ]
           : []),
       ]
-    : [
-        { candidate: "Dutse First Gate", score: 0.985, corridor: trip.activeCorridorId || "BWR-DUT-WUS" },
-        { candidate: "Berger Roundabout Underbridge", score: 1.0, corridor: trip.activeCorridorId || "BWR-DUT-WUS" },
-        { candidate: "Sokale Roundabout", score: 0.912, corridor: trip.activeCorridorId || "BWR-DUT-WUS" },
-      ];
+    : [];
 
   return (
     <div

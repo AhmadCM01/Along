@@ -3,7 +3,7 @@
 **The AI-Orchestrated Operating System for Shared Urban Corridor Transit in Africa (Abuja, FCT, Nigeria)**
 
 > **Hackathon Opening Statement (What Existed Before vs. What Was Built This Week):**
-> Zero code existed prior to this hackathon; this entire repository (including the conversational state machine, the 6-corridor Abuja spatial and relational landmark engine, the simulated double-entry Kobo escrow ledger, the 2G USSD/Voice driver dispatch system, and the 3-step live corridor web application) was built from scratch this week for the Meta AI Developer Hackathon.
+> Zero code existed prior to this hackathon; this entire repository (including the conversational state machine, the 6-corridor Abuja spatial and relational landmark engine, the simulated double-entry Kobo escrow ledger, the 2G USSD/Voice driver dispatch system, and the 3-step live corridor web application) was built from scratch this week for the Meta AI Developer Hackathon. For USSD: the backend endpoint and tests exist but the simulator was removed from the UI. The WhatsApp webhook handler exists but is not connected to a verified Meta Business account.
 
 ---
 
@@ -14,12 +14,20 @@ The system combines live Meta AI open-weight models, character n-gram hashing an
 | Runtime Pipeline Stage | Technology / Model ID | Where It Runs | Implementation Status | Role in Along |
 | :--- | :--- | :--- | :--- | :--- |
 | **Primary Conversational NLU, Slot Extraction & Relational Reasoning** | `meta-models/muse-spark-open-1026` (*Meta Muse Spark Open*) | Baseten Meta AI API (`https://inference.baseten.co/v1`) | **Live** | Extracts origin, destination, relational landmarks, seat counts, safety classification, and natural trilingual replies across **Nigerian Pidgin (`pcm`)**, **Hausa (`ha`)**, and **Nigerian English (`en`)**. |
-| **Deterministic Fallback Extraction** | Rule-Based Extractor (`backend/app/ai/rule_based.py`) | In-process Python runtime | **Live (Fallback)** | Deterministic keyword and regex slot extractor that activates if primary LLM is unavailable (chain: primary -> rule_based). |
-| **Speech-to-Text Audio Transcription** | `whisper-large-v3-turbo` (*OpenAI Whisper via Groq*) & Web Audio API | Groq API & Browser Web Audio | **Live** | Transcribes commuter WhatsApp voice notes (English, Pidgin, Hausa) with sub-500ms latency. |
-| **Spatial Landmark Gazetteer & Search** | **Meta FAISS** (768-D L2-normalized index) + character n-gram hashing + Jaro-Winkler reranker | In-process Python runtime (`backend/data/faiss/`) | **Live** | Resolves 142 Abuja landmarks across 1,122 aliases (1,247 indexed vector representations) in sub-15ms p95 latency. |
+| **Fallback Conversational NLU** | `meta/llama-3.2-11b-vision-instruct` (*Meta Llama 3.2 Vision*) | NVIDIA NIM API | **Live (Fallback)** | Secondary open-weights fallback model before deterministic rules. |
+| **Deterministic Fallback Extraction** | Rule-Based Extractor (`backend/app/ai/rule_based.py`) | In-process Python runtime | **Live (Fallback)** | Deterministic keyword and regex slot extractor that activates if hosted LLMs are unavailable (runtime chain: primary -> fallback -> rule_based). |
+| **Speech-to-Text Audio Transcription** | `whisper-large-v3-turbo` (*OpenAI Whisper via Groq*) & Web Audio API | Groq API & Browser Web Audio | **Live** | Transcribes commuter voice notes (English, Pidgin, Hausa) with sub-500ms latency. Groq is used only for Whisper speech to text. The WhatsApp webhook handler exists but is not connected to a verified Meta Business account. |
+| **Spatial Landmark Gazetteer & Search** | **Meta FAISS** (768-D L2-normalized index) + character n-gram hashing + Jaro-Winkler reranker | In-process Python runtime (`backend/data/faiss/`) | **Live** | Resolves 142 landmarks and 1,122 aliases (1247 indexed vectors) in sub-15ms p95 latency. |
 | **Boarding Code Security & Verification** | Per-trip 4-digit OTP + HMAC-SHA256 | Backend memory / Redis store | **Live** | HMAC-SHA256 verification, 30-minute expiry, 3-attempt lock, and 150m anchor geofence. |
 | **Double-Entry Escrow Ledger** | Double-entry Kobo balance ledger | Backend simulated store | **Simulated** | Simulates 90% driver net and 10% platform fee split without live NIP interbank clearing. |
-| **Corridor Pod Telemetry & GPS** | Dynamic 4-seat pod simulator | Backend & Map state | **Simulated** | Simulates real-time corridor movement along actual Abuja FCT roadway coordinates. |
+| **Corridor Pod Telemetry & GPS** | Dynamic 4-seat pod simulator | Backend & Map state | **Simulated** | Simulates real-time corridor movement along actual Abuja FCT roadway coordinates across all 6 canonical corridors. |
+
+> **Hosting Note:**
+> The backend runs on a free Render instance that sleeps after inactivity. An external UptimeRobot monitor, set up by the owner, pings /healthz every 5 minutes to keep it awake. The first request after a long pause can still take up to a minute.
+>
+> **Channel Status:**
+> - USSD: the backend endpoint and tests exist but the simulator was removed from the UI.
+> - WhatsApp: The WhatsApp webhook handler exists but is not connected to a verified Meta Business account.
 
 ---
 
@@ -67,7 +75,7 @@ npm --prefix frontend run dev -- -H 0.0.0.0 -p 3001
 Open **`http://localhost:3001`** in your browser:
 1. **Step 1: Ride (`http://localhost:3001`)**:
    - Click **Play Pidgin Voice**, tap any of the instant test prompts on the left sidebar, record a live voice note with the microphone button, or type any Abuja route in English, Pidgin, or Hausa (e.g., `"From Wuse to Bwari"`, `"From Banex to Dutse"`, `"Ina Bwari zan je Kasuwar Wuse kujera biyu"`, `"From Gwarinpa to Mpape"`).
-   - Click **Confirm & Lock Seat** on the WhatsApp quote card to lock the fare in simulated escrow and receive your 4-digit **Boarding OTP**.
+   - Click **Confirm & Lock Seat** on the quote card to lock the fare in simulated escrow and receive your 4-digit **Boarding OTP**. (The WhatsApp webhook handler exists but is not connected to a verified Meta Business account.)
 2. **Step 2: Driver OTP (`http://localhost:3001/driver`)**:
    - Click **Open driver view with this code** (Demo shortcut) to prefill the code into the Driver Terminal.
    - Verify the 4-digit OTP via HMAC-SHA256 to initiate the trip (`IN_TRANSIT`).

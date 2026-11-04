@@ -54,11 +54,10 @@ export function Header({ activeShareToken }: HeaderProps) {
     } catch {}
   };
 
-  const shareToken = activeShareToken || trip.activeShareToken || "share-bwr-4817";
-  const trackerHref = `/t/${shareToken}`;
-
+  const realShareToken = activeShareToken || trip.activeShareToken || trip.currentQuote?.shareToken;
   const isConfirmed = trip.journeyStage === "CONFIRMED" || trip.journeyStage === "IN_TRANSIT";
   const isInTransit = trip.journeyStage === "IN_TRANSIT";
+  const hasBooking = Boolean(realShareToken && (isConfirmed || pathname.startsWith("/t/")));
 
   return (
     <>
@@ -166,35 +165,55 @@ export function Header({ activeShareToken }: HeaderProps) {
             </Link>
 
             {/* 3. Live corridor */}
-            <Link
-              href={trackerHref}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "var(--radius-chip)",
-                fontSize: 13,
-                fontWeight: pathname.startsWith("/t/") ? 700 : 600,
-                background: pathname.startsWith("/t/") ? "var(--brand-primary)" : "transparent",
-                color: pathname.startsWith("/t/") ? "#FFFFFF" : "var(--text-muted)",
-                transition: "all 150ms ease",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <RadarNavIcon size={15} color={pathname.startsWith("/t/") ? "#FFFFFF" : "currentColor"} />
-              <span>Live corridor</span>
-              {isInTransit && !pathname.startsWith("/t/") && (
-                <span
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: "var(--brand-primary)",
-                  }}
-                />
-              )}
-            </Link>
+            {hasBooking && realShareToken ? (
+              <Link
+                href={`/t/${realShareToken}`}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "var(--radius-chip)",
+                  fontSize: 13,
+                  fontWeight: pathname.startsWith("/t/") ? 700 : 600,
+                  background: pathname.startsWith("/t/") ? "var(--brand-primary)" : "transparent",
+                  color: pathname.startsWith("/t/") ? "#FFFFFF" : "var(--text-muted)",
+                  transition: "all 150ms ease",
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <RadarNavIcon size={15} color={pathname.startsWith("/t/") ? "#FFFFFF" : "currentColor"} />
+                <span>Live corridor</span>
+                {isInTransit && !pathname.startsWith("/t/") && (
+                  <span
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: "var(--brand-primary)",
+                    }}
+                  />
+                )}
+              </Link>
+            ) : (
+              <span
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "var(--radius-chip)",
+                  fontSize: 12,
+                  color: "var(--text-muted)",
+                  opacity: 0.7,
+                  cursor: "not-allowed",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+                title="Book a ride to get your tracking link"
+              >
+                <RadarNavIcon size={15} color="currentColor" />
+                <span>Book a ride to get your tracking link</span>
+              </span>
+            )}
 
             {/* 4. Multi-rider lab */}
             <button

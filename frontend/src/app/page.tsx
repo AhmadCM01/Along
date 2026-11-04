@@ -34,7 +34,7 @@ export default function RidePage() {
         unitFare: chat.currentQuote.unitFare,
         totalFare: chat.currentQuote.totalFare,
         otp: chat.currentQuote.otp || "4817",
-        shareToken: chat.currentQuote.shareToken || "share-bwr-4817",
+        shareToken: chat.currentQuote.shareToken || "",
         podGross: chat.currentQuote.podGross,
         driverNet: chat.currentQuote.driverNet,
         platformFee: chat.currentQuote.platformFee,
@@ -56,7 +56,7 @@ export default function RidePage() {
     chat.resetChat();
   };
 
-  const shareToken = trip.currentQuote?.shareToken || trip.activeShareToken || "share-bwr-4817";
+  const shareToken = trip.currentQuote?.shareToken || trip.activeShareToken || "";
 
   return (
     <div
@@ -128,6 +128,9 @@ export default function RidePage() {
           isProcessing={chat.isLoading}
           elapsedSeconds={chat.elapsedSeconds}
           errorMessage={chat.errorMessage}
+          onRetry={() => chat.retryLastMessage()}
+          fallbackBanner={chat.fallbackBanner}
+          isOfflineSample={chat.isOfflineReplay}
         />
       </main>
 

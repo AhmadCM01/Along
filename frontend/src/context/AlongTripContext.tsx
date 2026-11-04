@@ -51,6 +51,7 @@ export interface PersistedChatMessage {
   audioUrl?: string;
   timestamp: string;
   isConfirmed?: boolean;
+  isSampleOffline?: boolean;
   quoteData?: {
     corridorId: string;
     anchorName: string;
@@ -81,7 +82,6 @@ interface AlongTripContextType {
   boardPassengerBySeat: (seatNumber: 1 | 2 | 3 | 4, boarded: boolean) => void;
   confirmBooking: () => void;
   startCorridorTrip: () => void;
-  simulatePodDispatch: () => void;
   resetAll: () => void;
   activeShareToken: string;
   traces: StageTrace[];
@@ -254,7 +254,7 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
   const [journeyStage, setJourneyStage] = useState<PodJourneyStage>("IDLE");
   const [driverInfo, setDriverInfo] = useState<DriverInfo>(DEFAULT_DRIVER);
   const [passengers, setPassengers] = useState<PodPassenger[]>([]);
-  const [activeShareToken, setActiveShareToken] = useState<string>("share-bwr-4817");
+  const [activeShareToken, setActiveShareToken] = useState<string>("");
   const [traces, setTraces] = useState<StageTrace[]>([]);
   const [resolverScores, setResolverScores] = useState<any>(null);
   const [audioPlaying, setAudioPlaying] = useState<boolean>(false);
@@ -352,26 +352,6 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
     setJourneyStage("IN_TRANSIT");
   }, []);
 
-  const simulatePodDispatch = useCallback(() => {
-    const sampleQuote: TripQuote = {
-      corridorId: activeCorridorId || "BWR-DUT-WUS",
-      originName: "Dutse First Gate",
-      destName: "Berger Roundabout Underbridge",
-      anchorId: "ANC-DUT-01",
-      anchorName: "A.A. Rano Filling Station (Dutse First Gate)",
-      seats: 2,
-      unitFare: "₦900",
-      totalFare: "₦1,800",
-      otp: "4817",
-      shareToken: "share-bwr-4817",
-      podGross: "₦3,600",
-      driverNet: "₦3,240",
-      platformFee: "₦360",
-    };
-    setCurrentQuote(sampleQuote);
-    setJourneyStage("CONFIRMED");
-  }, [activeCorridorId]);
-
   const boardPassengerByOtp = useCallback((otp: string): boolean => {
     const cleanOtp = otp.trim();
     let matched = false;
@@ -419,7 +399,7 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
     setCurrentQuote(null);
     setJourneyStage("IDLE");
     setPassengers([]);
-    setActiveShareToken("share-bwr-4817");
+    setActiveShareToken("");
     setTraces([]);
     setResolverScores(null);
     setPersistedMessages([]);
@@ -446,7 +426,6 @@ export function AlongTripProvider({ children }: { children: React.ReactNode }) {
         boardPassengerBySeat,
         confirmBooking,
         startCorridorTrip,
-        simulatePodDispatch,
         resetAll,
         activeShareToken,
         traces,

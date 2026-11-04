@@ -9,12 +9,12 @@ export interface TransitStripProps {
 }
 
 export const CORRIDORS_LIST = [
-  { id: "BWR-DUT-WUS", name: "Bwari to Wuse", fare: "₦900", samplePrompt: "Abeg I dey Dutse first gate, two seats go Berger" },
-  { id: "ZUB-KUB-WUS", name: "Zuba to Wuse", fare: "₦900", samplePrompt: "I dey Zuba interchange, one seat to Wuse Zone 4" },
-  { id: "ZUB-DEI-DUT", name: "Zuba to Dutse", fare: "₦700", samplePrompt: "From Dei-Dei market, I need ride go Dutse Alhaji" },
-  { id: "ZUB-KRM-JAB", name: "Zuba to Jabi", fare: "₦700", samplePrompt: "Karmo market junction to Jabi park two seats" },
-  { id: "GWL-LUG-AR1", name: "Gwagwalada to Area 1", fare: "₦1,000", samplePrompt: "I dey Police signboard Lugbe, 1 seat go Area 1" },
-  { id: "MRB-NYA-CEN", name: "Mararaba to Central", fare: "₦600", samplePrompt: "Mararaba bridge to Area 10 Central business district" },
+  { id: "BWR-DUT-WUS", name: "Bwari - Dutse - Oando - Berger - Wuse / Central Area", fare: "₦900", samplePrompt: "Abeg I dey Dutse first gate, two seats go Berger" },
+  { id: "ZUB-KUB-WUS", name: "Zuba - Dei-Dei - Kubwa - Gwarinpa - Oando - Berger - Wuse / Central Area", fare: "₦900", samplePrompt: "I dey Zuba interchange, one seat to Wuse Zone 4" },
+  { id: "ZUB-DEI-DUT", name: "Zuba - Dei-Dei - Kubwa - Dutse - Sokale - Bwari Connector", fare: "₦700", samplePrompt: "From Dei-Dei market, I need ride go Dutse Alhaji" },
+  { id: "ZUB-KRM-JAB", name: "Zuba - Dei-Dei - Gwagwa - Karmo - Jabi - Utako - Wuse", fare: "₦700", samplePrompt: "Karmo market junction to Jabi park two seats" },
+  { id: "GWL-LUG-AR1", name: "Gwagwalada - Airport Rd - Lugbe - Area 1 - Central Area", fare: "₦1,000", samplePrompt: "I dey Police signboard Lugbe, 1 seat go Area 1" },
+  { id: "MRB-NYA-CEN", name: "Mararaba - Nyanya - Kugbo - AYA - Central Area - Wuse", fare: "₦600", samplePrompt: "Mararaba bridge to Area 10 Central business district" },
 ];
 
 /**

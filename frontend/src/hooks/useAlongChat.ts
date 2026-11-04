@@ -108,6 +108,8 @@ export function useAlongChat(initialPhone = "+2348031111111") {
   const [replayRuns, setReplayRuns] = useState<ReplayRunItem[]>([]);
   const [replayMode, setReplayMode] = useState<boolean>(false);
   const [activeReplayRunId, setActiveReplayRunId] = useState<string | null>(null);
+  const [isOfflineReplay, setIsOfflineReplay] = useState<boolean>(false);
+  const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -136,10 +138,12 @@ export function useAlongChat(initialPhone = "+2348031111111") {
           setIsReplayAvailable(true);
           setReplayDate(res.recorded_at);
           setReplayRuns(res.replay.runs);
+          setIsOfflineReplay(Boolean(res.isOfflineSample));
         } else {
           setIsReplayAvailable(false);
           setReplayDate(null);
           setReplayRuns([]);
+          setIsOfflineReplay(false);
         }
       })
       .catch(() => {
@@ -221,7 +225,7 @@ export function useAlongChat(initialPhone = "+2348031111111") {
         unitFare: ledger.unit_fare_naira,
         totalFare: ledger.total_fare_naira,
         otp: whatsapp.boarding_otp || "4817",
-        shareToken: whatsapp.share_token || "share-bwr-4817",
+        shareToken: whatsapp.share_token || null,
         podGross: ledger.pod_gross_naira,
         driverNet: ledger.driver_net_90pct_naira,
         platformFee: ledger.platform_10pct_naira,
@@ -242,7 +246,7 @@ export function useAlongChat(initialPhone = "+2348031111111") {
           unitFare: quote.unitFare,
           totalFare: quote.totalFare,
           otp: quote.otp,
-          shareToken: quote.shareToken || "share-bwr-4817",
+          shareToken: quote.shareToken || "",
           podGross: quote.podGross,
           driverNet: quote.driverNet,
           platformFee: quote.platformFee,
@@ -318,6 +322,7 @@ export function useAlongChat(initialPhone = "+2348031111111") {
     ): Promise<DemoChatResponse | null> => {
       const trimmed = text.trim();
       if (!trimmed) return null;
+      setLastUserMessage(trimmed);
 
       const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const userMsgId = `u_${Date.now()}`;
@@ -348,8 +353,10 @@ export function useAlongChat(initialPhone = "+2348031111111") {
         applyBotResponse(data, trimmed);
         return data;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to execute chat turn";
+        const msg = err instanceof Error ? err.message : "The live AI server is not answering.";
         setErrorMessage(msg);
+        setFallback(true);
+        setFallbackBanner("The live AI server is not answering. You are seeing a sample response, not a live result.");
         return null;
       } finally {
         stopTimer();
@@ -443,10 +450,17 @@ export function useAlongChat(initialPhone = "+2348031111111") {
 
       setActiveReplayRunId(run.id);
       setActiveLocale(run.locale);
-      setFallback(run.fallback);
-      setFallbackBanner(run.fallback_banner || null);
-      setTraces(run.traces);
-      trip.setTraces(run.traces);
+      const isOffline = isOfflineReplay || run.fallback;
+      setFallback(isOffline);
+      if (isOfflineReplay) {
+        setFallbackBanner("The live AI server is not answering. You are seeing a sample response, not a live result.");
+        setTraces([]);
+        trip.setTraces([]);
+      } else {
+        setFallbackBanner(run.fallback_banner || null);
+        setTraces(run.traces);
+        trip.setTraces(run.traces);
+      }
 
       const q = run.quote;
       setCurrentQuote({
@@ -489,6 +503,7 @@ export function useAlongChat(initialPhone = "+2348031111111") {
           sender: "bot",
           text: run.reply_text,
           timestamp: "12:44",
+          isSampleOffline: isOfflineReplay,
           quoteData: {
             corridorId: q.corridor_id,
             anchorName: q.anchor_name || "A.A. Rano Filling Station",
@@ -532,6 +547,13 @@ export function useAlongChat(initialPhone = "+2348031111111") {
     }
   }, [phone, trip]);
 
+  const retryLastMessage = useCallback(() => {
+    if (lastUserMessage) {
+      return sendMessage(lastUserMessage);
+    }
+    return null;
+  }, [lastUserMessage, sendMessage]);
+
   return {
     phone,
     setPhone,
@@ -561,5 +583,8 @@ export function useAlongChat(initialPhone = "+2348031111111") {
     toggleReplayMode,
     selectReplayRun,
     resetChat,
+    retryLastMessage,
+    isOfflineReplay,
+    lastUserMessage,
   };
 }

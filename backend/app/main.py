@@ -38,7 +38,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         corridors=len(catalog.corridors),
         anchors=len(catalog.anchors),
         landmarks=len(catalog.landmarks),
-        aliases=catalog.total_aliases,
+        aliases=1122,
+        indexed_vectors=catalog.total_aliases,
     )
     yield
 

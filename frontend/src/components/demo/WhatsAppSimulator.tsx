@@ -62,6 +62,9 @@ interface WhatsAppSimulatorProps {
   isProcessing?: boolean;
   elapsedSeconds?: number;
   errorMessage?: string | null;
+  onRetry?: () => void;
+  isOfflineSample?: boolean;
+  fallbackBanner?: string | null;
 }
 
 const QUICK_SCENARIOS = [
@@ -223,6 +226,9 @@ export function WhatsAppSimulator({
   onSwitchCommuter,
   isProcessing = false,
   errorMessage,
+  onRetry,
+  isOfflineSample = false,
+  fallbackBanner,
 }: WhatsAppSimulatorProps) {
   const trip = useAlongTrip();
   const [inputText, setInputText] = useState("");
@@ -848,6 +854,55 @@ export function WhatsAppSimulator({
             </span>
           </div>
 
+          {/* Persistent Offline / Sample Banner with Retry Button */}
+          {(isOfflineSample ||
+            fallbackBanner === "The live AI server is not answering. You are seeing a sample response, not a live result." ||
+            messages.some((m) => (m as { isSampleOffline?: boolean }).isSampleOffline)) && (
+            <div
+              style={{
+                alignSelf: "center",
+                width: "100%",
+                maxWidth: 480,
+                padding: "10px 14px",
+                background: "var(--signal-soft)",
+                border: "1px solid var(--signal-amber)",
+                borderRadius: "var(--radius-input)",
+                fontSize: 12.5,
+                color: "var(--signal-ink)",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span>⚠️</span>
+                <span>The live AI server is not answering. You are seeing a sample response, not a live result.</span>
+              </div>
+              {onRetry && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: "var(--radius-chip)",
+                    background: "var(--brand-primary)",
+                    color: "#FFFFFF",
+                    border: "none",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Empty State Onboarding Card inside Chat */}
           {messages.length === 0 && !isProcessing && (
             <div
@@ -929,6 +984,25 @@ export function WhatsAppSimulator({
                         onTogglePlay={() => handlePlayVoice(m.id, m.text, m.audioUrl)}
                         duration={m.voiceDuration || "0:04"}
                       />
+                    </div>
+                  )}
+
+                  {/* Sample offline response badge */}
+                  {(m as { isSampleOffline?: boolean }).isSampleOffline && (
+                    <div
+                      style={{
+                        display: "inline-block",
+                        marginBottom: 6,
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                        background: "var(--signal-soft)",
+                        color: "var(--signal-ink)",
+                        border: "1px solid var(--signal-amber)",
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    >
+                      Sample response (offline)
                     </div>
                   )}
 
@@ -1066,7 +1140,8 @@ export function WhatsAppSimulator({
                         <button
                           type="button"
                           onClick={() => {
-                            const token = m.quoteData?.shareToken || trip.activeShareToken || "share-bwr-4817";
+                            const token = m.quoteData?.shareToken || trip.activeShareToken;
+                            if (!token) return;
                             const base = typeof window !== "undefined" ? window.location.origin : "";
                             const url = `${base}/t/${token}`;
                             if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -1181,7 +1256,7 @@ export function WhatsAppSimulator({
             </div>
           )}
 
-          {/* Error Banner */}
+          {/* Error Banner with Retry */}
           {errorMessage && (
             <div
               style={{
@@ -1189,13 +1264,34 @@ export function WhatsAppSimulator({
                 border: "1px solid var(--danger-red)",
                 color: "var(--danger-red)",
                 borderRadius: 10,
-                padding: "8px 12px",
+                padding: "8px 14px",
                 fontSize: 12.5,
                 fontWeight: 600,
                 alignSelf: "center",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
               }}
             >
-              {errorMessage}
+              <span>{errorMessage}</span>
+              {onRetry && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 6,
+                    background: "var(--danger-red)",
+                    color: "#FFFFFF",
+                    border: "none",
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Retry
+                </button>
+              )}
             </div>
           )}
         </div>

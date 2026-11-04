@@ -13,8 +13,9 @@ export interface BottomTabBarProps {
 export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
   const pathname = usePathname();
   const trip = useAlongTrip();
-  const shareToken = activeShareToken || trip.activeShareToken || "share-bwr-4817";
-  const trackerHref = `/t/${shareToken}`;
+  const realShareToken = activeShareToken || trip.activeShareToken || trip.currentQuote?.shareToken;
+  const isConfirmed = trip.journeyStage === "CONFIRMED" || trip.journeyStage === "IN_TRANSIT";
+  const hasBooking = Boolean(realShareToken && (isConfirmed || pathname.startsWith("/t/")));
 
   const hasUnboardedCommuter = trip.passengers.some((p) => p.isCurrentUser && !p.isBoarded) && trip.journeyStage === "CONFIRMED";
 
@@ -90,23 +91,44 @@ export function BottomTabBar({ activeShareToken }: BottomTabBarProps) {
         <span>Driver</span>
       </Link>
 
-      {/* 3. Tracker (Live Route & Safety) */}
-      <Link
-        href={trackerHref}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 3,
-          color: pathname.startsWith("/t/") ? "var(--brand-primary)" : "var(--text-muted)",
-          fontWeight: pathname.startsWith("/t/") ? 700 : 500,
-          fontSize: 11.5,
-          textDecoration: "none",
-        }}
-      >
-        <RadarNavIcon size={22} color={pathname.startsWith("/t/") ? "var(--brand-primary)" : "var(--text-muted)"} />
-        <span>Tracker</span>
-      </Link>
+      {/* 3. Live corridor (Tracker) */}
+      {hasBooking && realShareToken ? (
+        <Link
+          href={`/t/${realShareToken}`}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 3,
+            color: pathname.startsWith("/t/") ? "var(--brand-primary)" : "var(--text-muted)",
+            fontWeight: pathname.startsWith("/t/") ? 700 : 500,
+            fontSize: 11.5,
+            textDecoration: "none",
+          }}
+        >
+          <RadarNavIcon size={22} color={pathname.startsWith("/t/") ? "var(--brand-primary)" : "var(--text-muted)"} />
+          <span>Live corridor</span>
+        </Link>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 3,
+            color: "var(--text-muted)",
+            opacity: 0.6,
+            fontSize: 10,
+            textAlign: "center",
+            cursor: "not-allowed",
+            maxWidth: 90,
+          }}
+          title="Book a ride to get your tracking link"
+        >
+          <RadarNavIcon size={18} color="currentColor" />
+          <span>Book a ride to get your tracking link</span>
+        </div>
+      )}
 
       <style jsx>{`
         @media (max-width: 768px) {

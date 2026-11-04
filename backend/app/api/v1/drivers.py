@@ -351,7 +351,7 @@ async def verify_rider_boarding_otp(
     active_passengers = [p for p in passengers if not p.get("is_alighted") and not p.get("alighted")]
     total_active_seats = sum(p.get("seats", 1) for p in active_passengers)
     all_passengers_boarded = bool(active_passengers) and all(p.get("is_boarded") for p in active_passengers)
-    if all_passengers_boarded or total_active_seats >= BusinessRules.POD_SIZE:
+    if total_active_seats >= BusinessRules.POD_SIZE and all_passengers_boarded:
         pod["status"] = "IN_TRANSIT"
     else:
         pod["status"] = "BOARDING"
@@ -360,7 +360,6 @@ async def verify_rider_boarding_otp(
         if (
             trip.get("pod_code") == pod_id
             or trip.get("pod_code") == "POD-842A"
-            or trip.get("share_token") == "share-bwr-4817"
             or trip.get("corridor_id") == pod.get("corridor_id")
         ):
             trip["status"] = pod["status"]
@@ -388,7 +387,6 @@ async def dispatch_pod_early(driver_id: str, pod_id: str) -> dict[str, Any]:
         if (
             trip.get("pod_code") == pod_id
             or trip.get("pod_code") == "POD-842A"
-            or trip.get("share_token") == "share-bwr-4817"
             or trip.get("corridor_id") == pod.get("corridor_id")
         ):
             trip["status"] = "IN_TRANSIT"
@@ -427,7 +425,6 @@ async def update_pod_location(
         if (
             trip.get("pod_code") == pod_id
             or trip.get("pod_code") == "POD-842A"
-            or trip.get("share_token") == "share-bwr-4817"
             or trip.get("corridor_id") == pod.get("corridor_id")
         ):
             trip.setdefault("telemetry", {})
@@ -643,7 +640,6 @@ async def reset_active_corridor_pod(
         ACTIVE_PODS_STORE[pid]["boarding_otps"] = {}
         ACTIVE_PODS_STORE[pid]["otp_created_at"] = {}
         ACTIVE_PODS_STORE[pid]["otp_attempts"] = {}
-    PUBLIC_TRIPS_BY_TOKEN["share-bwr-4817"] = get_default_demo_trip()
     return {"status": "ok", "message": "Pod reset to standby", "pod_id": pid}
 
 

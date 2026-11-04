@@ -264,10 +264,10 @@ def test_p5_ops_and_demo_cockpit_endpoints() -> None:
     assert ops_ov["brand"] == "Along"
     assert ops_ov["network"]["active_corridors"] == 6
     assert ops_ov["ledger_audit"]["trial_balance_kobo"] == 0
-    assert ops_ov["ai_models"]["fast_extraction"] == "muse-spark-1.3"
-    assert ops_ov["ai_models"]["frontier_reasoning"] == "muse-wonder"
-    assert ops_ov["ai_models"]["voice_asr"] == "muse-voice-transcribe"
-    assert ops_ov["ai_models"]["vehicle_kyc_vision"] == "sam-3.1"
+    assert ops_ov["ai_models"]["primary"] == "meta-models/muse-spark-open-1026 (via Baseten)"
+    assert ops_ov["ai_models"]["fallback"] == "meta/llama-3.2-11b-vision-instruct (via NVIDIA NIM)"
+    assert ops_ov["ai_models"]["speech_to_text"] == "whisper-large-v3-turbo (via Groq)"
+    assert ops_ov["ai_models"]["vector_index"] == "Meta FAISS IndexFlatIP (768-D)"
 
     ops_corr = client.get("/api/v1/ops/corridors").json()
     assert ops_corr["count"] == 6

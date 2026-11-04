@@ -75,7 +75,7 @@ All 3 web fonts are distributed under the SIL Open Font License (OFL-1.1), permi
 
 | File | Purpose | Provenance & Consent | License / Rights |
 |---|---|---|---|
-| `frontend/public/audio/pidgin_voice_note.ogg` | Demonstration voice sample in WhatsApp chat interface | Recorded by me and my brother | Original recording, consented |
+| `frontend/public/audio/pidgin_voice_note.ogg` | Demonstration voice sample in WhatsApp chat interface (The WhatsApp webhook handler exists but is not connected to a verified Meta Business account) | Recorded by me and my brother | Original recording, consented |
 | `data/clips/c01.ogg` to `c30.ogg` | 30 evaluation audio clips (stored locally in `data/clips/`, git-ignored) | Recorded by me and my brother | Original recordings, consented |
 
 No third-party proprietary audio, copyright music, or unauthorized voice recordings exist in the repository.
@@ -86,7 +86,11 @@ No third-party proprietary audio, copyright music, or unauthorized voice recordi
 |---|---|---|---|
 | `meta-models/muse-spark-open-1026` | Baseten Inference API | Primary multilingual NLU, intent classification, slot extraction | Meta open-weight model license |
 | `meta/llama-3.2-11b-vision-instruct` | NVIDIA NIM Inference API | Secondary fallback NLU and vehicle photo inspection | Meta Llama 3.2 Community License |
-| `whisper-large-v3-turbo` | Groq Cloud API | Speech-to-text audio transcription | OpenAI Whisper open-source license (MIT) via Groq API terms |
+| `whisper-large-v3-turbo` | Groq Cloud API | Speech-to-text audio transcription (Groq is used only for Whisper speech to text) | OpenAI Whisper open-source license (MIT) via Groq API terms |
+
+> Channel status notes:
+> - USSD: the backend endpoint and tests exist but the simulator was removed from the UI.
+> - WhatsApp: The WhatsApp webhook handler exists but is not connected to a verified Meta Business account.
 
 ## 8. OpenStreetMap (OSM) Finding
 

@@ -215,10 +215,10 @@ export async function pingBackendHealth(): Promise<HealthStatus> {
       const data = await res.json();
       return { status: "ok", version: data.version };
     }
-    return { status: "error", message: `Server error HTTP ${res.status}` };
+    return { status: "error", message: "The live AI server is not answering." };
   } catch {
     clearTimeout(timer);
-    return { status: "waking_up", message: "Server is waking up (free tier cold start)..." };
+    return { status: "error", message: "The live AI server is not answering." };
   }
 }
 
@@ -513,6 +513,7 @@ export async function getOpsOverview(): Promise<{
     fare_zones: number;
     private_filling_station_anchors: number;
     indexed_landmarks: number;
+    indexed_vectors?: number;
     seeded_drivers: number;
     live_online_drivers: number;
   };
@@ -533,6 +534,7 @@ export async function getLiveReplayFile(): Promise<{
   available: boolean;
   recorded_at: string | null;
   replay: LiveReplayDoc | null;
+  isOfflineSample?: boolean;
 }> {
   try {
     const backendRes = await fetch(`${getApiBaseUrl()}/api/v1/demo/replay/live`);
@@ -543,6 +545,7 @@ export async function getLiveReplayFile(): Promise<{
           available: true,
           recorded_at: data.recorded_at,
           replay: data.replay,
+          isOfflineSample: false,
         };
       }
     }
@@ -559,6 +562,7 @@ export async function getLiveReplayFile(): Promise<{
           available: true,
           recorded_at: data.recorded_at,
           replay: data,
+          isOfflineSample: true,
         };
       }
     }
@@ -570,5 +574,6 @@ export async function getLiveReplayFile(): Promise<{
     available: false,
     recorded_at: null,
     replay: null,
+    isOfflineSample: false,
   };
 }

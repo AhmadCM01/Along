@@ -12,7 +12,7 @@
 ### **ALONG**
 **The Operating System for Shared Urban Corridor Transit in Africa**
 
-- **What we do:** We turn Nigeria's chaotic, unsafe roadside carpooling ("Along") into verified, simulated escrow-backed 4-seat commuter pods on a **WhatsApp-style interface** (for riders) and **Smartphone / 2G Feature Phones** (for drivers).
+- **What we do:** We turn Nigeria's chaotic, unsafe roadside carpooling ("Along") into verified, simulated escrow-backed 4-seat commuter pods on a **WhatsApp-style interface** (for riders) and **Smartphone / 2G Feature Phones** (for drivers). (Note: The WhatsApp webhook handler exists but is not connected to a verified Meta Business account; for USSD: the backend endpoint and tests exist but the simulator was removed from the UI.)
 - **The 10-Second Value Prop:**
   - **Riders** pay **75% less** than solo ride-hailing (**₦600 to ₦2,000** by segment), sit comfortably (**4 seats, never 6 squeezed**), and board at safe private filling stations in **10 seconds**.
   - **Drivers** keep **90% of gross fares**, pay **₦0 in Agbero (tout) extortion**, and fill all 4 seats in **60 seconds**.
@@ -81,7 +81,7 @@ Most transit startups fail in Africa because they assume every commercial driver
 
 ### **Everyone Wins When You Eliminate Waste and Extortion**
 
-Unlike flat-rate apps, Along uses a **Dynamic Origin-to-Destination Zone Matrix** across Abuja's 6 major corridors (`Bwari-Dutse-Wuse`, `Zuba-Dei-Dei-Kubwa-Wuse`, `Zuba-Karmo-Jabi`, `Gwagwalada-Lugbe-Area 1`, `Mararaba-Nyanya-Central Area`):
+Unlike flat-rate apps, Along uses a **Dynamic Origin-to-Destination Zone Matrix** across Abuja's 6 canonical corridors matching `supabase/seed/corridors.csv` exactly (`BWR-DUT-WUS: Bwari - Dutse - Oando - Berger - Wuse / Central Area`, `ZUB-KUB-WUS: Zuba - Dei-Dei - Kubwa - Gwarinpa - Oando - Berger - Wuse / Central Area`, `ZUB-DEI-DUT: Zuba - Dei-Dei - Kubwa - Dutse - Sokale - Bwari Connector`, `ZUB-KRM-JAB: Zuba - Dei-Dei - Gwagwa - Karmo - Jabi - Utako - Wuse`, `GWL-LUG-AR1: Gwagwalada - Airport Rd - Lugbe - Area 1 - Central Area`, `MRB-NYA-CEN: Mararaba - Nyanya - Kugbo - AYA - Central Area - Wuse`):
 
 | Route Segment (Abuja) | Solo Ride-Hailing Est. | Traditional 6-Squeezed "Along" | **Along Verified 4-Seat Fare** | Commuter Savings |
 |---|---|---|---|---|
@@ -110,13 +110,13 @@ Unlike flat-rate apps, Along uses a **Dynamic Origin-to-Destination Zone Matrix*
 In Abuja, commuters do not use street addresses or zip codes. They navigate by spoken, multilingual, relational landmarks (*"second transformer after Dutse first gate"*, *"Ina Dei-Dei zan tafi gadar Berger"*).
 
 1. **Multilingual Reasoning & Slot Extraction:**
-   - Powered by Meta open-weight models (Muse Spark Open via Baseten / Llama 3.2 Vision via NVIDIA NIM) for intent and route extraction across **English, Nigerian Pidgin, and Hausa**, resolving complex relational landmarks.
+   - Powered by Meta open-weight models: primary Muse Spark Open (`meta-models/muse-spark-open-1026`) via Baseten; fallback Llama 3.2 Vision (`meta/llama-3.2-11b-vision-instruct`) via NVIDIA NIM for intent and route extraction across **English, Nigerian Pidgin, and Hausa**, resolving complex relational landmarks.
 2. **Hyper-Local Spatial Search (Character N-Gram Hashing + FAISS):**
-   - Indexes **1,122 hyper-local Abuja landmark aliases** across 142 landmarks and 6 corridors, snapping informal spoken descriptions to exact **Virtual Anchor Point** coordinates in **< 15 milliseconds**.
+   - Indexes **1,122 hyper-local Abuja landmark aliases** across 142 landmarks (1247 indexed vectors) and 6 corridors, snapping informal spoken descriptions to exact **Virtual Anchor Point** coordinates in **< 15 milliseconds**.
 3. **Computer Vision Vehicle Inspection:**
-   - Llama 3.2 vision check inspects vehicle registration photo and plate text during onboarding to verify identity against fleet records.
+   - Llama 3.2 Vision (`meta/llama-3.2-11b-vision-instruct` via NVIDIA NIM) inspects vehicle registration photo and plate text during onboarding to verify identity against fleet records.
 4. **Speech Recognition:**
-   - Non-Meta ASR via Groq Whisper (`whisper-large-v3-turbo`), providing spoken voice transcription in the demo interface.
+   - Non-Meta ASR via Groq Whisper (`whisper-large-v3-turbo`), providing spoken voice transcription in the demo interface. Groq is used only for Whisper speech to text.
 
 ---
 
@@ -140,7 +140,7 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
 ### **A Multi-Billion-Dollar Daily Habit Across Emerging Markets (Illustrative Market Estimates)**
 
 - **Abuja Initial Beachhead (SOM) (illustrative estimate):**
-  - **6 Major Corridors** (`Bwari-Dutse-Wuse`, `Zuba-Kubwa-Wuse`, `Zuba-Dei-Dei-Dutse`, `Zuba-Karmo-Jabi`, `Gwagwalada-Lugbe-Area 1`, `Mararaba-Nyanya-Central Area`).
+  - **6 Major Corridors** (`BWR-DUT-WUS: Bwari - Dutse - Oando - Berger - Wuse / Central Area`, `ZUB-KUB-WUS: Zuba - Dei-Dei - Kubwa - Gwarinpa - Oando - Berger - Wuse / Central Area`, `ZUB-DEI-DUT: Zuba - Dei-Dei - Kubwa - Dutse - Sokale - Bwari Connector`, `ZUB-KRM-JAB: Zuba - Dei-Dei - Gwagwa - Karmo - Jabi - Utako - Wuse`, `GWL-LUG-AR1: Gwagwalada - Airport Rd - Lugbe - Area 1 - Central Area`, `MRB-NYA-CEN: Mararaba - Nyanya - Kugbo - AYA - Central Area - Wuse`).
   - Capturing just **25,000 daily pods** (100,000 daily passenger trips at an average pod gross of ₦4,800 and 10% take rate) = **₦12,000,000/day** (**~₦4.38 Billion / $2.7M USD annual net platform revenue (illustrative estimate)** in Abuja alone).
 - **Nigeria Major Corridor Cities (SAM) (illustrative estimate):**
   - Lagos (*Berger-VI, Ikorodu-Yaba, Lekki-Ajah*), Port Harcourt, Kano, Kaduna, Ibadan = **15M+ daily corridor trips (illustrative estimate)** (**$180M+ annual net fee opportunity (illustrative estimate)**).
@@ -180,11 +180,11 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
 ### **From Abuja's Flagship Corridors to Every African City**
 
 - **What Is Built & Ready Today:**
-  - Full-stack production platform supporting **6 Abuja corridors, 20 fare zones, 24 private filling station Virtual Anchor Points, and 500+ multilingual landmark aliases**.
-  - End-to-end **WhatsApp-style Commuter Bot** (Text + Voice Notes in English, Pidgin, and Hausa), **Dual-Theme Driver PWA**, **2G Feature-Phone Voice/USSD channel**, **Double-Entry Kobo Escrow Ledger**, and **Operations Command Center**.
+  - Full-stack production platform supporting **6 Abuja corridors, 20 fare zones, 24 private filling station Virtual Anchor Points, 1,122 aliases and 142 landmarks (1247 indexed vectors)**.
+  - End-to-end **WhatsApp-style Commuter Bot** (Text + Voice Notes in English, Pidgin, and Hausa), **Dual-Theme Driver PWA**, **2G Feature-Phone Voice/USSD channel**, **Double-Entry Kobo Escrow Ledger**, and **Operations Command Center**. (For USSD: the backend endpoint and tests exist but the simulator was removed from the UI. The WhatsApp webhook handler exists but is not connected to a verified Meta Business account.)
 - **12-Month Rollout Roadmap:**
-  - **Quarter 1 (Abuja Flagship Launch):** Commercial operations on the **Bwari - Dutse First Gate - Oando - Berger - Wuse** corridor with 100 vetted drivers and 6 partner filling station forecourts (*A.A. Rano, Oando, TotalEnergies*).
-  - **Quarter 2 (FCT Corridor Expansion):** Activate the **Zuba - Dei-Dei - Kubwa** and **Mararaba - Nyanya - Central Area** corridors.
+  - **Quarter 1 (Abuja Flagship Launch):** Commercial operations on the **Bwari - Dutse - Oando - Berger - Wuse / Central Area** corridor with 100 vetted drivers and 6 partner filling station forecourts (*A.A. Rano, Oando, TotalEnergies*).
+  - **Quarter 2 (FCT Corridor Expansion):** Activate the **Zuba - Dei-Dei - Kubwa - Gwarinpa - Oando - Berger - Wuse / Central Area** and **Mararaba - Nyanya - Kugbo - AYA - Central Area - Wuse** corridors.
   - **Quarter 3 (Recurring Commuter Subscriptions):** Launch **Weekday Morning Commuter Pass** subscriptions and Dedicated Virtual Account (NUBAN) instant top-ups.
   - **Quarter 4 (Multi-City Scale):** Expand blueprint to **Lagos** (*Ikorodu-Yaba, Berger-VI, Lekki-Ajah*) and **Kano / Port Harcourt**.
 - **The Opportunity for Investors & Forecourt Partners:**
@@ -193,4 +193,4 @@ In Abuja, commuters do not use street addresses or zip codes. They navigate by s
 
 ---
 
-*Disclaimer: Along is an independent project. It is not affiliated with or endorsed by WhatsApp or Meta.*
+*Disclaimer: Along is an independent project. It is not affiliated with or endorsed by WhatsApp or Meta. The WhatsApp webhook handler exists but is not connected to a verified Meta Business account. For USSD: the backend endpoint and tests exist but the simulator was removed from the UI.*

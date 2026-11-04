@@ -485,6 +485,7 @@ interface AbujaCorridorMapProps {
   journeyStage?: string;
   progressPct?: number;
   driverMarkerLabel?: string;
+  podId?: string;
   onTripCompleted?: () => void;
 }
 
@@ -496,9 +497,16 @@ export function AbujaCorridorMap({
   journeyStage,
   progressPct,
   driverMarkerLabel,
+  podId,
   onTripCompleted,
 }: AbujaCorridorMapProps) {
   const trip = useAlongTrip();
+  const serverPodId =
+    driverMarkerLabel ||
+    podId ||
+    trip.serverSnapshot?.podId ||
+    trip.podId ||
+    "POD";
   const currentCorridorId = trip.currentQuote?.corridorId || trip.activeCorridorId || corridorId;
   const corridor = CORRIDOR_DATA[currentCorridorId] || CORRIDOR_DATA["BWR-DUT-WUS"];
 
@@ -822,7 +830,7 @@ export function AbujaCorridorMap({
             d="M 486,184 C 512,178 525,196 510,208 C 492,216 476,202 486,184 Z"
             className="abuja-water-poly"
           />
-          <text x="498" y="199" textAnchor="middle" className="abuja-water-label">
+          <text x="498" y="199" textAnchor="middle" className="abuja-water-label" style={{ display: "none" }}>
             Jabi Lake
           </text>
 
@@ -913,7 +921,7 @@ export function AbujaCorridorMap({
             const maxIdx = Math.max(pickupIdx, dropIdx);
             const isWithinTrip = !hasBookingOrQuote || (idx >= minIdx && idx <= maxIdx);
             const labelY = wp.labelPos === "top" ? -14 : 21;
-            const badgeY = wp.labelPos === "top" ? -26 : 33;
+            const badgeY = wp.labelPos === "top" ? -30 : 36;
             const nodeDisplayLabel = isPickup ? shortOriginLabel : isDrop ? shortDestLabel : wp.name;
 
             return (
@@ -1026,9 +1034,9 @@ export function AbujaCorridorMap({
                 strokeWidth="1.5"
               />
               <rect
-                x={driverMarkerLabel ? "-86" : "-58"}
+                x={serverPodId.length > 8 ? "-86" : "-58"}
                 y="-58"
-                width={driverMarkerLabel ? "172" : "116"}
+                width={serverPodId.length > 8 ? "172" : "116"}
                 height="20"
                 rx="10"
                 fill={isTripInitiated || hasArrived ? "var(--brand-primary)" : "#D97706"}
@@ -1038,19 +1046,17 @@ export function AbujaCorridorMap({
                 y="-44.5"
                 textAnchor="middle"
                 style={{
-                  fontSize: driverMarkerLabel ? 8.6 : 9.2,
+                  fontSize: serverPodId.length > 8 ? 8.6 : 9.2,
                   fontWeight: 800,
                   fill: "#FFFFFF",
                   fontFamily: "var(--font-mono)",
                 }}
               >
-                {driverMarkerLabel
-                  ? `${driverMarkerLabel} · ${vehicleInfo.pct}%`
-                  : isTripInitiated
-                  ? `POD-842A · ${vehicleInfo.pct}%`
+                {isTripInitiated
+                  ? `${serverPodId} · ${vehicleInfo.pct}%`
                   : hasArrived
-                  ? "POD-842A · ARRIVED"
-                  : "POD-842A · BOARDING"}
+                  ? `${serverPodId} · ARRIVED`
+                  : `${serverPodId} · BOARDING`}
               </text>
             </g>
           )}

@@ -147,6 +147,7 @@ export interface PublicTripShareResponse {
   // Legacy fields for backward compatibility
   share_token?: string;
   pod_code?: string;
+  pod_id?: string;
   corridor_id?: string;
   corridor_name?: string;
   status?: string;

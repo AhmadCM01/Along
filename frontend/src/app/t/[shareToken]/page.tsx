@@ -520,14 +520,15 @@ export default function TripTrackerPage({
               padding: "8px 12px",
               borderRadius: 6,
               background: "var(--brand-soft)",
-              color: "var(--brand-ink)",
+              color: "var(--text-ink)",
+              border: "1px solid var(--border-strong)",
               fontWeight: 600,
               display: "flex",
               alignItems: "center",
               gap: 8,
             }}
           >
-            <span>●</span>
+            <span style={{ color: "var(--brand-primary)" }}>●</span>
             <span>{renderStageCopy()}</span>
           </div>
         </section>
@@ -541,6 +542,7 @@ export default function TripTrackerPage({
             anchorName={tripData?.pickup || "Pickup Anchor"}
             journeyStage={currentStage}
             progressPct={progressPct}
+            podId={tripData?.pod_code || tripData?.pod_id}
           />
         </section>
 

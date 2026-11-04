@@ -181,3 +181,94 @@ This evaluation is subject to several real-world limitations:
 5. Team-written aliases: Landmark aliases and gazetteer entries were curated by the project team rather than harvested from large-scale independent commuter field logs.
 6. No real-world field deployment: These results reflect controlled laboratory evaluations against recorded audio files, not live field conditions with end commuters.
 7. Results not generalizable: Due to the constraints above, metrics reported here must not be generalized to broader demographic groups or other Nigerian transit regions.
+
+## Addendum
+
+### Pipeline Unchanged Check
+
+- Current HEAD Commit at Verification: `eaeb48f0cc697974c70ccb6ba9262ae62ee74e44` (short `eaeb48f`)
+- Frozen Evaluation Target: `39685acd752fed3f3ae57102d234188b76a509b6` (short `39685ac`)
+- Diff Command: `git diff --stat 39685ac HEAD -- backend/app/ai backend/app/matching supabase/seed data/faiss`
+- Pipeline Diff Result:
+  `backend/app/ai/llm.py | 18 +++++++++++-------`
+  `1 file changed, 11 insertions(+), 7 deletions(-)`
+- Scope Statement: The underlying pipeline changed in 1 file (`backend/app/ai/llm.py`, adding HTTP error body sanitization and conditional fallback chain representation). The matching engine (`backend/app/matching`), seed data (`supabase/seed`), and FAISS landmark vector index (`data/faiss`) remain identical to commit 39685ac. This evaluation report applies to commit 39685ac only; note that other commits may land while development proceeds.
+
+### System A-prime: Rule-based Extractor on Typed Text Baseline
+
+System A-prime evaluates the local deterministic rule-based extractor applied directly to typed ground truth text (no speech recognition, no external cloud API calls), followed by the landmark resolver.
+
+> Note: System A-prime was added after seeing the first results; no tuning of any component was done.
+
+#### Results Table with System A-prime
+
+| System | Pipeline Description | Book Exact (All 3) | Book Lenient (Anchor) | Pickup Match | Drop Match | Seats Match | Clarify Success | SOS Success | WER (27 clips) | Latency p50 | Latency p95 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| System A | Whisper (hint) -> Rule-based -> Resolver | 1 of 19 | 4 of 19 | 5 of 19 | 3 of 19 | 17 of 19 | 5 of 5 | 2 of 2 | 44.4% | 2197.01 ms | 2774.93 ms |
+| System A-prime | Ground Truth Text -> Rule-based -> Resolver | 10 of 19 | 11 of 19 | 15 of 19 | 14 of 19 | 16 of 19 | 5 of 5 | 1 of 2 | 0.0% | 8.98 ms | 212.98 ms |
+| System B (with hint) | Whisper (hint) -> Muse Spark Open -> Resolver | 2 of 19 | 5 of 19 | 6 of 19 | 6 of 19 | 17 of 19 | 5 of 5 | 2 of 2 | 44.4% | 5192.16 ms | 7110.57 ms |
+| System B (no hint) | Whisper (raw) -> Muse Spark Open -> Resolver | 1 of 19 | 3 of 19 | 5 of 19 | 7 of 19 | 16 of 19 | 5 of 5 | 2 of 2 | 55.0% | 5097.54 ms | 8268.70 ms |
+| System C | Ground Truth Text -> Muse Spark Open -> Resolver | 13 of 19 | 14 of 19 | 16 of 19 | 16 of 19 | 17 of 19 | 5 of 5 | 2 of 2 | 0.0% | 2353.72 ms | 3479.85 ms |
+
+#### System A-prime Split and Language Breakdown
+
+- Split breakdown (Headline Book Rows: 5 Dev, 14 Test):
+  - Dev: 3 of 5 exact
+  - Test: 7 of 14 exact
+- Language breakdown (Headline Book Rows: 7 English, 8 Pidgin, 4 Hausa):
+  - English: 4 of 7 exact
+  - Pidgin: 4 of 8 exact
+  - Hausa: 2 of 4 exact
+
+#### System A-prime In-Vocabulary versus Out-of-Vocabulary
+
+| System | In-Vocabulary (All 3 Correct) | In-Vocabulary Count | Out-of-Vocabulary (All 3 Correct) | Out-of-Vocabulary Count |
+|---|---|---|---|---|
+| System A-prime | 8 of 12 | 12 | 2 of 7 | 7 |
+
+#### Cross-Corridor Subgroup Comparison
+
+| Clip | Spoken Route | System A | System A-prime | System B (hint) | System B (no hint) | System C | Valid Booking? (A-prime) |
+|---|---|---|---|---|---|---|---|
+| c04 | Jabi Lake Mall to Zuba interchange | clarify | clarify | clarify | clarify | clarify | N/A (clarified) |
+| c06 | Kubwa Gate 1 to Wuse Zone 4 | clarify | book | clarify | clarify | book | No (wrong pickup and seats) |
+| c07 | Nyanya Underbridge to Central Area | clarify | clarify | clarify | clarify | book | N/A (clarified) |
+| c10 | Kubwa Arab Road to Mabushi Bridge | clarify | book | clarify | clarify | book | Yes (exact match) |
+| c23 | Bridge after Gwarinpa to Central Area | clarify | clarify | clarify | clarify | clarify | N/A (clarified) |
+
+### Clarify Rate on Headline Booking Rows
+
+On the 19 headline booking requests, system behavior was classified into: (1) booked correctly with all 3 slots exact; (2) booked with a wrong pickup, drop, or seat count; (3) asked a clarifying question instead of booking; and (4) other terminal action (e.g. short trip decline).
+
+| System | Booked Correctly (Exact) | Booked with Wrong Slots | Asked Clarifying Question | Other Action (Decline) | Total Headline Book Rows |
+|---|---|---|---|---|---|
+| System A | 0 of 19 | 1 of 19 | 18 of 19 | 0 of 19 | 19 |
+| System A-prime | 9 of 19 | 2 of 19 | 7 of 19 | 1 of 19 | 19 |
+| System B (with hint) | 1 of 19 | 1 of 19 | 17 of 19 | 0 of 19 | 19 |
+| System B (without hint) | 0 of 19 | 1 of 19 | 18 of 19 | 0 of 19 | 19 |
+| System C | 12 of 19 | 2 of 19 | 4 of 19 | 1 of 19 | 19 |
+
+Perfect clarify and sos scores are easy for a system that asks a question whenever it is unsure.
+
+### Word Error Rate (WER) Normalization Analysis
+
+In the codebase evaluation harness, word error rate is calculated using character-level normalization before Levenshtein alignment:
+1. Case folding to lowercase.
+2. Token extraction with regular expression `[a-zA-Z0-9']+`, which keeps alphanumeric characters, numbers as digits, and internal apostrophes in contractions (such as "i'm" or "don't") while stripping external punctuation.
+3. Macro-averaged word edit distance divided by reference token length across the 27 evaluation clips (excluding the 3 artificial noise-masked clips c24, c25, c26).
+
+To evaluate sensitivity to normalization conventions, WER was also recomputed using simple normalization (convert to lowercase, strip all punctuation including apostrophes with `[^\w\s]`, collapse whitespace, and split by spaces).
+
+| System | Code Regex WER (Apostrophes Kept) | Simple Normalization Macro WER | Simple Normalization Micro WER |
+|---|---|---|---|
+| System A (with hint) | 44.4% | 44.5% | 42.8% |
+| System B (with hint) | 44.4% | 44.5% | 42.8% |
+| System B (no hint) | 55.4% (55.0% reported) | 54.8% | 52.2% |
+| System C (Ground Truth) | 0.0% | 0.0% | 0.0% |
+| System A-prime (Ground Truth) | 0.0% | 0.0% | 0.0% |
+
+Under simple normalization, apostrophes are deleted so contractions like "i'm" become single unpunctuated tokens ("im"). Both methods confirm that ASR errors affect approximately 43% to 55% of spoken tokens.
+
+### What the Results Mean
+
+Language understanding on typed text works reasonably well across both methods, correctly booking 13 of 19 requests with the language model and 10 of 19 with deterministic rules. Speech recognition on recorded audio is the primary bottleneck in the pipeline, dropping exact booking accuracy to 2 of 19 with prompt hints and 1 of 19 without hints while exhibiting word error rates of 44.4% to 55.0%. Performance is heavily dependent on gazetteer coverage, succeeding on 11 of 12 in-vocabulary requests for the model but only 2 of 7 out-of-vocabulary requests where spoken place names lacked exact aliases. Comparing the two text-based extractors directly on typed text, the language model (13 of 19 exact matches) outperforms the deterministic rule-based path (10 of 19 exact matches). The rule-based path frequently asks clarifying questions when colloquial phrasing deviates from scripted regular expressions, leading to 7 clarification turns on booking requests compared to 4 for the model. All evaluation audio clips were collected from a small sample of 30 recordings provided by only two male speakers from the same household. Because of the small sample size and narrow acoustic distribution, these results do not claim generalization to broader commuter demographics or transit settings across Nigeria.

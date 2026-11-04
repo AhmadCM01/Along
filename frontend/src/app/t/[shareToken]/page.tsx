@@ -247,23 +247,6 @@ export default function TripTrackerPage({
       })
     : "";
 
-  // Dynamic context banner copy per contract
-  const renderStageCopy = () => {
-    if (currentStage === "BOARDING") {
-      return "Your driver is at the pickup point. Waiting for the driver to check your boarding code.";
-    }
-    if (currentStage === "IN_TRANSIT") {
-      return `On the way. Next stop: ${tripData?.next_waypoint || "Upcoming stop"}.`;
-    }
-    if (currentStage === "COMPLETED") {
-      return "Arrived. Trip complete.";
-    }
-    if (currentStage === "DRIVER_ON_THE_WAY") {
-      return "Driver is en route to your pickup point.";
-    }
-    return "Waiting for driver assignment.";
-  };
-
   return (
     <div
       style={{
@@ -289,16 +272,17 @@ export default function TripTrackerPage({
       >
         {/* Title, Telemetry Header, and Prominent Share Link */}
         <section
+          className="tracker-header-section"
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
             flexWrap: "wrap",
-            gap: 12,
+            gap: 14,
           }}
         >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ flex: "1 1 280px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>
                 Live Corridor Tracker
               </h1>
@@ -367,30 +351,46 @@ export default function TripTrackerPage({
           </div>
 
           {/* Prominent Copy Share Link Button & Guidance */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+          <div
+            className="tracker-share-container"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
             <button
               type="button"
               onClick={handleShareLink}
+              className="tracker-share-btn"
               style={{
-                padding: "8px 16px",
+                padding: "10px 18px",
                 borderRadius: "var(--radius-button)",
                 background: "var(--brand-primary)",
                 color: "#FFFFFF",
                 border: "none",
-                fontSize: 13,
+                fontSize: 13.5,
                 fontWeight: 700,
                 cursor: "pointer",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 6,
+                justifyContent: "center",
+                gap: 8,
                 boxShadow: "var(--shadow-soft)",
               }}
             >
-              <LinkChainIcon size={14} color="#FFFFFF" />
+              <LinkChainIcon size={15} color="#FFFFFF" />
               <span>{copiedLink ? "Link Copied ✓" : "Copy share link"}</span>
             </button>
-            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              Open this link on another phone to see the same live trip.
+            <span
+              className="tracker-share-hint"
+              style={{
+                fontSize: 11.5,
+                color: "var(--text-muted)",
+                lineHeight: 1.4,
+              }}
+            >
+              Share with family or loved ones to track your live ride in real time.
             </span>
           </div>
         </section>
@@ -511,25 +511,6 @@ export default function TripTrackerPage({
                 </div>
               );
             })}
-          </div>
-
-          {/* Dynamic contextual copy */}
-          <div
-            style={{
-              fontSize: 12.5,
-              padding: "8px 12px",
-              borderRadius: 6,
-              background: "var(--brand-soft)",
-              color: "var(--text-ink)",
-              border: "1px solid var(--border-strong)",
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <span style={{ color: "var(--brand-primary)" }}>●</span>
-            <span>{renderStageCopy()}</span>
           </div>
         </section>
 
@@ -705,6 +686,37 @@ export default function TripTrackerPage({
       <BottomTabBar activeShareToken={shareToken} />
 
       <style jsx>{`
+        @media (max-width: 640px) {
+          .tracker-header-section {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+          }
+          .tracker-share-container {
+            align-items: stretch !important;
+            width: 100% !important;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-card);
+            padding: 12px 14px;
+            box-shadow: var(--shadow-soft);
+          }
+          .tracker-share-btn {
+            width: 100% !important;
+            padding: 12px 16px !important;
+            font-size: 14px !important;
+          }
+          .tracker-share-hint {
+            text-align: center !important;
+          }
+        }
+        @media (min-width: 641px) {
+          .tracker-share-container {
+            align-items: flex-end !important;
+            max-width: 280px !important;
+            text-align: right !important;
+          }
+        }
         @media (max-width: 720px) {
           .tracker-cards-grid {
             grid-template-columns: 1fr !important;

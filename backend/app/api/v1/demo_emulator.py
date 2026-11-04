@@ -413,9 +413,9 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
     state.pod_code = pod_entry.get("pod_id", driver_info["pod_code"])
     driver_info["pod_code"] = state.pod_code
     passengers = pod_entry.setdefault("passengers", [])
+    req_id = state.request_id or (f"req-{state.phone_e164[-4:]}" if state.phone_e164 else "req-demo-01")
 
     if state.stage in ("AWAITING_CONFIRMATION", "POOLING") and state.destination_name:
-        req_id = state.request_id or f"req-{state.phone_e164[-4:]}"
         active_passengers = [p for p in passengers if not p.get("is_alighted") and not p.get("alighted")]
         existing_idx = next(
             (i for i, p in enumerate(passengers) if p.get("phone") == state.phone_e164),

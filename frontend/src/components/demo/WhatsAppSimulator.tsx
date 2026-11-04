@@ -821,7 +821,7 @@ export function WhatsAppSimulator({
           className="along-chat-body"
           style={{
             flex: 1,
-            padding: "16px 16px 28px",
+            padding: "16px 16px 36px",
             overflowY: "auto",
             scrollbarGutter: "stable",
             display: "flex",
@@ -1364,7 +1364,9 @@ export function WhatsAppSimulator({
         {/* WhatsApp Bottom Composer Bar (Normal Mode vs Live Voice Recording Mode) */}
         <footer
           style={{
-            padding: "10px 14px",
+            padding: "8px 12px",
+            minHeight: 52,
+            boxSizing: "border-box",
             background: "var(--bg-surface)",
             borderTop: "1px solid var(--border-subtle)",
             display: "flex",

@@ -196,7 +196,7 @@ export default function RidePage() {
       <style jsx global>{`
         @media (max-width: 768px) {
           .ride-whatsapp-stage {
-            padding: 0 0 56px 0 !important;
+            padding: 0 0 calc(60px + env(safe-area-inset-bottom, 0px)) 0 !important;
             max-width: 100% !important;
           }
           .ride-desktop-footer {

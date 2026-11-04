@@ -5,7 +5,7 @@ Along is an AI-orchestrated shared transit platform that groups Abuja commuters 
 | Item | Details |
 |---|---|
 | Live Demo | [https://along-dusky.vercel.app/](https://along-dusky.vercel.app/) (Frontend on Vercel) |
-| Demo Video | <VIDEO_URL> |
+| Demo Video | <https://youtu.be/3rtguXda-4s?si=SWtNoAGN1hB4Smp4> |
 | API Health | [https://along-api-i3ne.onrender.com/healthz](https://along-api-i3ne.onrender.com/healthz) (Backend on Render) |
 | Track and Theme | Indie Developer, solo builder, Build for Your World |
 | Repository Status | Public repository, 46 backend tests passing, frontend production build passing |
@@ -32,20 +32,6 @@ Follow this path to test the complete live transit flow:
 > - Voice input requires HTTPS or localhost for browser microphone access.
 > - Each browser session receives its own isolated demo pod through the `X-Along-Session` header.
 > - Please do not input real personal identity numbers, financial secrets, or sensitive personal information.
-
----
-
-## Interface Previews
-
-The interface is illustrated by the following component views:
-
-- Mobile Chat Interface: `docs/images/mobile_chat.png` (displays conversational booking in English, Pidgin, or Hausa).
-- Fare Quote Card: `docs/images/quote_card.png` (displays calculated zone fare, corridor anchor, and seat breakdown).
-- Confirmed Ride Card: `docs/images/ride_card_boarding_code.png` (shows 4-digit boarding code, safe meeting anchor, and shareable link).
-- AI X-ray Telemetry Panel: `docs/images/ai_xray_panel.png` (shows NLU model, token latency, and extraction confidence).
-- Driver Cockpit Terminal: `docs/images/driver_terminal.png` (manifest table, 150m geofence check, and OTP verification).
-- Live Family Tracker (Desktop): `docs/images/live_tracker_in_transit.png` (server-clock telemetry and corridor polyline progress).
-- Live Family Tracker (Mobile): `docs/images/live_tracker_mobile.png` (mobile tracker with driver badge and simulated escrow release).
 
 ---
 
@@ -364,10 +350,6 @@ All 46 automated backend tests pass (0 failures, 0 errors, 1 warning):
 - `tests/unit/test_rate_limiter.py`: In-memory sliding window IP rate limiting and global quotas.
 - `tests/unit/test_server_authoritative_trips.py`: Server clock stage progression, monotonic telemetry, isolated session pods, 409 capacity limit, OTP lockout, and CORS header preflights.
 
-### End-to-End Validation
-
-An end-to-end live deployment verification script is referenced at `<E2E_SCRIPT_PATH: scripts/e2e_live.py not yet committed>` and can be executed against any environment base URL.
-
 ### Continuous Integration (GitHub Actions)
 
 The `.github/workflows/ci.yml` pipeline runs on every push and pull request to `main`:
@@ -471,8 +453,8 @@ To transition Along from a hackathon demonstration to a production transit platf
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/along-ai/along.git
-cd along
+git clone https://github.com/AhmadCM01/Along.git
+cd Along
 ```
 
 ### 2. Environment Configuration
@@ -576,4 +558,4 @@ Along AI/
 
 ## License
 
-<LICENSE: owner to choose>
+<No license has been chosen yet. All rights reserved by the author.>

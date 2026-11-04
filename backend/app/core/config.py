@@ -75,6 +75,8 @@ class Settings(BaseSettings):
     PUBLIC_BASE_URL: str = "http://localhost:3001"
     API_BASE_URL: str = "http://localhost:8000"
     ALLOW_SIMULATED_GPS: bool = True
+    DEMO_DRIVER_ARRIVAL_SECONDS: float = 8.0
+    DEMO_TRIP_SECONDS: float = 150.0
 
     DATABASE_URL: str = "postgresql://along:along_dev_password@localhost:5433/along"
     DIRECT_DATABASE_URL: str = "postgresql://along:along_dev_password@localhost:5433/along"

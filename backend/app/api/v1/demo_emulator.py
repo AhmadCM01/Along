@@ -26,6 +26,12 @@ from app.core.config import get_settings
 from app.core.ids import generate_boarding_otp, generate_share_token
 from app.core.money import format_naira
 from app.core.security import hash_otp_code
+from app.core.trip_state import (
+    SHARE_TOKENS,
+    get_or_create_session_pod,
+    get_pod_by_id_or_session,
+    get_server_time,
+)
 from app.redis.keys import RedisKeys
 
 router = APIRouter(prefix="/api/v1/demo", tags=["demo-cockpit"])
@@ -395,11 +401,17 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
 
     corr_key = state.corridor_id or "BWR-DUT-WUS"
     driver_info = CORRIDOR_DRIVERS.get(corr_key, CORRIDOR_DRIVERS["BWR-DUT-WUS"])
-    state.pod_code = driver_info["pod_code"]
 
-    # Sync passenger and OTP with active pod for multi-browser concurrent pooling
-    pod_key = driver_info["pod_code"]
-    pod_entry = get_pod_for_corridor(corr_key, pod_key)
+    # Resolve per-session isolated pod or default corridor pod
+    session_id = request.headers.get("x-along-session") if request else None
+    if session_id:
+        pod_entry = get_or_create_session_pod(session_id, corridor_id=corr_key)
+    else:
+        pod_key = driver_info["pod_code"]
+        pod_entry = get_pod_for_corridor(corr_key, pod_key)
+
+    state.pod_code = pod_entry.get("pod_id", driver_info["pod_code"])
+    driver_info["pod_code"] = state.pod_code
     passengers = pod_entry.setdefault("passengers", [])
 
     if state.stage in ("AWAITING_CONFIRMATION", "POOLING") and state.destination_name:
@@ -437,15 +449,14 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
         if not assigned_seats:
             assigned_seats = [4]
 
-        # Use clean names like 'Rider A', 'Rider B' without phone numbers
-        rider_letter = chr(65 + (len(passengers) % 26))
-        display_label = f"Rider {rider_letter}"
-
+        display_label = "Rider A (you)"
+        now = get_server_time()
         p_entry = {
             "request_id": req_id,
             "first_name": display_label,
             "phone": state.phone_e164,
             "display_name": display_label,
+            "simulated": False,
             "origin": state.anchor_name or state.origin_name or "Safe Pickup Anchor",
             "destination": state.destination_name,
             "seats": req_seats,
@@ -455,7 +466,9 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
             "is_boarded": req_id in pod_entry.get("boarded_requests", set()),
             "is_alighted": False,
             "is_confirmed": state.stage == "POOLING",
-            "booked_at": time.time(),
+            "booked_at": now,
+            "sos_active": False,
+            "share_token": state.share_token,
         }
 
         if existing_idx >= 0:
@@ -467,64 +480,28 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
         pod_entry.setdefault("boarding_otp_hashes", {})[req_id] = hash_otp_code(
             state.boarding_otp, context_id=req_id
         )
+        if state.request_code:
+            pod_entry.setdefault("boarding_otp_hashes", {})[state.request_code] = hash_otp_code(
+                state.boarding_otp, context_id=state.request_code
+            )
+            pod_entry.setdefault("otp_created_at", {})[state.request_code] = now
+            pod_entry.setdefault("otp_attempts", {})[state.request_code] = 0
         pod_entry.setdefault("boarding_otp_hashes", {})[state.boarding_otp] = hash_otp_code(
             state.boarding_otp, context_id=""
         )
         pod_entry.setdefault("boarding_otps", {})[state.boarding_otp] = req_id
-        pod_entry.setdefault("otp_created_at", {})[req_id] = time.time()
+        pod_entry.setdefault("otp_created_at", {})[req_id] = now
         pod_entry.setdefault("otp_attempts", {})[req_id] = 0
+
+        if state.stage == "POOLING":
+            pod_entry["confirmed_at"] = pod_entry.get("confirmed_at") or now
+            p_entry["is_confirmed"] = True
+
+        if state.share_token:
+            SHARE_TOKENS[state.share_token] = (pod_entry["pod_id"], req_id)
 
     settings = get_settings()
     share_url = f"{settings.PUBLIC_BASE_URL.rstrip('/')}/t/{state.share_token}" if state.share_token else ""
-
-    # Sync public trip share store with the rider's exact booked trip details
-    if state.share_token and (state.anchor_name or state.origin_name) and state.destination_name:
-        PUBLIC_TRIPS_BY_TOKEN[state.share_token] = {
-            "share_token": state.share_token,
-            "share_url": share_url,
-            "pod_code": driver_info["pod_code"],
-            "corridor": corr_key,
-            "corridor_id": corr_key,
-            "corridor_name": f"{state.origin_name or 'Origin'} -> {state.destination_name}",
-            "status": "AWAITING_BOARDING" if state.stage == "POOLING" else state.stage,
-            "pickup_anchor": state.anchor_name or state.origin_name or "Safe Forecourt Anchor",
-            "origin_anchor": state.anchor_name or state.origin_name or "Safe Forecourt Anchor",
-            "drop_off": state.destination_name,
-            "destination_landmark": state.destination_name,
-            "seats": state.seats,
-            "fare": state.total_fare_kobo // 100,
-            "fare_kobo": state.total_fare_kobo,
-            "fare_naira": state.total_fare_kobo // 100,
-            "demo_driver_profile": {
-                "full_name": driver_info["full_name"],
-                "profile_note": "Demo driver profile",
-                "vehicle_desc": driver_info["vehicle_desc"],
-                "plate_number": driver_info["plate_number"],
-                "id_on_file": True,
-                "rating": 4.94,
-            },
-            "driver": {
-                "full_name": driver_info["full_name"],
-                "profile_note": "Demo driver profile",
-                "vehicle_desc": driver_info["vehicle_desc"],
-                "plate_number": driver_info["plate_number"],
-                "id_on_file": True,
-                "rating": 4.94,
-            },
-            "telemetry": {
-                "lat": state.origin_lat or 9.1779,
-                "lng": state.origin_lng or 7.3736,
-                "current_landmark": state.anchor_name or state.origin_name or "Forecourt Bay",
-                "progress_pct": 0,
-                "eta_minutes": 11,
-                "route_deviation_m": 4,
-                "is_on_corridor": True,
-            },
-            "escrow_status": "Simulated escrow",
-            "sos_active": state.stage == "SOS_ACTIVE",
-            "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        }
-
     gross_pod_kobo = max(state.total_fare_kobo, state.unit_fare_kobo * 4)
     driver_net_kobo = int(round(gross_pod_kobo * 0.90))
     platform_fee_kobo = gross_pod_kobo - driver_net_kobo
@@ -548,6 +525,7 @@ async def execute_demo_chat_turn(body: DemoChatInput, request: Request) -> dict[
             "buttons": state.last_buttons,
             "seats": state.seats,
             "request_code": state.request_code,
+            "request_id": req_id,
             "boarding_otp": state.boarding_otp,
             "share_token": state.share_token,
             "share_url": share_url,

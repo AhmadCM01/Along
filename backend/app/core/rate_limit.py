@@ -88,8 +88,8 @@ async def rate_limit_middleware(request: Request, call_next: Any) -> Any:
         return await call_next(request)
 
     path = request.url.path
-    # Exclude healthz, metrics, and OPTIONS from rate limits
-    if request.method == "OPTIONS" or path in ("/healthz", "/metrics"):
+    # Exclude healthz, metrics, OPTIONS, and public trip share endpoint from rate limits
+    if request.method == "OPTIONS" or path in ("/healthz", "/metrics") or path.startswith("/api/v1/trips/share"):
         return await call_next(request)
 
     limiter = get_rate_limiter()

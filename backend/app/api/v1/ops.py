@@ -30,6 +30,8 @@ async def get_ops_overview() -> dict[str, Any]:
     completed_runs = 42 + len(ACTIVE_PODS_STORE)
     agbero_avoided_kobo = completed_runs * BusinessRules.AGBERO_AVG_FEE_AVOIDED_KOBO
     sos_alerts = [
+        p for pod in ACTIVE_PODS_STORE.values() for p in pod.get("passengers", []) if p.get("sos_active") is True
+    ] or [
         t for t in PUBLIC_TRIPS_BY_TOKEN.values() if t.get("sos_active") is True
     ]
 

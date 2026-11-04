@@ -7,15 +7,25 @@ and trigger an immediate SOS alert if needed.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from app.core.config import get_settings
 from app.core.ids import generate_share_token
+from app.core.trip_state import (
+    ACTIVE_PODS,
+    DEFAULT_DEMO_POD_ID,
+    SHARE_TOKENS,
+    compute_public_trip_view,
+    get_pod_by_id_or_session,
+    get_server_time,
+)
 
 router = APIRouter(prefix="/api/v1/trips", tags=["trips-public"])
+
 
 class TripLocationInput(BaseModel):
     lat: float
@@ -26,153 +36,164 @@ class TripLocationInput(BaseModel):
     eta_minutes: int | None = None
 
 
-def get_default_demo_trip(token: str | None = None) -> dict[str, Any]:
-    """Construct authoritative default demo trip with a random or requested share token."""
-    assigned_token = token or generate_share_token()
-    return {
-        "share_token": assigned_token,
-        "pod_code": "POD-842A",
-        "corridor": "BWR-DUT-WUS",
-        "corridor_id": "BWR-DUT-WUS",
-        "corridor_name": "Bwari - Dutse - Oando - Berger - Wuse / Central Area",
-        "status": "WAITING_FOR_DRIVER",
-        "pickup_anchor": "A.A. Rano Filling Station (Dutse First Gate)",
-        "origin_anchor": "A.A. Rano Filling Station (Dutse First Gate)",
-        "drop_off": "Berger Roundabout Underbridge",
-        "destination_landmark": "Berger Roundabout Underbridge",
-        "seats": 2,
-        "fare": 1800,
-        "fare_kobo": 180000,
-        "fare_naira": 1800,
-        "driver": {
-            "full_name": "Musa Bello",
-            "profile_note": "Demo driver profile",
-            "vehicle_desc": "Volkswagen Golf 4 (Emerald Green)",
-            "plate_number": "ABJ-402-AL",
-            "id_on_file": True,
-            "rating": 4.94,
-        },
-        "telemetry": {
-            "lat": 9.1779,
-            "lng": 7.3736,
-            "current_landmark": "Dutse First Gate Forecourt Bay",
-            "progress_pct": 0,
-            "eta_minutes": 14,
-            "route_deviation_m": 0,
-            "is_on_corridor": True,
-        },
-        "escrow_status": "Locked in Simulated Atomic Escrow",
-        "sos_active": False,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-
-
+# Backward-compatibility alias dictionary for legacy tests
 PUBLIC_TRIPS_BY_TOKEN: dict[str, dict[str, Any]] = {}
 
 
+def get_default_demo_trip(token: str | None = None) -> dict[str, Any]:
+    """Construct authoritative default demo trip with a random or requested share token."""
+    assigned_token = token or generate_share_token()
+    pod = get_pod_by_id_or_session(pod_id=DEFAULT_DEMO_POD_ID)
+    req_id = "rr-demo-01"
+    SHARE_TOKENS[assigned_token] = (DEFAULT_DEMO_POD_ID, req_id)
+    if not any(p.get("request_id") == req_id for p in pod.get("passengers", [])):
+        pod["passengers"].append({
+            "request_id": req_id,
+            "first_name": "Rider A (you)",
+            "display_name": "Rider A (you)",
+            "simulated": False,
+            "origin": "A.A. Rano Filling Station (Dutse First Gate)",
+            "destination": "Berger Roundabout Underbridge",
+            "seats": 2,
+            "fare_naira": 1800,
+            "fare_kobo": 180000,
+            "is_boarded": False,
+            "is_confirmed": False,
+            "sos_active": False,
+            "share_token": assigned_token,
+        })
+    settings = get_settings()
+    return compute_public_trip_view(
+        share_token=assigned_token,
+        demo_driver_arrival_seconds=settings.DEMO_DRIVER_ARRIVAL_SECONDS,
+        demo_trip_seconds=settings.DEMO_TRIP_SECONDS,
+    )
+
+
 @router.get("/share/{share_token}")
-async def get_public_trip_share(share_token: str) -> dict[str, Any]:
+async def get_public_trip_share(share_token: str) -> JSONResponse:
     """Return live trip telemetry for `/t/[shareToken]` without requiring login.
-    
+
     Synchronizes real-time progress for family members and riders, automatically
     advancing in-transit trips and completing them at destination arrival.
     Returns 404 if token is unknown.
     """
-    trip = PUBLIC_TRIPS_BY_TOKEN.get(share_token)
-    if not trip:
-        raise HTTPException(
+    settings = get_settings()
+
+    # If not in SHARE_TOKENS, check legacy PUBLIC_TRIPS_BY_TOKEN
+    if share_token not in SHARE_TOKENS and share_token in PUBLIC_TRIPS_BY_TOKEN:
+        legacy = PUBLIC_TRIPS_BY_TOKEN[share_token]
+        pid = legacy.get("pod_code") or DEFAULT_DEMO_POD_ID
+        req_id = "rr-demo-legacy"
+        SHARE_TOKENS[share_token] = (pid, req_id)
+        pod = get_pod_by_id_or_session(pod_id=pid)
+        pod["passengers"] = [
+            {
+                "request_id": req_id,
+                "first_name": "Rider A (you)",
+                "display_name": "Rider A (you)",
+                "simulated": False,
+                "origin": legacy.get("origin_anchor") or legacy.get("pickup_anchor") or "Dutse First Gate",
+                "destination": legacy.get("destination_landmark") or legacy.get("drop_off") or "Wuse Market Main Gate",
+                "seats": legacy.get("seats", 1),
+                "fare_naira": legacy.get("fare_naira", 900),
+                "is_boarded": True,
+                "is_confirmed": True,
+                "sos_active": bool(legacy.get("sos_active", False)),
+                "share_token": share_token,
+            }
+        ]
+        if legacy.get("status") in ("IN_TRANSIT", "IN_TRIP"):
+            pod["departed_at"] = pod.get("departed_at") or get_server_time()
+
+    if share_token not in SHARE_TOKENS:
+        return JSONResponse(
             status_code=404,
-            detail=f"Trip with share token '{share_token}' was not found. Please verify your family link or book a trip first.",
+            content={
+                "code": "TRIP_NOT_FOUND",
+                "message": "This trip is no longer available. The demo server may have restarted. Book a new ride.",
+            },
+            headers={"Cache-Control": "no-store"},
         )
 
-    trip_status = (trip.get("status") or "").upper()
-    if trip_status in ("IN_TRANSIT", "IN_TRIP", "EN_ROUTE"):
-        now_dt = datetime.now(timezone.utc)
-        if not trip.get("in_transit_started_at"):
-            trip["in_transit_started_at"] = now_dt.isoformat()
+    try:
+        data = compute_public_trip_view(
+            share_token=share_token,
+            demo_driver_arrival_seconds=settings.DEMO_DRIVER_ARRIVAL_SECONDS,
+            demo_trip_seconds=settings.DEMO_TRIP_SECONDS,
+        )
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "code": "TRIP_NOT_FOUND",
+                    "message": "This trip is no longer available. The demo server may have restarted. Book a new ride.",
+                },
+                headers={"Cache-Control": "no-store"},
+            )
+        raise exc
 
-        try:
-            started_dt = datetime.fromisoformat(trip["in_transit_started_at"])
-            elapsed = max(0.0, (now_dt - started_dt).total_seconds())
-            demo_duration_sec = 35.0
-            computed_pct = min(100.0, (elapsed / demo_duration_sec) * 100.0)
-
-            trip.setdefault("telemetry", {})
-            current_pct = float(trip["telemetry"].get("progress_pct", 0.0))
-            effective_pct = max(current_pct, computed_pct)
-
-            trip["telemetry"]["progress_pct"] = round(effective_pct, 1)
-            trip["telemetry"]["eta_minutes"] = max(0, int(14 * (1.0 - effective_pct / 100.0)))
-
-            if effective_pct >= 100.0:
-                trip["status"] = "COMPLETED"
-                drop_target = trip.get("destination_landmark") or trip.get("drop_off") or "Destination"
-                trip["telemetry"]["current_landmark"] = drop_target
-
-            trip["updated_at"] = now_dt.isoformat()
-        except Exception:
-            pass
-
-    return trip
+    return JSONResponse(content=data, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/share/{share_token}/location")
 async def update_public_trip_location(share_token: str, body: TripLocationInput) -> dict[str, Any]:
-    """Update simulated GPS telemetry and progress for a shared trip."""
-    trip = PUBLIC_TRIPS_BY_TOKEN.get(share_token)
-    if not trip:
+    """Simulated GPS location endpoint (kept for API contract compatibility)."""
+    if share_token not in SHARE_TOKENS and share_token not in PUBLIC_TRIPS_BY_TOKEN:
         raise HTTPException(
             status_code=404,
-            detail=f"Trip with share token '{share_token}' was not found. Cannot update location.",
+            detail={
+                "code": "TRIP_NOT_FOUND",
+                "message": "This trip is no longer available. The demo server may have restarted. Book a new ride.",
+            },
         )
-    if "telemetry" not in trip or not isinstance(trip["telemetry"], dict):
-        trip["telemetry"] = {}
-
-    trip["telemetry"]["lat"] = body.lat
-    trip["telemetry"]["lng"] = body.lng
-    trip["telemetry"]["progress_pct"] = body.progress_pct
-    trip["telemetry"]["current_landmark"] = body.current_landmark
-    if body.eta_minutes is not None:
-        trip["telemetry"]["eta_minutes"] = body.eta_minutes
-    else:
-        trip["telemetry"]["eta_minutes"] = max(0, int(14 * (1 - body.progress_pct / 100)))
-
-    if body.status:
-        trip["status"] = body.status
-    elif body.progress_pct >= 100:
-        trip["status"] = "COMPLETED"
-    elif body.progress_pct > 0:
-        trip["status"] = "IN_TRANSIT"
-        if not trip.get("in_transit_started_at"):
-            trip["in_transit_started_at"] = datetime.now(timezone.utc).isoformat()
-
-    trip["updated_at"] = datetime.now(timezone.utc).isoformat()
     return {
         "status": "ok",
         "share_token": share_token,
-        "trip_status": trip["status"],
-        "telemetry": trip["telemetry"],
-        "updated_at": trip["updated_at"],
+        "lat": body.lat,
+        "lng": body.lng,
+        "progress_pct": body.progress_pct,
     }
 
 
 @router.post("/share/{share_token}/sos")
 async def trigger_public_trip_sos(share_token: str) -> dict[str, Any]:
-    """Activate immediate SOS alert on a shared trip and notify Along Operations Command Center."""
-    trip = PUBLIC_TRIPS_BY_TOKEN.get(share_token)
-    if not trip:
+    """Activate immediate SOS alert on that trip only."""
+    if share_token not in SHARE_TOKENS and share_token in PUBLIC_TRIPS_BY_TOKEN:
+        SHARE_TOKENS[share_token] = (DEFAULT_DEMO_POD_ID, "rr-demo-legacy")
+
+    if share_token not in SHARE_TOKENS:
         raise HTTPException(
             status_code=404,
-            detail=f"Trip with share token '{share_token}' was not found. Cannot trigger SOS.",
+            detail={
+                "code": "TRIP_NOT_FOUND",
+                "message": "This trip is no longer available. The demo server may have restarted. Book a new ride.",
+            },
         )
-    trip["sos_active"] = True
-    trip["status"] = "SOS_ACTIVE"
-    trip["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    pod_id, req_id = SHARE_TOKENS[share_token]
+    pod = ACTIVE_PODS.get(pod_id)
+    if not pod:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "TRIP_NOT_FOUND",
+                "message": "This trip is no longer available. The demo server may have restarted. Book a new ride.",
+            },
+        )
+
+    for p in pod.get("passengers", []):
+        if p.get("request_id") == req_id or p.get("share_token") == share_token:
+            p["sos_active"] = True
+
+    msg = "Demo only. This marks the trip as an emergency in this demo. It does not contact any emergency service."
     return {
         "status": "SOS_ACTIVATED",
         "share_token": share_token,
-        "pod_code": trip.get("pod_code", "POD-842A"),
-        "driver_plate": trip.get("driver", {}).get("plate_number", ""),
-        "message": "Along Operations Command Center and FCT Rapid Response alerted with live GPS coordinates.",
+        "sos_active": True,
+        "message": msg,
+        "text": msg,
+        "pod_code": pod.get("pod_id", "POD-842A"),
+        "driver_plate": pod.get("plate_number", "ABJ-402-AL"),
     }
-

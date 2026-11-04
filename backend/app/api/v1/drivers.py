@@ -17,72 +17,32 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.ai.vision_sam import verify_vehicle_photo_sam
 from app.api.v1.trips_public import PUBLIC_TRIPS_BY_TOKEN, get_default_demo_trip
-from app.core.config import BusinessRules
+from app.core.config import BusinessRules, get_settings
 from app.core.ids import generate_boarding_otp
 from app.core.security import hash_otp_code, verify_otp_code
+from app.core.trip_state import (
+    ACTIVE_PODS as ACTIVE_PODS_STORE,
+    LAB_POD_ID,
+    derive_pod_stage,
+    get_pod_by_id_or_session,
+    get_server_time,
+    reset_session_pod,
+)
 from app.matching.corridor import haversine_distance_m
 from scripts.seed import load_abuja_seed_catalog
 
 router = APIRouter(prefix="/api/v1/drivers", tags=["drivers"])
 
-# In-memory operational state for active pods, OTPs, and driver states (backed by Redis when attached)
-_initial_demo_otp = generate_boarding_otp()
-ACTIVE_PODS_STORE: dict[str, dict[str, Any]] = {
-    "POD-842A": {
-        "pod_id": "POD-842A",
-        "driver_id": "DRV-001",
-        "driver_name": "Musa Bello",
-        "plate_number": "ABJ-402-AL",
-        "vehicle_desc": "Volkswagen Golf 4 (Emerald Green)",
-        "corridor_id": "BWR-DUT-WUS",
-        "anchor_lat": 9.1779,
-        "anchor_lng": 7.3736,
-        "seats_occupied": 4,
-        "passengers": [],
-        "boarding_otp_hashes": {
-            "rr-demo-01": hash_otp_code(_initial_demo_otp, context_id="rr-demo-01"),
-            _initial_demo_otp: hash_otp_code(_initial_demo_otp, context_id=""),
-        },
-        "boarding_otps": {_initial_demo_otp: "rr-demo-01"},
-        "otp_created_at": {"rr-demo-01": time.time()},
-        "otp_attempts": {"rr-demo-01": 0},
-        "boarded_requests": {"rr-demo-02", "rr-demo-03", "rr-demo-04"},
-        "status": "BOARDING",
-    }
-}
 DRIVER_LIVE_STATE: dict[str, dict[str, Any]] = {}
 
 
 def get_pod_for_corridor(corridor_id: str = "BWR-DUT-WUS", pod_id: str | None = None) -> dict[str, Any]:
-    pid = pod_id or "POD-842A"
-    if pid not in ACTIVE_PODS_STORE:
-        ACTIVE_PODS_STORE[pid] = {
-            "pod_id": pid,
-            "driver_id": "DRV-001",
-            "driver_name": "Musa Bello",
-            "plate_number": "ABJ-402-AL",
-            "vehicle_desc": "Volkswagen Golf 4 (Emerald Green)",
-            "corridor_id": corridor_id,
-            "anchor_lat": 9.1779,
-            "anchor_lng": 7.3736,
-            "seats_occupied": 0,
-            "passengers": [],
-            "boarding_otp_hashes": {},
-            "boarding_otps": {},
-            "otp_created_at": {},
-            "otp_attempts": {},
-            "boarded_requests": set(),
-            "status": "STANDBY",
-        }
-    pod = ACTIVE_PODS_STORE[pid]
-    if "passengers" not in pod:
-        pod["passengers"] = []
-    return pod
+    return get_pod_by_id_or_session(pod_id=pod_id, corridor_id=corridor_id)
 
 
 class BookPodSeatInput(BaseModel):
@@ -260,11 +220,13 @@ async def verify_rider_boarding_otp(
     driver_id: str,
     pod_id: str,
     body: VerifyBoardingOTPInput,
+    request: Request,
 ) -> dict[str, Any]:
     """Verify 4-digit boarding OTP within 150m of the Virtual Anchor Point and capture escrow."""
-    pod = ACTIVE_PODS_STORE.get(pod_id)
+    session_id = request.headers.get("x-along-session") if request else None
+    pod = get_pod_by_id_or_session(pod_id=pod_id, session_id=session_id)
     if pod is None:
-        clean_id = pod_id.split()[0]
+        clean_id = pod_id.split()[0] if pod_id else None
         pod = ACTIVE_PODS_STORE.get(clean_id)
     if pod is None:
         raise HTTPException(status_code=404, detail="Pod not found")
@@ -279,18 +241,28 @@ async def verify_rider_boarding_otp(
         )
 
     req_id = body.ride_request_id
-    if req_id == "auto" or (
-        req_id not in pod.get("boarding_otp_hashes", {})
-        and req_id not in pod.get("boarding_otps", {})
-    ):
+    if req_id == "auto":
         matching_req = pod.get("boarding_otps", {}).get(body.otp_code)
         if not matching_req:
             for p in pod.get("passengers", []):
                 if p.get("otp_code") == body.otp_code:
                     matching_req = p.get("request_id")
                     break
-        if matching_req:
-            req_id = matching_req
+        if not matching_req:
+            for rid, h in pod.get("boarding_otp_hashes", {}).items():
+                if len(h) == 64:
+                    if verify_otp_code(body.otp_code, context_id=rid, expected_hash=h) or verify_otp_code(body.otp_code, context_id="", expected_hash=h):
+                        matching_req = rid
+                        break
+        if not matching_req:
+            raise HTTPException(status_code=404, detail="No booking matching this OTP found on pod")
+        req_id = matching_req
+    elif (
+        req_id not in pod.get("boarding_otp_hashes", {})
+        and req_id not in pod.get("boarding_otps", {})
+        and not any(p.get("request_id") == req_id for p in pod.get("passengers", []))
+    ):
+        raise HTTPException(status_code=404, detail="No boarding OTP registered for request")
 
     attempts_map: dict[str, int] = pod.setdefault("otp_attempts", {})
     attempts = attempts_map.get(req_id, 0)
@@ -303,7 +275,7 @@ async def verify_rider_boarding_otp(
     # 30-minute expiration check
     created_at = pod.get("otp_created_at", {}).get(req_id)
     if created_at is not None:
-        if time.time() - float(created_at) > BusinessRules.OTP_EXPIRATION_SECONDS:
+        if get_server_time() - float(created_at) > BusinessRules.OTP_EXPIRATION_SECONDS:
             raise HTTPException(
                 status_code=410,
                 detail="Boarding OTP has expired (30 minute limit)",
@@ -352,24 +324,14 @@ async def verify_rider_boarding_otp(
     total_active_seats = sum(p.get("seats", 1) for p in active_passengers)
     all_passengers_boarded = bool(active_passengers) and all(p.get("is_boarded") for p in active_passengers)
     if total_active_seats >= BusinessRules.POD_SIZE and all_passengers_boarded:
+        pod["departed_at"] = pod.get("departed_at") or get_server_time()
         pod["status"] = "IN_TRANSIT"
     else:
         pod["status"] = "BOARDING"
 
-    for trip in PUBLIC_TRIPS_BY_TOKEN.values():
-        if (
-            trip.get("pod_code") == pod_id
-            or trip.get("pod_code") == "POD-842A"
-            or trip.get("corridor_id") == pod.get("corridor_id")
-        ):
-            trip["status"] = pod["status"]
-            if pod["status"] == "IN_TRANSIT" and not trip.get("in_transit_started_at"):
-                trip["in_transit_started_at"] = datetime.now(timezone.utc).isoformat()
-            trip["updated_at"] = datetime.now(timezone.utc).isoformat()
-
     return {
         "status": "BOARDED",
-        "pod_id": pod_id,
+        "pod_id": pod.get("pod_id", pod_id),
         "driver_id": driver_id,
         "ride_request_id": req_id,
         "escrow_state": "CAPTURED",
@@ -379,21 +341,29 @@ async def verify_rider_boarding_otp(
 
 
 @router.post("/{driver_id}/pods/{pod_id}/dispatch")
-async def dispatch_pod_early(driver_id: str, pod_id: str) -> dict[str, Any]:
+async def dispatch_pod_early(
+    driver_id: str,
+    pod_id: str,
+    request: Request,
+) -> dict[str, Any]:
     """Manually dispatch pod into transit (e.g. at departure window deadline or driver choice)."""
-    pod = ACTIVE_PODS_STORE.get(pod_id) or get_pod_for_corridor("BWR-DUT-WUS", pod_id)
+    session_id = request.headers.get("x-along-session") if request else None
+    pod = get_pod_by_id_or_session(pod_id=pod_id, session_id=session_id)
+    passengers = pod.get("passengers", [])
+    boarded_count = len(pod.get("boarded_requests", set())) or sum(p.get("seats", 1) for p in passengers if p.get("is_boarded"))
+    if boarded_count < 1:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot start trip: at least one passenger must be boarded before departing.",
+        )
+    pod["departed_at"] = pod.get("departed_at") or get_server_time()
     pod["status"] = "IN_TRANSIT"
-    for trip in PUBLIC_TRIPS_BY_TOKEN.values():
-        if (
-            trip.get("pod_code") == pod_id
-            or trip.get("pod_code") == "POD-842A"
-            or trip.get("corridor_id") == pod.get("corridor_id")
-        ):
-            trip["status"] = "IN_TRANSIT"
-            if not trip.get("in_transit_started_at"):
-                trip["in_transit_started_at"] = datetime.now(timezone.utc).isoformat()
-            trip["updated_at"] = datetime.now(timezone.utc).isoformat()
-    return {"status": "IN_TRANSIT", "pod_id": pod_id, "message": "Pod dispatched"}
+    return {
+        "status": "IN_TRANSIT",
+        "pod_id": pod.get("pod_id", pod_id),
+        "departed_at": pod["departed_at"],
+        "message": "Pod dispatched",
+    }
 
 
 class PodLocationInput(BaseModel):
@@ -454,9 +424,14 @@ async def update_pod_location(
 
 
 @router.post("/{driver_id}/pods/{pod_id}/fill-coriders")
-async def fill_pod_coriders(driver_id: str, pod_id: str) -> dict[str, Any]:
+async def fill_pod_coriders(
+    driver_id: str,
+    pod_id: str,
+    request: Request,
+) -> dict[str, Any]:
     """Fill remaining empty seats with simulated corridor co-riders to complete 4/4 pod for testing."""
-    pod = ACTIVE_PODS_STORE.get(pod_id) or get_pod_for_corridor("BWR-DUT-WUS", pod_id)
+    session_id = request.headers.get("x-along-session") if request else None
+    pod = get_pod_by_id_or_session(pod_id=pod_id, session_id=session_id)
     passengers = pod.setdefault("passengers", [])
     active_passengers = [p for p in passengers if not p.get("is_alighted") and not p.get("alighted")]
 
@@ -466,7 +441,7 @@ async def fill_pod_coriders(driver_id: str, pod_id: str) -> dict[str, Any]:
             occupied_seats.add(int(s))
 
     free_seats = [s for s in [1, 2, 3, 4] if s not in occupied_seats]
-    seat_name_map = {1: "Rider A", 2: "Rider B", 3: "Rider C", 4: "Rider D"}
+    seat_name_map = {1: "Rider A (you)", 2: "Rider B", 3: "Rider C", 4: "Rider D"}
     sample_pool = [
         {"dest": "Katampe Bridge (Oando)", "fare": 900},
         {"dest": "Berger Underbridge", "fare": 900},
@@ -474,11 +449,12 @@ async def fill_pod_coriders(driver_id: str, pod_id: str) -> dict[str, Any]:
         {"dest": "Mabushi Expressway", "fare": 800},
     ]
 
+    now = get_server_time()
     added = []
     for idx, seat_num in enumerate(free_seats):
         sample = sample_pool[idx % len(sample_pool)]
         otp = generate_boarding_otp()
-        req_id = f"cr-sim-{seat_num}-{int(time.time() * 1000) % 10000}"
+        req_id = f"cr-sim-{seat_num}-{int(now * 1000) % 10000}"
         rider_name = seat_name_map.get(seat_num, f"Rider {chr(64 + seat_num)}")
         entry = {
             "request_id": req_id,
@@ -495,7 +471,7 @@ async def fill_pod_coriders(driver_id: str, pod_id: str) -> dict[str, Any]:
             "is_boarded": True,
             "is_alighted": False,
             "status": "BOARDED",
-            "booked_at": time.time(),
+            "booked_at": now,
         }
         passengers.append(entry)
         pod.setdefault("boarded_requests", set()).add(req_id)
@@ -507,11 +483,12 @@ async def fill_pod_coriders(driver_id: str, pod_id: str) -> dict[str, Any]:
     pod["seats_occupied"] = min(4, sum(p["seats"] for p in passengers if not p.get("is_alighted") and not p.get("alighted")))
     active_now = [p for p in passengers if not p.get("is_alighted") and not p.get("alighted")]
     if sum(p.get("seats", 1) for p in active_now) >= 4 and all(p.get("is_boarded") for p in active_now):
+        pod["departed_at"] = pod.get("departed_at") or get_server_time()
         pod["status"] = "IN_TRANSIT"
 
     return {
         "status": "ok",
-        "pod_id": pod_id,
+        "pod_id": pod.get("pod_id", pod_id),
         "added_count": len(added),
         "seats_occupied": pod["seats_occupied"],
         "pod_status": pod["status"],
@@ -583,14 +560,24 @@ async def trigger_mid_corridor_seat_reload(
 
 @router.get("/active-pod")
 async def get_active_corridor_pod(
+    request: Request,
     corridor_id: str = "BWR-DUT-WUS",
     pod_id: str | None = None,
 ) -> dict[str, Any]:
     """Return active pod manifest with OTP privacy and no phone numbers exposed."""
-    pod = get_pod_for_corridor(corridor_id, pod_id)
+    session_id = request.headers.get("x-along-session") if request else None
+    pod = get_pod_by_id_or_session(pod_id=pod_id, session_id=session_id, corridor_id=corridor_id)
+    settings = get_settings()
+    stage, stage_label, progress = derive_pod_stage(
+        pod,
+        demo_driver_arrival_seconds=settings.DEMO_DRIVER_ARRIVAL_SECONDS,
+        demo_trip_seconds=settings.DEMO_TRIP_SECONDS,
+    )
+    pod["status"] = stage
+
     safe_passengers = []
     for p in pod.get("passengers", []):
-        fn = p.get("first_name") or p.get("display_name", "Rider").split()[0]
+        fn = p.get("first_name") or p.get("display_name", "Rider")
         safe_passengers.append({
             "request_id": p.get("request_id", ""),
             "first_name": fn,
@@ -602,8 +589,8 @@ async def get_active_corridor_pod(
             "seat_numbers": p.get("seat_numbers", [1]),
             "fare_naira": p.get("fare_naira", 0),
             "otp_code": p.get("otp_code", ""),
-            "is_boarded": p.get("is_boarded", False),
-            "is_alighted": p.get("is_alighted", False),
+            "is_boarded": bool(p.get("is_boarded", False)),
+            "is_alighted": bool(p.get("is_alighted", False)),
             "status": "BOARDED" if p.get("is_boarded") else ("ALIGHTED" if p.get("is_alighted") else "AWAITING_BOARDING"),
         })
     active_count = sum(p["seats"] for p in safe_passengers if not p["is_alighted"])
@@ -618,7 +605,11 @@ async def get_active_corridor_pod(
         "anchor_lng": pod.get("anchor_lng", 7.3736),
         "seats_occupied": active_count,
         "passengers": safe_passengers,
-        "status": pod.get("status", "STANDBY"),
+        "status": stage,
+        "stage": stage,
+        "stage_label": stage_label,
+        "progress": progress,
+        "departed_at": pod.get("departed_at"),
         "boarded_requests": list(pod.get("boarded_requests", set())),
     }
     return {"status": "ok", "pod": pod_data}
@@ -626,21 +617,16 @@ async def get_active_corridor_pod(
 
 @router.post("/active-pod/reset")
 async def reset_active_corridor_pod(
+    request: Request,
     corridor_id: str = "BWR-DUT-WUS",
     pod_id: str | None = None,
 ) -> dict[str, Any]:
     """Reset active pod back to standby queue."""
-    pid = pod_id or "POD-842A"
-    if pid in ACTIVE_PODS_STORE:
-        ACTIVE_PODS_STORE[pid]["passengers"] = []
-        ACTIVE_PODS_STORE[pid]["seats_occupied"] = 0
-        ACTIVE_PODS_STORE[pid]["boarded_requests"] = set()
-        ACTIVE_PODS_STORE[pid]["status"] = "STANDBY"
-        ACTIVE_PODS_STORE[pid]["boarding_otp_hashes"] = {}
-        ACTIVE_PODS_STORE[pid]["boarding_otps"] = {}
-        ACTIVE_PODS_STORE[pid]["otp_created_at"] = {}
-        ACTIVE_PODS_STORE[pid]["otp_attempts"] = {}
-    return {"status": "ok", "message": "Pod reset to standby", "pod_id": pid}
+    session_id = request.headers.get("x-along-session") if request else None
+    if pod_id == LAB_POD_ID:
+        return {"status": "ok", "message": "Multi-Rider Lab pod is isolated", "pod_id": LAB_POD_ID}
+    pod = reset_session_pod(session_id)
+    return {"status": "ok", "message": "Pod reset to standby", "pod_id": pod.get("pod_id", "POD-842A")}
 
 
 @router.post("/{driver_id}/pods/{pod_id}/book")

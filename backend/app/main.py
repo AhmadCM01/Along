@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import re
 from typing import Any, AsyncIterator
 
 from fastapi import FastAPI, Request
@@ -54,6 +55,14 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    cors_headers = [
+        "*",
+        "X-Along-Session",
+        "x-along-session",
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+    ]
     if settings.ENV == "production":
         origins = [o.strip() for o in settings.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
         if not origins:
@@ -63,7 +72,8 @@ def create_app() -> FastAPI:
             allow_origins=origins,
             allow_credentials=True,
             allow_methods=["*"],
-            allow_headers=["*"],
+            allow_headers=cors_headers,
+            expose_headers=["*", "X-Along-Session"],
         )
     else:
         app.add_middleware(
@@ -71,8 +81,26 @@ def create_app() -> FastAPI:
             allow_origins=["*"],
             allow_credentials=True,
             allow_methods=["*"],
-            allow_headers=["*"],
+            allow_headers=cors_headers,
+            expose_headers=["*", "X-Along-Session"],
         )
+
+    @app.middleware("http")
+    async def session_header_validation_middleware(request: Request, call_next: Any) -> Any:
+        # Ignore validation on CORS preflights
+        if request.method != "OPTIONS":
+            session_id = request.headers.get("x-along-session")
+            if session_id is not None:
+                cleaned = session_id.strip()
+                if not (16 <= len(cleaned) <= 64 and re.match(r"^[A-Za-z0-9\-]+$", cleaned)):
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "code": "INVALID_SESSION_HEADER",
+                            "message": "X-Along-Session header must be 16 to 64 alphanumeric or hyphen characters.",
+                        },
+                    )
+        return await call_next(request)
 
     app.middleware("http")(rate_limit_middleware)
 

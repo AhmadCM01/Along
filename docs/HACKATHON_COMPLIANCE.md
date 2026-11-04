@@ -15,8 +15,8 @@ I built Along as a student project for the Meta Global AI Developer Hackathon. T
 - **Total Repository Files Analyzed**: 195 files (excluding `node_modules`, `.next`, `.git`, `__pycache__`, and audio clips).
 - **Filesystem Creation Timestamps**:
   - Pre-event files created before 2026-10-26 11:00 WAT (local time, UTC+1):
-    1. `MASTER_IMPLEMENTATION_PLAN.md`: Created 2026-10-23 10:43:20 WAT. Contains design specifications and system architecture, with no application code.
-    2. `PITCH_DECK.md`: Created 2026-10-26 10:34:04 WAT. Draft presentation outline.
+    1. `docs/archive/MASTER_IMPLEMENTATION_PLAN.md` (originally `MASTER_IMPLEMENTATION_PLAN.md`): Created 2026-10-23 10:43:20 WAT. Contains design specifications and system architecture, with no application code.
+    2. `docs/archive/PITCH_DECK.md` (originally `PITCH_DECK.md`): Created 2026-10-26 10:34:04 WAT. Draft presentation outline.
   - All source code, configuration files, backend logic, and frontend components were created on or after 2026-10-26 11:09 WAT:
     - `.gitignore`: 2026-10-26 11:09:38
     - `Caddyfile`, `Makefile`, `docker-compose.yml`: 2026-10-26 11:09:44
@@ -46,10 +46,10 @@ I live in Abuja and regularly travel the Berger, Wuse, and Banex corridors. The 
 
 ## 4. Pre-Event Materials and Disclosures
 The following files were drafted before the official hackathon start:
-1. `MASTER_IMPLEMENTATION_PLAN.md` (created 2026-10-23 10:43:20 WAT).
+1. `docs/archive/MASTER_IMPLEMENTATION_PLAN.md` (created 2026-10-23 10:43:20 WAT, moved to `docs/archive/`).
    - Owner statement: "MASTER_IMPLEMENTATION_PLAN.md was drafted on 2026-10-23 before the event. It contains no code."
    - Pre-event material note: "MASTER_IMPLEMENTATION_PLAN.md received a banner and one hosting reference update after the event started. No other changes were made." (Banner: 2026-11-02, commit 3486890; Hosting update: 2026-11-04, commit eaeb48f).
-2. `PITCH_DECK.md` (created 2026-10-26 10:34:04 WAT).
+2. `docs/archive/PITCH_DECK.md` (created 2026-10-26 10:34:04 WAT, moved to `docs/archive/`).
    - Owner statement: "PITCH_DECK.md was created 2026-10-26 10:34 local time. All code and config files were created from 2026-10-26 11:09 local time (WAT, UTC+1)."
 
 ## 5. Contribution Map
